@@ -478,7 +478,9 @@
     "queuedOffline_one": "Hors ligne : la recherche de {{count}} morceau partira au retour du réseau",
     "queuedOffline_other": "Hors ligne : la recherche de {{count}} morceaux partira au retour du réseau",
     "caughtUp_one": "Connexion retrouvée : {{count}} recherche en attente a été faite",
-    "caughtUp_other": "Connexion retrouvée : {{count}} recherches en attente ont été faites"
+    "caughtUp_other": "Connexion retrouvée : {{count}} recherches en attente ont été faites",
+    "batchDone": "Recherche terminée : {{auto}} complétés automatiquement, {{review}} à valider, {{unidentified}} non identifiés",
+    "view": "Voir"
   },
   "sources": {
     "musicbrainz": "MusicBrainz",
@@ -524,7 +526,8 @@
     "acceptRelease_other": "Accepter tout l'album ({{count}})",
     "nothingFound": "Aucun résultat. Vérifiez l'orthographe ou essayez avec moins de mots.",
     "offline": "Pas de connexion internet : réessayez quand le réseau sera revenu.",
-    "searchFailed": "La recherche a échoué. Réessayez dans un instant."
+    "searchFailed": "La recherche a échoué. Réessayez dans un instant.",
+    "errorDetail": "La recherche a échoué : {{detail}}"
   },
   "crop": {
     "title": "Recadrer la pochette",

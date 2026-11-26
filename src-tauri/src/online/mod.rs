@@ -262,6 +262,31 @@ pub struct Online {
     busy: AtomicBool,
     /// Nombre de recherches faites depuis la dernière coupure (pour la notification de retour).
     done_since_offline: AtomicI64,
+    /// Bilan de la série de recherches en cours (affiché quand la file est vide).
+    batch: Mutex<BatchSummary>,
+}
+
+#[derive(Debug, Clone, Default, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BatchSummary {
+    pub auto: i64,
+    pub review: i64,
+    pub unidentified: i64,
+    pub error: i64,
+}
+
+impl BatchSummary {
+    fn total(&self) -> i64 {
+        self.auto + self.review + self.unidentified + self.error
+    }
+    fn add(&mut self, status: &str) {
+        match status {
+            "auto" => self.auto += 1,
+            "review" => self.review += 1,
+            "unidentified" => self.unidentified += 1,
+            _ => self.error += 1,
+        }
+    }
 }
 
 impl Online {
@@ -276,6 +301,7 @@ impl Online {
             offline: AtomicBool::new(false),
             busy: AtomicBool::new(false),
             done_since_offline: AtomicI64::new(-1),
+            batch: Mutex::new(BatchSummary::default()),
         })
     }
 
@@ -345,6 +371,11 @@ impl Online {
                     if n > 0 {
                         me.emit("online:caught-up", n);
                     }
+                    // Fin d'une série de recherches : bilan pour l'utilisateur.
+                    let summary = me.batch.lock().map(|mut b| std::mem::take(&mut *b)).unwrap_or_default();
+                    if summary.total() > 0 {
+                        me.emit("online:batch-done", summary);
+                    }
                     me.busy.store(false, Ordering::Relaxed);
                     me.notify_status();
                     me.sleep(Duration::from_secs(5));
@@ -363,6 +394,9 @@ impl Online {
                         if me.done_since_offline.load(Ordering::Relaxed) >= 0 {
                             me.done_since_offline.fetch_add(1, Ordering::Relaxed);
                         }
+                        if let Ok(mut b) = me.batch.lock() {
+                            b.add(status);
+                        }
                         me.emit("online:update", (id, status));
                         me.lib.notify_changed(false);
                     }
@@ -375,6 +409,9 @@ impl Online {
                     }
                     Err(IdError::Other(e)) => {
                         log::warn!("Recherche en ligne du morceau {id} : {e}");
+                        if let Ok(mut b) = me.batch.lock() {
+                            b.add("error");
+                        }
                         if let Ok(c) = me.conn() {
                             let _ = c.execute("UPDATE online_queue SET attempts = attempts + 1 WHERE track_id = ?1", [id]);
                             let _ = c.execute("DELETE FROM online_queue WHERE track_id = ?1 AND attempts >= 3", [id]);
@@ -416,7 +453,16 @@ impl Online {
                 match fingerprint::get_or_compute(conn, id, &path) {
                     Ok(fp) => {
                         let user = key_get("acoustid_user");
-                        let matches = acoustid::lookup(&self.http, client.as_deref().unwrap(), user.as_deref(), &fp.encoded, fp.duration_s)?;
+                        // Un refus d'AcoustID (clé, quota…) n'arrête pas la recherche : on continue
+                        // par artiste et titre. Seule une coupure du réseau met le morceau en attente.
+                        let matches = match acoustid::lookup(&self.http, client.as_deref().unwrap(), user.as_deref(), &fp.encoded, fp.duration_s) {
+                            Ok(m) => m,
+                            Err(NetError::Offline) => return Err(IdError::Offline),
+                            Err(e) => {
+                                log::warn!("AcoustID pour le morceau {id} : {e}");
+                                vec![]
+                            }
+                        };
                         let mut seen = 0;
                         for m in matches.iter().filter(|m| m.score >= 0.5).take(3) {
                             for rec in m.recording_ids.iter().take(3) {
@@ -429,8 +475,8 @@ impl Online {
                                         c.fingerprint_score = Some(m.score);
                                         cands.push(c);
                                     }
-                                    Err(NetError::NotFound) => {}
-                                    Err(e) => return Err(e.into()),
+                                    Err(NetError::Offline) => return Err(IdError::Offline),
+                                    Err(e) => log::warn!("MusicBrainz {rec} : {e}"),
                                 }
                             }
                         }
@@ -448,20 +494,25 @@ impl Online {
         }
 
         // 3. Compléments Deezer et iTunes (désactivés par défaut)
+        // Une source en échec n'empêche pas d'utiliser les autres.
         if !title.is_empty() {
             if s.deezer {
                 let isrc = cands.iter().find_map(|c| c.isrc.clone());
-                let found = match isrc {
-                    Some(i) => deezer::by_isrc(&self.http, &i)?.into_iter().collect(),
-                    None => deezer::search(&self.http, &artist, &title)?.into_iter().take(3).collect::<Vec<_>>(),
+                let found: Result<Vec<Candidate>, NetError> = match isrc {
+                    Some(i) => deezer::by_isrc(&self.http, &i).map(|c| c.into_iter().collect()),
+                    None => deezer::search(&self.http, &artist, &title).map(|c| c.into_iter().take(3).collect()),
                 };
-                for c in found {
-                    merge(&mut cands, c);
+                match found {
+                    Ok(found) => found.into_iter().for_each(|c| merge(&mut cands, c)),
+                    Err(NetError::Offline) => return Err(IdError::Offline),
+                    Err(e) => log::warn!("Deezer pour le morceau {id} : {e}"),
                 }
             }
             if s.itunes {
-                for c in itunes::search(&self.http, &artist, &title)?.into_iter().take(3) {
-                    merge(&mut cands, c);
+                match itunes::search(&self.http, &artist, &title) {
+                    Ok(found) => found.into_iter().take(3).for_each(|c| merge(&mut cands, c)),
+                    Err(NetError::Offline) => return Err(IdError::Offline),
+                    Err(e) => log::warn!("iTunes pour le morceau {id} : {e}"),
                 }
             }
         }
@@ -692,7 +743,8 @@ impl Online {
         let conn = self.conn()?;
         let mut st = conn.prepare(
             "SELECT track_id, status, score, candidates, applied, detail FROM online_results
-             WHERE (?1 = 'all' OR status = ?1) ORDER BY updated_at DESC LIMIT ?2",
+             WHERE (?1 = 'all' OR status = ?1 OR (?1 = 'unidentified' AND status = 'error'))
+             ORDER BY updated_at DESC LIMIT ?2",
         )?;
         let rows: Vec<(i64, String, i64, String, Option<String>, Option<String>)> = st
             .query_map(params![status, limit], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?)))?
@@ -883,6 +935,26 @@ mod tests {
         assert_eq!(ch.year, Some(Some(2020)));
         assert!(pending, "l'album différent doit partir dans la file À valider");
         assert_eq!(ch.title, None, "titre identique : rien à écrire");
+    }
+
+    /// Essai réel du chemin « bouton Rechercher en ligne » (file + identification), à la main seulement.
+    #[test]
+    #[ignore]
+    fn vraie_recherche_par_la_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let music = dir.path().join("m");
+        std::fs::create_dir_all(&music).unwrap();
+        crate::testdata::write(&music, "Daft Punk - One More Time.mp3", &crate::testdata::mp3_bytes());
+        let (lib, ids) = crate::library::edit::tests_support::library_on(&dir, &music);
+        // Le fichier de test dure 1 s : on lui donne la durée du vrai morceau (5 min 20).
+        crate::db::open_worker(lib.db_path()).unwrap().execute("UPDATE tracks SET duration_ms = 320000", []).unwrap();
+        let online = Online::new(lib, dir.path().to_path_buf(), None);
+        online.enqueue(&ids).unwrap();
+        let status = online.identify(ids[0]).unwrap_or_else(|e| panic!("{e:?}"));
+        let rows = online.results("all", 10).unwrap();
+        eprintln!("état : {status} ; meilleur : {:?}", rows[0].candidates.first().map(|c| (&c.title, &c.artists, c.score, &c.score_detail)));
+        assert_eq!(status, "review", "sans empreinte, une bonne correspondance doit aller dans À valider");
+        assert!(!rows[0].candidates.is_empty());
     }
 
     #[test]

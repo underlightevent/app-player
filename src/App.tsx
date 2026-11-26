@@ -294,9 +294,17 @@ export default function App() {
     void onlineStatus().then(setOnline).catch(() => {});
     const a = onEvent<OnlineStatus>("online:status", setOnline);
     const b = onEvent<number>("online:caught-up", (n) => toast.show(t("online.caughtUp", { count: n })));
+    // Bilan d'une série de recherches, avec un accès direct à la file « À valider ».
+    const c = onEvent<{ auto: number; review: number; unidentified: number; error: number }>("online:batch-done", (s) =>
+      toast.show(
+        t("online.batchDone", { auto: s.auto, review: s.review, unidentified: s.unidentified + s.error }),
+        s.review + s.unidentified + s.error > 0 ? { label: t("online.view"), run: () => setView("review") } : undefined,
+      ),
+    );
     return () => {
       a();
       b();
+      c();
     };
   }, [toast, t]);
 

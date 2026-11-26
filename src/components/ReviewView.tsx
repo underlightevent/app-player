@@ -346,6 +346,9 @@ export function ReviewView({ onDone }: { onDone: (r: EditReport) => void }) {
                 <strong>{row.fileName}</strong>
                 {row.applied.length > 0 && <span className="muted small"> · {t("review.applied", { fields: row.applied.map((f) => t(`fields.${f}`)).join(", ") })}</span>}
               </div>
+              {row.status === "error" && row.detail && (
+                <p className="text-error small">{t("review.errorDetail", { detail: row.detail })}</p>
+              )}
               {candidates.length === 0 ? (
                 <p className="muted">{t("review.noCandidate")}</p>
               ) : (

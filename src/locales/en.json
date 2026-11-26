@@ -478,7 +478,9 @@
     "queuedOffline_one": "Offline: the search for {{count}} track will run when the network is back",
     "queuedOffline_other": "Offline: the search for {{count}} tracks will run when the network is back",
     "caughtUp_one": "Connection restored: {{count}} pending search was done",
-    "caughtUp_other": "Connection restored: {{count}} pending searches were done"
+    "caughtUp_other": "Connection restored: {{count}} pending searches were done",
+    "batchDone": "Search finished: {{auto}} completed automatically, {{review}} to review, {{unidentified}} unidentified",
+    "view": "View"
   },
   "sources": {
     "musicbrainz": "MusicBrainz",
@@ -524,7 +526,8 @@
     "acceptRelease_other": "Accept the whole album ({{count}})",
     "nothingFound": "No results. Check the spelling or try fewer words.",
     "offline": "No internet connection: try again when the network is back.",
-    "searchFailed": "The search failed. Try again in a moment."
+    "searchFailed": "The search failed. Try again in a moment.",
+    "errorDetail": "The search failed: {{detail}}"
   },
   "crop": {
     "title": "Crop artwork",
