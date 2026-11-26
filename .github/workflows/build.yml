@@ -35,8 +35,9 @@ jobs:
             args: ""
             bundle_dir: src-tauri/target/release/bundle
           - name: macOS
-            # Version fixée : « macos-latest » est resté plusieurs fois sans machine disponible.
-            os: macos-15
+            # Mac Intel : les Mac Apple Silicon de GitHub sont saturés (tâches annulées faute de
+            # machine). Le .dmg produit reste universel (Apple Silicon et Intel).
+            os: macos-15-intel
             rust_targets: aarch64-apple-darwin,x86_64-apple-darwin
             args: --target universal-apple-darwin
             bundle_dir: src-tauri/target/universal-apple-darwin/release/bundle
