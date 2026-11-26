@@ -11,6 +11,7 @@ interface Props {
   ids: number[];
   rows: Map<number, TrackRow>;
   staleRows: Map<number, TrackRow>;
+  rowsVersion: number;
   needRows: (ids: number[]) => void;
   loading: boolean;
   roots: RootInfo[];
@@ -62,6 +63,11 @@ export function LibraryView(p: Props) {
       ))}
 
       <div className="filter-bar" role="toolbar" aria-label={t("library.filters")}>
+        {query.folder && (
+          <button className="chip" aria-pressed onClick={() => set({ folder: null })} title={t("library.clearFolder")}>
+            {t("library.folderFilter", { name: query.folder[1].split("/").pop() || "/" })} ×
+          </button>
+        )}
         {FORMATS.map((f) => (
           <button key={f} className="chip" aria-pressed={query.formats.includes(f)} onClick={() => toggleFormat(f)}>
             {f.toUpperCase()}
@@ -110,6 +116,7 @@ export function LibraryView(p: Props) {
           ids={p.ids}
           rows={p.rows}
           staleRows={p.staleRows}
+          rowsVersion={p.rowsVersion}
           onNeedRows={p.needRows}
           sort={query.sort}
           onSortChange={(sort: SortKey[]) => set({ sort })}

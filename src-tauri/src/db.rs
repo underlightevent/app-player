@@ -187,11 +187,111 @@ pub fn migrate(conn: &mut Connection) -> Result<(), AppError> {
     Ok(())
 }
 
+// ---------- Sauvegardes, export, import ----------
+
+const KEEP_BACKUPS: usize = 7;
+const IMPORT_FILE: &str = "library.import.sqlite";
+
+/// Date du jour (AAAA-MM-JJ, temps universel) sans dépendance supplémentaire.
+pub fn today() -> String {
+    let days = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() / 86_400)
+        .unwrap_or(0) as i64;
+    // Algorithme de conversion jours → date civile (H. Hinnant).
+    let z = days + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z - era * 146_097;
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let y = yoe + era * 400 + if m <= 2 { 1 } else { 0 };
+    format!("{y:04}-{m:02}-{d:02}")
+}
+
+/// Sauvegarde quotidienne de la base (7 dernières copies conservées).
+pub fn daily_backup(conn: &Connection, data_dir: &Path) -> Result<Option<PathBuf>, AppError> {
+    let dir = data_dir.join("backups");
+    std::fs::create_dir_all(&dir)?;
+    let target = dir.join(format!("library-{}.sqlite", today()));
+    if target.exists() {
+        return Ok(None);
+    }
+    conn.execute("VACUUM INTO ?1", [target.to_string_lossy().as_ref()])?;
+    let mut copies: Vec<PathBuf> = std::fs::read_dir(&dir)?
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.file_name().and_then(|n| n.to_str()).map(|n| n.starts_with("library-2") && n.ends_with(".sqlite")).unwrap_or(false))
+        .collect();
+    copies.sort();
+    while copies.len() > KEEP_BACKUPS {
+        let old = copies.remove(0);
+        let _ = std::fs::remove_file(old);
+    }
+    log::info!("Sauvegarde de la base : {}", target.display());
+    Ok(Some(target))
+}
+
+/// Exporte la base dans un fichier choisi par l'utilisateur.
+pub fn export(conn: &Connection, dest: &Path) -> Result<(), AppError> {
+    if dest.exists() {
+        // L'utilisateur a confirmé le remplacement dans la fenêtre d'enregistrement.
+        std::fs::remove_file(dest)?;
+    }
+    conn.execute("VACUUM INTO ?1", [dest.to_string_lossy().as_ref()])?;
+    Ok(())
+}
+
+/// Prépare l'import d'une base : vérifiée maintenant, mise en place au prochain démarrage.
+pub fn stage_import(data_dir: &Path, src: &Path) -> Result<(), AppError> {
+    let conn = Connection::open_with_flags(src, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+    let v = current_version(&conn)?;
+    if v > latest_version() {
+        return Err(AppError::DatabaseTooNew { found: v, supported: latest_version() });
+    }
+    let ok: i64 = conn.query_row(
+        "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name IN ('settings', 'tracks')",
+        [],
+        |r| r.get(0),
+    )?;
+    if v < 1 || ok < 1 {
+        return Err(AppError::InvalidSetting("ce fichier n'est pas une base de l'application".into()));
+    }
+    drop(conn);
+    std::fs::copy(src, data_dir.join(IMPORT_FILE))?;
+    Ok(())
+}
+
+/// Au démarrage : une base importée remplace l'actuelle, qui est d'abord sauvegardée.
+fn apply_pending_import(data_dir: &Path, path: &Path) -> Result<(), AppError> {
+    let pending = data_dir.join(IMPORT_FILE);
+    if !pending.exists() {
+        return Ok(());
+    }
+    if path.exists() {
+        let dir = data_dir.join("backups");
+        std::fs::create_dir_all(&dir)?;
+        let stamp = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
+        let conn = Connection::open(path)?;
+        conn.execute("VACUUM INTO ?1", [dir.join(format!("avant-import-{stamp}.sqlite")).to_string_lossy().as_ref()])?;
+        drop(conn);
+        for suffix in ["-wal", "-shm"] {
+            let _ = std::fs::remove_file(PathBuf::from(format!("{}{suffix}", path.display())));
+        }
+    }
+    std::fs::rename(&pending, path)?;
+    log::info!("Base importée mise en place");
+    Ok(())
+}
+
 /// Ouvre (ou crée) la base dans le dossier de données de l'application.
 /// Avant de migrer une base existante, une copie de sécurité est faite à côté.
 pub fn open(data_dir: &Path) -> Result<(Connection, PathBuf), AppError> {
     std::fs::create_dir_all(data_dir)?;
     let path = data_dir.join("library.sqlite");
+    apply_pending_import(data_dir, &path)?;
     let mut conn = Connection::open(&path)?;
     conn.pragma_update(None, "journal_mode", "WAL")?;
     configure(&conn)?;
@@ -239,6 +339,42 @@ mod tests {
         let mut conn = Connection::open_in_memory().unwrap();
         conn.pragma_update(None, "user_version", latest_version() + 1).unwrap();
         assert!(matches!(migrate(&mut conn), Err(AppError::DatabaseTooNew { .. })));
+    }
+
+    #[test]
+    fn date_du_jour_valide() {
+        let d = today();
+        assert_eq!(d.len(), 10);
+        assert!(d.starts_with("20"));
+    }
+
+    #[test]
+    fn sauvegardes_export_import() {
+        let dir = tempfile::tempdir().unwrap();
+        let (conn, path) = open(dir.path()).unwrap();
+        conn.execute("INSERT INTO settings (key, value) VALUES ('theme', 'dark')", []).unwrap();
+        assert!(daily_backup(&conn, dir.path()).unwrap().is_some());
+        assert!(daily_backup(&conn, dir.path()).unwrap().is_none(), "une seule sauvegarde par jour");
+        // Garder 7 copies au plus
+        for i in 0..10 {
+            std::fs::write(dir.path().join("backups").join(format!("library-2000-01-{i:02}.sqlite")), b"x").unwrap();
+        }
+        std::fs::remove_file(dir.path().join("backups").join(format!("library-{}.sqlite", today()))).unwrap();
+        daily_backup(&conn, dir.path()).unwrap();
+        let n = std::fs::read_dir(dir.path().join("backups")).unwrap().count();
+        assert_eq!(n, 7);
+
+        let exported = dir.path().join("export.sqlite");
+        export(&conn, &exported).unwrap();
+        conn.execute("UPDATE settings SET value = 'light' WHERE key = 'theme'", []).unwrap();
+        drop(conn);
+        stage_import(dir.path(), &exported).unwrap();
+        assert!(stage_import(dir.path(), &dir.path().join("backups").join("library-2000-01-09.sqlite")).is_err(), "faux fichier accepté");
+        let (conn, _) = open(dir.path()).unwrap();
+        let v: String = conn.query_row("SELECT value FROM settings WHERE key = 'theme'", [], |r| r.get(0)).unwrap();
+        assert_eq!(v, "dark", "la base importée n'a pas été mise en place");
+        assert!(std::fs::read_dir(dir.path().join("backups")).unwrap().flatten().any(|e| e.file_name().to_string_lossy().starts_with("avant-import")));
+        let _ = path;
     }
 
     #[test]

@@ -25,6 +25,9 @@ pub enum AppError {
     #[error("image : {0}")]
     Artwork(String),
 
+    #[error("disque déconnecté")]
+    Offline,
+
     #[error("état interne indisponible")]
     Poisoned,
 }
@@ -38,6 +41,7 @@ impl AppError {
             AppError::InvalidSetting(_) => "invalid_setting",
             AppError::DatabaseUnavailable => "database_unavailable",
             AppError::Artwork(_) => "artwork",
+            AppError::Offline => "offline",
             AppError::Poisoned => "internal",
         }
     }

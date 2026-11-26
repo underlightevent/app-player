@@ -47,7 +47,6 @@ struct Row {
     id: i64,
     volume_id: i64,
     rel_path: String,
-    file_name: String,
     status: String,
     values: Values,
 }
@@ -66,7 +65,6 @@ fn load_rows(conn: &Connection, ids: &[i64], key_camelot: bool) -> Result<Vec<Ro
                     id: r.get(0)?,
                     volume_id: r.get(1)?,
                     rel_path: r.get(2)?,
-                    file_name: r.get(3)?,
                     status: r.get(4)?,
                     values: Values {
                         artists: vec![],

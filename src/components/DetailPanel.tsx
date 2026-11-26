@@ -5,6 +5,7 @@ import type { TrackRow } from "../core/library";
 import type { Changes, EditableField } from "../core/edit";
 import { trackCover } from "../core/edit";
 import { formatBpm, formatDuration, formatKey, formatQuality, formatSize } from "../core/format";
+import { startDrag, useDropTarget } from "../core/dnd";
 
 interface Props {
   selected: TrackRow[];
@@ -102,12 +103,44 @@ function TextField(props: {
   );
 }
 
+/** Étiquette d'artiste : glisser pour réordonner, étoile pour en faire l'artiste principal. */
+function ArtistTag(p: { name: string; index: number; onMove: (from: number, to: number) => void; onRemove: () => void }) {
+  const { t } = useTranslation();
+  const ref = useDropTarget<HTMLSpanElement>("artist", (payload) => {
+    if (payload.kind === "artist") p.onMove(payload.index, p.index);
+  });
+  const main = p.index === 0;
+  return (
+    <span
+      ref={ref}
+      className={`artist-tag ${main ? "main" : ""}`}
+      onMouseDown={(e) => {
+        if ((e.target as HTMLElement).closest("button")) return;
+        startDrag(e, () => ({ kind: "artist", index: p.index }), () => p.name);
+      }}
+      title={t("detail.artistDragHint")}
+    >
+      <button
+        className="tag-btn"
+        onClick={() => p.onMove(p.index, 0)}
+        aria-label={main ? t("detail.mainArtist") : t("detail.makeMain", { name: p.name })}
+        title={main ? t("detail.mainArtist") : t("detail.makeMain", { name: p.name })}
+      >
+        <Star size={11} className={main ? "star on" : "star"} aria-hidden />
+      </button>
+      {p.name}
+      <button className="tag-btn" onClick={p.onRemove} aria-label={t("detail.removeArtist", { name: p.name })}>
+        <X size={11} aria-hidden />
+      </button>
+    </span>
+  );
+}
+
 function ArtistsField({ rows, onCommit, onLock }: { rows: TrackRow[]; onCommit: (a: string[]) => void; onLock: Props["onLock"] }) {
   const { t } = useTranslation();
   const value = common(rows, (r) => r.artists);
   const artists = value === MIXED ? null : value;
   const [adding, setAdding] = useState("");
-  const [drag, setDrag] = useState<number | null>(null);
   const commit = (next: string[]) => onCommit(next);
   const move = (from: number, to: number) => {
     if (!artists || from === to) return;
@@ -122,31 +155,7 @@ function ArtistsField({ rows, onCommit, onLock }: { rows: TrackRow[]; onCommit: 
       <div className="artist-tags">
         {artists === null && <span className="muted">{t("detail.mixed")}</span>}
         {artists?.map((a, i) => (
-          <span
-            key={a + i}
-            className={`artist-tag ${i === 0 ? "main" : ""}`}
-            draggable
-            onDragStart={() => setDrag(i)}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={() => {
-              if (drag != null) move(drag, i);
-              setDrag(null);
-            }}
-            title={t("detail.artistDragHint")}
-          >
-            <button
-              className="tag-btn"
-              onClick={() => move(i, 0)}
-              aria-label={i === 0 ? t("detail.mainArtist") : t("detail.makeMain", { name: a })}
-              title={i === 0 ? t("detail.mainArtist") : t("detail.makeMain", { name: a })}
-            >
-              <Star size={11} className={i === 0 ? "star on" : "star"} aria-hidden />
-            </button>
-            {a}
-            <button className="tag-btn" onClick={() => commit(artists.filter((_, j) => j !== i))} aria-label={t("detail.removeArtist", { name: a })}>
-              <X size={11} aria-hidden />
-            </button>
-          </span>
+          <ArtistTag key={a + i} name={a} index={i} onMove={move} onRemove={() => commit(artists.filter((_, j) => j !== i))} />
         ))}
         <input
           className="artist-add"

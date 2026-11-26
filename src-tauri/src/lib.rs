@@ -268,6 +268,69 @@ async fn cover_prepare(state: State<'_, AppState>, path: Option<String>, data: O
     .await
 }
 
+// ---------- Dossiers, sauvegardes ----------
+
+#[tauri::command]
+async fn folders_list(state: State<'_, AppState>, volume_id: i64, rel: String) -> Result<Vec<library::folders::DirInfo>, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || lib.list_dirs(volume_id, &rel)).await
+}
+
+#[tauri::command]
+async fn folder_create(state: State<'_, AppState>, volume_id: i64, parent: String, name: String) -> Result<EditReport, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || lib.create_dir(volume_id, &parent, &name)).await
+}
+
+#[tauri::command]
+async fn folder_move(state: State<'_, AppState>, volume_id: i64, from: String, to: String) -> Result<EditReport, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || lib.move_dir(volume_id, &from, &to)).await
+}
+
+#[tauri::command]
+async fn tracks_move_preview(state: State<'_, AppState>, ids: Vec<i64>, volume_id: i64, target: String) -> Result<Vec<rename::PlanItem>, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || lib.move_tracks_preview(&ids, volume_id, &target)).await
+}
+
+#[tauri::command]
+async fn tracks_move(state: State<'_, AppState>, ids: Vec<i64>, volume_id: i64, target: String) -> Result<EditReport, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || lib.move_tracks(&ids, volume_id, &target)).await
+}
+
+/// Affiche le fichier (ou le dossier) dans l'Explorateur ou le Finder.
+#[tauri::command]
+async fn reveal(app: tauri::AppHandle, state: State<'_, AppState>, id: Option<i64>, volume_id: Option<i64>, rel: Option<String>) -> Result<(), AppError> {
+    use tauri_plugin_opener::OpenerExt;
+    let lib = state.library()?.clone();
+    let path = match (id, volume_id, rel) {
+        (Some(id), _, _) => {
+            let conn = db::open_worker(lib.db_path())?;
+            lib.track_path(&conn, id)?.ok_or(AppError::Offline)?
+        }
+        (None, Some(v), Some(r)) => {
+            let m = lib.mounts().get(&v).cloned().ok_or(AppError::Offline)?;
+            library::volumes::join_rel(&m, &r)
+        }
+        _ => return Err(AppError::InvalidSetting("rien à afficher".into())),
+    };
+    app.opener().reveal_item_in_dir(&path).map_err(|e| AppError::Io(std::io::Error::other(e.to_string())))
+}
+
+#[tauri::command]
+async fn database_export(state: State<'_, AppState>, path: String) -> Result<(), AppError> {
+    state.with_db(|c| db::export(c, std::path::Path::new(&path)))
+}
+
+/// Vérifie la base choisie ; elle remplacera l'actuelle au prochain démarrage.
+#[tauri::command]
+async fn database_import(state: State<'_, AppState>, path: String) -> Result<(), AppError> {
+    let data_dir = state.db_path.parent().map(|p| p.to_path_buf()).ok_or(AppError::DatabaseUnavailable)?;
+    db::stage_import(&data_dir, std::path::Path::new(&path))
+}
+
 // ---------- Lecteur et forme d'onde ----------
 
 #[tauri::command]
@@ -435,6 +498,7 @@ pub fn run() {
         )
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             #[allow(unused_mut)]
             let mut data_dir = app.path().app_data_dir()?;
@@ -470,6 +534,12 @@ pub fn run() {
                     }
                     if let Err(e) = db::open_worker(lib.db_path()).and_then(|c| history::prune(&c)) {
                         log::warn!("Nettoyage de l'historique : {e}");
+                    }
+                    let data_dir = lib.db_path().parent().map(|p| p.to_path_buf());
+                    if let Some(dir) = data_dir {
+                        if let Err(e) = db::open_worker(lib.db_path()).and_then(|c| db::daily_backup(&c, &dir)) {
+                            log::warn!("Sauvegarde quotidienne : {e}");
+                        }
                     }
                     // Réservé aux essais automatiques de développement : ajoute un dossier au démarrage.
                     #[cfg(debug_assertions)]
@@ -508,6 +578,14 @@ pub fn run() {
             history_apply,
             track_cover,
             cover_prepare,
+            folders_list,
+            folder_create,
+            folder_move,
+            tracks_move_preview,
+            tracks_move,
+            reveal,
+            database_export,
+            database_import,
             player_load,
             player_command,
             player_state,

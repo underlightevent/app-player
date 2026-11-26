@@ -1,15 +1,18 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
+import { consumeDragClick, startDrag, useDropTarget } from "../../core/dnd";
 import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ArrowDown, ArrowUp, Check } from "lucide-react";
 import type { SortKey, TrackRow } from "../../core/library";
-import { COLUMNS, loadColumnState, saveColumnState, type ColumnState } from "./columns";
+import { COLUMNS, loadColumnState, saveColumnState, type ColumnState, type RenderCtx } from "./columns";
 
 interface Props {
   ids: number[];
   rows: Map<number, TrackRow>;
   /** Lignes d'avant le dernier rafraîchissement, affichées en attendant les nouvelles. */
   staleRows: Map<number, TrackRow>;
+  /** Change quand de nouvelles lignes sont arrivées. */
+  rowsVersion: number;
   /** Demande le chargement des lignes visibles. */
   onNeedRows: (ids: number[]) => void;
   sort: SortKey[];
@@ -21,13 +24,89 @@ interface Props {
   keyNotation: "camelot" | "musical";
 }
 
+/** En-tête de colonne : clic pour trier, glisser pour réordonner, poignée pour la largeur. */
+function HeaderCell(p: {
+  id: string;
+  label: string;
+  ariaSort?: "ascending" | "descending";
+  className: string;
+  title?: string;
+  onClick: (e: MouseEvent) => void;
+  onDropColumn: (from: string) => void;
+  indicator: ReactNode;
+  onResizeStart: (e: MouseEvent) => void;
+}) {
+  const ref = useDropTarget<HTMLDivElement>("column", (payload) => {
+    if (payload.kind === "column") p.onDropColumn(payload.id);
+  });
+  return (
+    <div
+      ref={ref}
+      role="columnheader"
+      aria-sort={p.ariaSort}
+      className={p.className}
+      onMouseDown={(e) => startDrag(e, () => ({ kind: "column", id: p.id }), () => p.label || "—")}
+      onClick={(e) => {
+        if (!consumeDragClick()) p.onClick(e);
+      }}
+      title={p.title}
+    >
+      <span className="th-label">{p.label}</span>
+      {p.indicator}
+      <span className="resize-handle" onMouseDown={(e) => { e.stopPropagation(); p.onResizeStart(e); }} onClick={(e) => e.stopPropagation()} aria-hidden />
+    </div>
+  );
+}
+
+interface RowProps {
+  id: number;
+  index: number;
+  top: number;
+  height: number;
+  row: TrackRow | undefined;
+  selected: boolean;
+  template: string;
+  width: number;
+  visible: { state: ColumnState; def: (typeof COLUMNS)[number] }[];
+  ctx: RenderCtx;
+  onDown: (e: MouseEvent, index: number) => void;
+  onActivate: (id: number) => void;
+}
+
+/** Une ligne du tableau. Mémorisée : le défilement ne redessine pas les lignes inchangées. */
+const Row = memo(function Row(p: RowProps) {
+  const { row } = p;
+  const cls = ["tr", p.selected ? "selected" : "", row && !row.online ? "offline" : "", row?.status === "missing" ? "missing" : "", p.index % 2 ? "odd" : ""].join(" ");
+  return (
+    <div
+      role="row"
+      aria-rowindex={p.index + 2}
+      aria-selected={p.selected}
+      aria-disabled={row && !row.online ? true : undefined}
+      className={cls}
+      style={{ transform: `translateY(${p.top}px)`, height: p.height, gridTemplateColumns: p.template, width: p.width }}
+      onMouseDown={(e) => p.onDown(e, p.index)}
+      onDoubleClick={() => p.onActivate(p.id)}
+    >
+      {row ? (
+        p.visible.map(({ state, def }) => (
+          <div key={state.id} role="gridcell" className={`td align-${def.align ?? "left"}`}>
+            {def.render(row, p.ctx)}
+          </div>
+        ))
+      ) : (
+        <div className="td loading" role="gridcell" />
+      )}
+    </div>
+  );
+});
+
 export function TrackTable(props: Props) {
   const { ids, rows, onNeedRows, sort, onSortChange, selection, onSelectionChange, density, keyNotation } = props;
   const { t, i18n } = useTranslation();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [cols, setCols] = useState<ColumnState[]>(loadColumnState);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
-  const [dragCol, setDragCol] = useState<string | null>(null);
   const anchor = useRef<number | null>(null);
   const focus = useRef<number | null>(null);
   const rowHeight = density === "compact" ? 28 : 36;
@@ -64,9 +143,13 @@ export function TrackTable(props: Props) {
     const to = Math.min(ids.length, last + 60);
     const missing = ids.slice(from, to).filter((id) => !rows.has(id));
     if (missing.length) onNeedRows(missing);
-  }, [first, last, ids, rows, onNeedRows]);
+  }, [first, last, ids, rows, onNeedRows, props.rowsVersion]);
 
-  const ctx = { t, locale: i18n.language, keyNotation };
+  const ctx = useMemo(() => ({ t, locale: i18n.language, keyNotation }), [t, i18n.language, keyNotation]);
+  // Gestionnaires stables : une ligne n'est redessinée que si son contenu change.
+  const handlers = useRef({ down: (_e: MouseEvent, _i: number) => {}, activate: (_id: number) => {} });
+  const rowDown = useCallback((e: MouseEvent, i: number) => handlers.current.down(e, i), []);
+  const rowActivate = useCallback((id: number) => handlers.current.activate(id), []);
 
   // ---------- Tri ----------
   const onHeaderClick = (e: MouseEvent, field?: string) => {
@@ -100,19 +183,23 @@ export function TrackTable(props: Props) {
     window.addEventListener("mouseup", up);
   };
 
-  // ---------- Réorganisation par glisser-déposer ----------
-  const dropOn = (targetId: string) => {
-    if (!dragCol || dragCol === targetId) return;
+  // ---------- Réorganisation des colonnes par glisser-déposer ----------
+  const dropOn = (dragged: string, targetId: string) => {
+    if (dragged === targetId) return;
     setCols((cs) => {
-      const from = cs.findIndex((c) => c.id === dragCol);
+      const from = cs.findIndex((c) => c.id === dragged);
       const to = cs.findIndex((c) => c.id === targetId);
+      if (from < 0 || to < 0) return cs;
       const next = [...cs];
       const [moved] = next.splice(from, 1);
       next.splice(to, 0, moved);
       return next;
     });
-    setDragCol(null);
   };
+
+  // Glisser des morceaux (vers un dossier) : la sélection, ou la ligne saisie.
+  const selectionRef = useRef(selection);
+  selectionRef.current = selection;
 
   // ---------- Sélection ----------
   const selectIndex = useCallback(
@@ -140,8 +227,31 @@ export function TrackTable(props: Props) {
 
   const onRowClick = (e: MouseEvent, index: number) => {
     scrollRef.current?.focus({ preventScroll: true });
-    selectIndex(index, e.shiftKey ? "range" : e.ctrlKey || e.metaKey ? "toggle" : "single");
+    const id = ids[index];
+    // Un clic sur une ligne déjà sélectionnée garde la sélection (pour pouvoir la faire glisser) ;
+    // relâché sans glisser, il ne sélectionne plus que cette ligne.
+    const keep = selection.has(id) && !e.shiftKey && !e.ctrlKey && !e.metaKey && selection.size > 1;
+    if (!keep) {
+      selectIndex(index, e.shiftKey ? "range" : e.ctrlKey || e.metaKey ? "toggle" : "single");
+    }
+    if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
+      startDrag(
+        e,
+        () => {
+          const sel = selectionRef.current;
+          return { kind: "tracks", ids: sel.has(id) ? [...sel] : [id] };
+        },
+        () => {
+          const sel = selectionRef.current;
+          const n = sel.has(id) ? sel.size : 1;
+          return t("table.dragTracks", { count: n });
+        },
+        keep ? () => selectIndex(index, "single") : undefined,
+      );
+    }
   };
+
+  handlers.current = { down: onRowClick, activate: (id) => props.onActivate?.(id) };
 
   const onKeyDown = (e: KeyboardEvent) => {
     const current = focus.current ?? -1;
@@ -196,23 +306,18 @@ export function TrackTable(props: Props) {
           {visible.map(({ state, def }) => {
             const sorted = sort.find((s) => s.field === def.sortField);
             return (
-              <div
+              <HeaderCell
                 key={state.id}
-                role="columnheader"
-                aria-sort={sorted ? (sorted.desc ? "descending" : "ascending") : undefined}
-                className={`th ${def.sortField ? "sortable" : ""} align-${def.align ?? "left"} ${dragCol === state.id ? "dragging" : ""}`}
-                draggable
-                onDragStart={() => setDragCol(state.id)}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={() => dropOn(state.id)}
-                onDragEnd={() => setDragCol(null)}
-                onClick={(e) => onHeaderClick(e, def.sortField)}
+                id={state.id}
+                label={state.id === "cover" ? "" : t(`columns.${state.id}`)}
+                ariaSort={sorted ? (sorted.desc ? "descending" : "ascending") : undefined}
+                className={`th ${def.sortField ? "sortable" : ""} align-${def.align ?? "left"}`}
                 title={def.sortField ? t("table.sortHint") : undefined}
-              >
-                <span className="th-label">{state.id === "cover" ? "" : t(`columns.${state.id}`)}</span>
-                {sortIndicator(def.sortField)}
-                <span className="resize-handle" onMouseDown={(e) => startResize(e, state.id)} onClick={(e) => e.stopPropagation()} aria-hidden />
-              </div>
+                onClick={(e) => onHeaderClick(e, def.sortField)}
+                onDropColumn={(from) => dropOn(from, state.id)}
+                indicator={sortIndicator(def.sortField)}
+                onResizeStart={(e) => startResize(e, state.id)}
+              />
             );
           })}
         </div>
@@ -220,29 +325,22 @@ export function TrackTable(props: Props) {
         <div style={{ height: virtualizer.getTotalSize(), width: totalWidth, position: "relative" }}>
           {items.map((vi) => {
             const id = ids[vi.index];
-            const row = rows.get(id) ?? props.staleRows.get(id);
-            const selected = selection.has(id);
-            const cls = ["tr", selected ? "selected" : "", row && !row.online ? "offline" : "", row?.status === "missing" ? "missing" : "", vi.index % 2 ? "odd" : ""].join(" ");
             return (
-              <div
+              <Row
                 key={id}
-                role="row"
-                aria-rowindex={vi.index + 2}
-                aria-selected={selected}
-                aria-disabled={row && !row.online ? true : undefined}
-                className={cls}
-                style={{ transform: `translateY(${vi.start - headerHeight}px)`, height: rowHeight, gridTemplateColumns: template, width: totalWidth }}
-                onMouseDown={(e) => onRowClick(e, vi.index)}
-                onDoubleClick={() => props.onActivate?.(id)}
-              >
-                {row
-                  ? visible.map(({ state, def }) => (
-                      <div key={state.id} role="gridcell" className={`td align-${def.align ?? "left"}`}>
-                        {def.render(row, ctx)}
-                      </div>
-                    ))
-                  : <div className="td loading" role="gridcell" />}
-              </div>
+                id={id}
+                index={vi.index}
+                top={vi.start - headerHeight}
+                height={rowHeight}
+                row={rows.get(id) ?? props.staleRows.get(id)}
+                selected={selection.has(id)}
+                template={template}
+                width={totalWidth}
+                visible={visible}
+                ctx={ctx}
+                onDown={rowDown}
+                onActivate={rowActivate}
+              />
             );
           })}
         </div>

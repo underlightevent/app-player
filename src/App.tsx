@@ -31,6 +31,10 @@ import { LANGUAGES, setLanguage, type Language } from "./i18n";
 import { Sidebar, type ViewId } from "./components/Sidebar";
 import { TopBar, type MoreAction } from "./components/TopBar";
 import { RenameDialog } from "./components/RenameDialog";
+import { FolderTree, type FolderTarget } from "./components/FolderTree";
+import { MoveDialog, NameDialog } from "./components/FolderDialogs";
+import { Onboarding } from "./components/Onboarding";
+import { databaseExport, databaseImport, folderCreate, folderMove, reveal } from "./core/folders";
 import { CleanDialog, ParseDialog } from "./components/TagsPreviewDialog";
 import { DEFAULT_TEMPLATE, renamePreview, type CleanRules, type SavedTemplate } from "./core/rename";
 import { OtherView } from "./components/MainView";
@@ -76,9 +80,13 @@ export default function App() {
         if (isLanguage(s.language)) setLanguageState(s.language);
         if (s.table_density === "comfortable" || s.table_density === "compact") setDensity(s.table_density);
         if (s.key_notation === "camelot" || s.key_notation === "musical") setKeyNotation(s.key_notation);
+        setSettingsValues(s);
+        if (s.onboarding_done !== "true") setOnboarding(true);
       })
       .catch((e) => logMessage("warn", `get_settings : ${isCoreError(e) ? e.detail : String(e)}`));
   }, []);
+  const [settingsValues, setSettingsValues] = useState<Record<string, string>>({});
+  const [onboarding, setOnboarding] = useState(false);
 
   useEffect(() => {
     const mq = window.matchMedia?.("(prefers-color-scheme: dark)");
@@ -126,6 +134,7 @@ export default function App() {
     (key: string, value: string) => {
       if (key === "table_density") setDensity(value as "compact" | "comfortable");
       if (key === "key_notation") setKeyNotation(value as "camelot" | "musical");
+      setSettingsValues((s) => ({ ...s, [key]: value }));
       save(key, value);
     },
     [save],
@@ -357,7 +366,58 @@ export default function App() {
     { id: "swap", label: t("actions.swap"), disabled: selection.size === 0, run: () => void swapArtistTitle() },
     { id: "copy", label: t("actions.copyTags"), disabled: selection.size !== 1, run: copyTags },
     { id: "paste", label: t("actions.pasteTags"), disabled: selection.size === 0 || !copiedTags, run: () => copiedTags && void applyEdit([...selection], copiedTags) },
+    { id: "reveal", label: t("actions.reveal"), disabled: selection.size !== 1, run: () => void revealSelected() },
   ];
+
+  // ---------- Dossiers ----------
+  const [folderRevision, setFolderRevision] = useState(0);
+  const [moveRequest, setMoveRequest] = useState<{ ids: number[]; target: FolderTarget } | null>(null);
+  const [nameRequest, setNameRequest] = useState<{ title: string; initial: string; submit: (n: string) => Promise<void> } | null>(null);
+
+  async function revealSelected() {
+    const id = [...selection][0];
+    if (id == null) return;
+    await reveal({ id }).catch(() => toast.show(t("errors.offlineFile"), undefined, "error"));
+  }
+
+  const folderDone = useCallback(
+    (r: EditReport, okKey: string) => {
+      setFolderRevision((n) => n + 1);
+      reportDone(r, okKey);
+    },
+    [reportDone],
+  );
+
+  const folderTree = (
+    <FolderTree
+      roots={lib.roots}
+      current={query.folder ? { volumeId: query.folder[0], relPath: query.folder[1], name: "" } : null}
+      revision={folderRevision + revision}
+      onOpen={(f) => {
+        setQuery((q) => ({ ...q, folder: [f.volumeId, f.relPath] }));
+        setView("library");
+      }}
+      onDropTracks={(ids, f) => setMoveRequest({ ids, target: f })}
+      onCreate={(parent) =>
+        setNameRequest({
+          title: t("folders.newSubIn", { name: parent.name }),
+          initial: "",
+          submit: async (n) => folderDone(await folderCreate(parent.volumeId, parent.relPath, n), "folders.created"),
+        })
+      }
+      onRename={(f) =>
+        setNameRequest({
+          title: t("folders.renameTitle", { name: f.name }),
+          initial: f.name,
+          submit: async (n) => {
+            const parent = f.relPath.includes("/") ? f.relPath.slice(0, f.relPath.lastIndexOf("/")) : "";
+            folderDone(await folderMove(f.volumeId, f.relPath, parent ? `${parent}/${n}` : n), "folders.renamed");
+          },
+        })
+      }
+      onReveal={(f) => void reveal({ volumeId: f.volumeId, rel: f.relPath })}
+    />
+  );
 
   // Aperçu du futur nom de fichier dans le panneau de détail.
   const [futureName, setFutureName] = useState<string | null>(null);
@@ -497,6 +557,18 @@ export default function App() {
       } else if (mod && k === "r" && !e.shiftKey) {
         e.preventDefault();
         if (selection.size > 0) setDialog("rename");
+      } else if (mod && k === "r" && e.shiftKey) {
+        e.preventDefault();
+        void revealSelected();
+      } else if (e.key === "F2" && selection.size > 0) {
+        // F2 : modifier le titre du morceau sélectionné (panneau de détail).
+        e.preventDefault();
+        setDetailOpen(true);
+        window.setTimeout(() => {
+          const el = document.getElementById("f-title") as HTMLInputElement | null;
+          el?.focus();
+          el?.select();
+        }, 50);
       } else if (!mod && !e.altKey && /^[0-5]$/.test(e.key) && selection.size > 0 && view === "library") {
         e.preventDefault();
         void applyEdit([...selection], { rating: Number(e.key) });
@@ -511,7 +583,7 @@ export default function App() {
 
   return (
     <div className={`app ${platformClass} ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
-      <Sidebar current={view} onSelect={setView} collapsed={sidebarCollapsed} onToggleCollapsed={() => setSidebarCollapsed((c) => !c)} />
+      <Sidebar current={view} onSelect={setView} collapsed={sidebarCollapsed} onToggleCollapsed={() => setSidebarCollapsed((c) => !c)} tree={folderTree} />
       <TopBar
         onRename={() => setDialog("rename")}
         renameDisabled={selection.size === 0}
@@ -547,6 +619,7 @@ export default function App() {
               ids={lib.ids}
               rows={lib.rows}
               staleRows={lib.staleRows}
+              rowsVersion={lib.rowsVersion}
               needRows={lib.needRows}
               loading={lib.loading}
               roots={lib.roots}
@@ -571,6 +644,21 @@ export default function App() {
                 density,
                 keyNotation,
                 onSettingChange: changeSetting,
+                values: settingsValues,
+                onExport: async () => {
+                  try {
+                    if (await databaseExport(t("settings.export"))) toast.show(t("settings.exported"));
+                  } catch {
+                    toast.show(t("errors.internal"), undefined, "error");
+                  }
+                },
+                onImport: async () => {
+                  try {
+                    if (await databaseImport(t("settings.import"))) toast.show(t("settings.imported"));
+                  } catch (e) {
+                    toast.show(isCoreError(e) ? t(`errors.${e.code}`, { defaultValue: e.detail }) : t("errors.internal"), undefined, "error");
+                  }
+                },
                 version: status?.version ?? "",
                 onToast: toast.show,
               }}
@@ -650,6 +738,23 @@ export default function App() {
         onSeek={(ms) => playerCommand("seek", ms)}
         onVolume={(v) => playerCommand("volume", v)}
       />
+      {moreActions.length > 0 && moveRequest && (
+        <MoveDialog ids={moveRequest.ids} target={moveRequest.target} onClose={() => setMoveRequest(null)} onDone={(r) => folderDone(r, "move.done")} />
+      )}
+      {nameRequest && <NameDialog title={nameRequest.title} initial={nameRequest.initial} onClose={() => setNameRequest(null)} onSubmit={nameRequest.submit} />}
+      {onboarding && (
+        <Onboarding
+          theme={theme}
+          onThemeChange={changeTheme}
+          language={language}
+          onLanguageChange={changeLanguage}
+          onFinish={() => {
+            setOnboarding(false);
+            changeSetting("onboarding_done", "true");
+            void lib.refresh();
+          }}
+        />
+      )}
       <Toast toast={toast.toast} onHide={toast.hide} />
     </div>
   );

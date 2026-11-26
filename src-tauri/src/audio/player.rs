@@ -136,10 +136,6 @@ impl PlayerHandle {
     pub fn snapshot(&self) -> PlayerState {
         self.state.lock().map(|s| s.clone()).unwrap_or_default()
     }
-    /// Identifiant du morceau en cours (pour différer une écriture si besoin).
-    pub fn current_track(&self) -> Option<i64> {
-        self.state.lock().ok().and_then(|s| s.track_id)
-    }
 }
 
 fn run(rx: Receiver<Cmd>, state: Arc<Mutex<PlayerState>>, app: Option<AppHandle>) {

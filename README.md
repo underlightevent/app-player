@@ -2,7 +2,9 @@
 
 Application de bureau (Windows et macOS) pour organiser une bibliothèque audio de DJ : tags, pochettes, noms de fichiers, notes, doublons, écoute et dossiers. Nom provisoire.
 
-> **État actuel : Phase 0 (fondations).** La fenêtre, les thèmes clair/sombre, les langues français/anglais et les réglages fonctionnent. La gestion de la musique arrive en Phase 1. Cette version **ne lit et ne modifie aucun fichier audio**.
+> **État actuel : Phase 1 (bibliothèque et édition hors connexion), version 0.2.0 à valider.** L'application indexe votre musique, modifie les tags et les pochettes, renomme les fichiers, gère les dossiers et lit les morceaux. Tout fonctionne sans internet ; la recherche en ligne arrive en phase 2.
+>
+> **Testez d'abord sur une copie de quelques dizaines de morceaux, jamais sur votre vraie bibliothèque, tant que la phase n'est pas validée.** Mode d'emploi complet : [docs/GUIDE_UTILISATEUR.md](docs/GUIDE_UTILISATEUR.md).
 
 Le cahier des charges complet est dans [docs/CAHIER_DES_CHARGES.md](docs/CAHIER_DES_CHARGES.md).
 

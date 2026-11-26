@@ -5,7 +5,8 @@
   "common": {
     "cancel": "Cancel",
     "undo": "Undo",
-    "close": "Close"
+    "close": "Close",
+    "ok": "OK"
   },
   "nav": {
     "library": "Library",
@@ -89,13 +90,17 @@
     "noResults": "No matching tracks",
     "noResultsHint": "Try another search or clear the filters.",
     "folderAdded": "Folder added: indexing in progress",
-    "notAFolder": "This is not an accessible folder."
+    "notAFolder": "This is not an accessible folder.",
+    "folderFilter": "Folder: {{name}}",
+    "clearFolder": "Show the whole library"
   },
   "table": {
     "label": "Tracks",
     "sortHint": "Click to sort; Shift + click to sort on several columns",
     "columnsMenu": "Visible columns",
-    "resetColumns": "Reset to default columns"
+    "resetColumns": "Reset to default columns",
+    "dragTracks_one": "{{count}} track",
+    "dragTracks_other": "{{count}} tracks"
   },
   "columns": {
     "cover": "Artwork",
@@ -183,7 +188,17 @@
     "remove": "Remove from library",
     "removeTitle": "Remove this folder?",
     "removeText": "“{{path}}” will no longer be followed by the application. No file is deleted or moved on the drive.",
-    "removed": "Folder removed from the library"
+    "removed": "Folder removed from the library",
+    "expand": "Expand",
+    "collapse": "Collapse",
+    "newSub": "New subfolder",
+    "newSubIn": "New folder in “{{name}}”",
+    "rename": "Rename folder",
+    "renameTitle": "Rename “{{name}}”",
+    "created_one": "Folder created",
+    "created_other": "Folder created",
+    "renamed_one": "Folder renamed",
+    "renamed_other": "Folder renamed"
   },
   "tasks": {
     "title": "Running tasks",
@@ -238,7 +253,20 @@
     "diagnosticCopy": "Copy diagnostic report",
     "diagnosticCopied": "Report copied to the clipboard",
     "diagnosticFailed": "Could not copy the report",
-    "about": "Version {{version}}"
+    "about": "Version {{version}}",
+    "writing": "Tag writing",
+    "writingHint": "How the application writes information into your files.",
+    "versionInTitle": "Write the version in the title: “Title (Extended Mix)” (recommended for Rekordbox and WAV)",
+    "bpmDecimals": "Keep BPM decimals (otherwise rounded)",
+    "singleCover": "Only one artwork per file (recommended)",
+    "artistSeparator": "Artist separator",
+    "coverSize": "Artwork size",
+    "database": "Database",
+    "databaseHint": "A copy is made automatically every day (the last 7 are kept). You can also export it, or import a copy: it will replace the current one at the next start, after a backup.",
+    "export": "Export the database…",
+    "import": "Import a database…",
+    "exported": "Database exported",
+    "imported": "Database checked: it will be put in place at the next start of the application"
   },
   "languages": {
     "fr": "Français",
@@ -252,14 +280,19 @@
     "io": "The application data folder is not accessible. Check that the computer's disk has free space.",
     "invalid_setting": "This setting could not be saved.",
     "internal": "Internal error. Restart the application; if the problem comes back, copy the diagnostic report.",
-    "settingNotSaved": "The setting could not be saved."
+    "settingNotSaved": "The setting could not be saved.",
+    "offlineFile": "File not found or drive disconnected.",
+    "offline": "The drive is disconnected."
   },
   "history": {
     "editTags": "the tag change",
     "rename": "the renaming",
     "clean": "the clean-up",
     "parseFilename": "reading file names",
-    "swap": "the artist / title swap"
+    "swap": "the artist / title swap",
+    "mkdir": "the folder creation",
+    "moveDir": "the folder move",
+    "moveTracks": "the track move"
   },
   "edit": {
     "saved_one": "Track updated",
@@ -295,14 +328,18 @@
     "rename_empty": "a field needed for the name is empty.",
     "rename_offline": "the drive is disconnected.",
     "rename_missing": "the file cannot be found.",
-    "rename_io": "the file could not be renamed; it stayed where it was."
+    "rename_io": "the file could not be renamed; it stayed where it was.",
+    "move_conflict": "a file with the same name already exists in this folder.",
+    "move_offline": "the drive is disconnected.",
+    "move_other_disk": "moving between two drives is not possible yet."
   },
   "actions": {
     "clean": "Clean up tags…",
     "parse": "Tags from file name…",
     "swap": "Swap artist and title",
     "copyTags": "Copy tags",
-    "pasteTags": "Paste tags"
+    "pasteTags": "Paste tags",
+    "reveal": "Show in Explorer or Finder"
   },
   "rename": {
     "title_one": "Rename {{count}} file",
@@ -382,5 +419,47 @@
     "pattern": "File name pattern",
     "hint": "{piste} stands for a track number, which is ignored. The name is read without its extension; “_” counts as a space.",
     "overwrite": "Also replace existing values (otherwise only empty fields are filled)"
+  },
+  "move": {
+    "title_one": "Move {{count}} track to “{{folder}}”",
+    "title_other": "Move {{count}} tracks to “{{folder}}”",
+    "hint": "The files change folder on the drive. Nothing is overwritten: a file with the same name already there is reported and skipped.",
+    "problems_one": "{{count}} track will not be moved (see the list).",
+    "problems_other": "{{count}} tracks will not be moved (see the list).",
+    "apply_one": "Move {{count}} track",
+    "apply_other": "Move {{count}} tracks",
+    "done_one": "{{count}} track moved",
+    "done_other": "{{count}} tracks moved",
+    "status": {
+      "ok": "to move",
+      "same": "already in this folder",
+      "conflict": "name already taken",
+      "offline": "drive disconnected",
+      "other_disk": "other drive"
+    }
+  },
+  "onboarding": {
+    "welcome": "Welcome",
+    "welcomeText": "A few settings before you start. Everything can be changed later in Settings.",
+    "foldersTitle": "Your music folders",
+    "foldersText": "Choose the folder where your music lives. If it is on an external drive, plug it in now.",
+    "library": "Library",
+    "libraryHint": "Main folder of your music.",
+    "inbox": "Incoming folder (optional)",
+    "inboxHint": "For example your Beatport or Bandcamp downloads folder. It will be processed in phase 2.",
+    "inboxPick": "Choose the incoming folder",
+    "choose": "Choose…",
+    "change": "Change",
+    "exfat": "Tip: for a drive used on both Windows and Mac, the exFAT format is the most convenient.",
+    "onlineTitle": "Online search and Rekordbox",
+    "online": "Online search",
+    "onlineText": "From phase 2, the application will be able to complete your tags and artwork from MusicBrainz, Deezer and iTunes. A free AcoustID key (optional) will recognise badly named tracks. Nothing is sent without your consent.",
+    "rekordboxTitle": "Tips with Rekordbox",
+    "tip1": "Organise and rename your tracks here before importing them into Rekordbox: they will never have broken links there.",
+    "tip2": "After changing tags, use “Reload Tag” in Rekordbox so it reads the files again.",
+    "tip3": "For WAV files, Rekordbox reads title, artist, album and genre, but not the artwork.",
+    "back": "Back",
+    "next": "Next",
+    "finish": "Get started"
   }
 }

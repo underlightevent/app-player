@@ -15,14 +15,16 @@ import { logMessage } from "./api";
 /**
  * Données du tableau : liste ordonnée des identifiants, lignes chargées à la demande,
  * rafraîchissement automatique quand le cœur signale un changement.
+ *
+ * Les lignes sont rangées dans une table qui n'est jamais recopiée (100 000 morceaux) ;
+ * un compteur `rowsVersion` signale à l'affichage qu'elle a changé.
  */
 export function useLibrary(query: LibraryQuery) {
   const [ids, setIds] = useState<number[]>([]);
-  const [rows, setRows] = useState<Map<number, TrackRow>>(new Map());
+  const rowsRef = useRef(new Map<number, TrackRow>());
   // Lignes de la version précédente, affichées le temps que les nouvelles arrivent (pas de clignotement).
-  const [staleRows, setStaleRows] = useState<Map<number, TrackRow>>(new Map());
-  const rowsRef = useRef(rows);
-  rowsRef.current = rows;
+  const staleRef = useRef(new Map<number, TrackRow>());
+  const [rowsVersion, setRowsVersion] = useState(0);
   const [loading, setLoading] = useState(true);
   const [roots, setRoots] = useState<RootInfo[]>([]);
   const [volumes, setVolumes] = useState<VolumeStatus[]>([]);
@@ -36,13 +38,14 @@ export function useLibrary(query: LibraryQuery) {
     try {
       const [list, r, v] = await Promise.all([libraryQuery(queryRef.current), libraryRoots(), libraryVolumes()]);
       if (gen !== generation.current) return; // une requête plus récente a été lancée
+      // Les lignes connues restent affichées, mais seront relues.
+      inflight.current.clear();
+      if (rowsRef.current.size) staleRef.current = rowsRef.current;
+      rowsRef.current = new Map();
       setIds(list);
       setRoots(r);
       setVolumes(v);
-      // Les lignes connues restent affichées, mais seront relues.
-      inflight.current.clear();
-      setStaleRows((old) => (rowsRef.current.size ? rowsRef.current : old));
-      setRows(new Map());
+      setRowsVersion((n) => n + 1);
     } catch (e) {
       logMessage("error", `Bibliothèque : ${JSON.stringify(e)}`);
     } finally {
@@ -82,11 +85,8 @@ export function useLibrary(query: LibraryQuery) {
       for (let i = 0; i < todo.length; i += 400) {
         const chunk = await libraryRows(todo.slice(i, i + 400));
         if (gen !== generation.current) return;
-        setRows((prev) => {
-          const next = new Map(prev);
-          for (const r of chunk) next.set(r.id, r);
-          return next;
-        });
+        for (const r of chunk) rowsRef.current.set(r.id, r);
+        setRowsVersion((n) => n + 1);
       }
     } catch (e) {
       todo.forEach((id) => inflight.current.delete(id));
@@ -94,5 +94,5 @@ export function useLibrary(query: LibraryQuery) {
     }
   }, []);
 
-  return { ids, rows, staleRows, needRows, refresh, loading, roots, volumes };
+  return { ids, rows: rowsRef.current, staleRows: staleRef.current, rowsVersion, needRows, refresh, loading, roots, volumes };
 }

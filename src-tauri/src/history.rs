@@ -41,6 +41,7 @@ pub struct BatchInfo {
 
 #[derive(Debug, Clone)]
 pub struct OpRow {
+    #[allow(dead_code)] // gardé pour le journal et les diagnostics
     pub id: i64,
     pub kind: String,
     pub track_id: Option<i64>,

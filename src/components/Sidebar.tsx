@@ -50,9 +50,11 @@ interface Props {
   onSelect: (v: ViewId) => void;
   collapsed: boolean;
   onToggleCollapsed: () => void;
+  /** Arborescence des dossiers, affichée sous « Dossiers ». */
+  tree?: React.ReactNode;
 }
 
-export function Sidebar({ current, onSelect, collapsed, onToggleCollapsed }: Props) {
+export function Sidebar({ current, onSelect, collapsed, onToggleCollapsed, tree }: Props) {
   const { t } = useTranslation();
 
   const item = ({ id, icon: Icon }: NavEntry) => (
@@ -92,6 +94,7 @@ export function Sidebar({ current, onSelect, collapsed, onToggleCollapsed }: Pro
       <div className="sidebar-section">
         <div className="sidebar-section-title">{t("nav.sectionTools")}</div>
         {TOOLS.map(item)}
+        {!collapsed && tree}
       </div>
 
       <div className="sidebar-footer">{item({ id: "settings", icon: Settings })}</div>

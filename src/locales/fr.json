@@ -5,7 +5,8 @@
   "common": {
     "cancel": "Annuler",
     "undo": "Annuler",
-    "close": "Fermer"
+    "close": "Fermer",
+    "ok": "Valider"
   },
   "nav": {
     "library": "Bibliothèque",
@@ -89,13 +90,17 @@
     "noResults": "Aucun morceau ne correspond",
     "noResultsHint": "Essayez une autre recherche ou effacez les filtres.",
     "folderAdded": "Dossier ajouté : indexation en cours",
-    "notAFolder": "Ce n'est pas un dossier accessible."
+    "notAFolder": "Ce n'est pas un dossier accessible.",
+    "folderFilter": "Dossier : {{name}}",
+    "clearFolder": "Afficher toute la bibliothèque"
   },
   "table": {
     "label": "Morceaux",
     "sortHint": "Cliquez pour trier ; Maj + clic pour trier sur plusieurs colonnes",
     "columnsMenu": "Colonnes affichées",
-    "resetColumns": "Rétablir les colonnes par défaut"
+    "resetColumns": "Rétablir les colonnes par défaut",
+    "dragTracks_one": "{{count}} morceau",
+    "dragTracks_other": "{{count}} morceaux"
   },
   "columns": {
     "cover": "Pochette",
@@ -183,7 +188,17 @@
     "remove": "Retirer de la bibliothèque",
     "removeTitle": "Retirer ce dossier ?",
     "removeText": "« {{path}} » ne sera plus suivi par l'application. Aucun fichier n'est supprimé ni déplacé sur le disque.",
-    "removed": "Dossier retiré de la bibliothèque"
+    "removed": "Dossier retiré de la bibliothèque",
+    "expand": "Déplier",
+    "collapse": "Replier",
+    "newSub": "Nouveau sous-dossier",
+    "newSubIn": "Nouveau dossier dans « {{name}} »",
+    "rename": "Renommer le dossier",
+    "renameTitle": "Renommer « {{name}} »",
+    "created_one": "Dossier créé",
+    "created_other": "Dossier créé",
+    "renamed_one": "Dossier renommé",
+    "renamed_other": "Dossier renommé"
   },
   "tasks": {
     "title": "Tâches en cours",
@@ -238,7 +253,20 @@
     "diagnosticCopy": "Copier le rapport de diagnostic",
     "diagnosticCopied": "Rapport copié dans le presse-papiers",
     "diagnosticFailed": "Impossible de copier le rapport",
-    "about": "Version {{version}}"
+    "about": "Version {{version}}",
+    "writing": "Écriture des tags",
+    "writingHint": "Comment l'application écrit les informations dans vos fichiers.",
+    "versionInTitle": "Écrire la version dans le titre : « Titre (Extended Mix) » (recommandé pour Rekordbox et les WAV)",
+    "bpmDecimals": "Garder les décimales du BPM (sinon arrondi à l'entier)",
+    "singleCover": "Une seule pochette par fichier (recommandé)",
+    "artistSeparator": "Séparateur des artistes",
+    "coverSize": "Taille des pochettes",
+    "database": "Base de données",
+    "databaseHint": "Une copie est faite automatiquement chaque jour (les 7 dernières sont gardées). Vous pouvez aussi l'exporter, ou importer une copie : elle remplacera l'actuelle au prochain démarrage, après une sauvegarde.",
+    "export": "Exporter la base…",
+    "import": "Importer une base…",
+    "exported": "Base exportée",
+    "imported": "Base vérifiée : elle sera mise en place au prochain démarrage de l'application"
   },
   "languages": {
     "fr": "Français",
@@ -252,14 +280,19 @@
     "io": "Le dossier de données de l'application n'est pas accessible. Vérifiez qu'il reste de la place sur le disque de l'ordinateur.",
     "invalid_setting": "Ce réglage n'a pas pu être enregistré.",
     "internal": "Erreur interne. Redémarrez l'application ; si le problème revient, copiez le rapport de diagnostic.",
-    "settingNotSaved": "Le réglage n'a pas pu être enregistré."
+    "settingNotSaved": "Le réglage n'a pas pu être enregistré.",
+    "offlineFile": "Fichier introuvable ou disque déconnecté.",
+    "offline": "Le disque est déconnecté."
   },
   "history": {
     "editTags": "la modification des tags",
     "rename": "le renommage",
     "clean": "le nettoyage",
     "parseFilename": "la lecture des noms de fichier",
-    "swap": "l'échange artiste / titre"
+    "swap": "l'échange artiste / titre",
+    "mkdir": "la création du dossier",
+    "moveDir": "le déplacement du dossier",
+    "moveTracks": "le déplacement des morceaux"
   },
   "edit": {
     "saved_one": "Morceau modifié",
@@ -295,14 +328,18 @@
     "rename_empty": "un champ nécessaire au nom est vide.",
     "rename_offline": "le disque est déconnecté.",
     "rename_missing": "le fichier est introuvable.",
-    "rename_io": "le fichier n'a pas pu être renommé ; il est resté à sa place."
+    "rename_io": "le fichier n'a pas pu être renommé ; il est resté à sa place.",
+    "move_conflict": "un fichier du même nom existe déjà dans ce dossier.",
+    "move_offline": "le disque est déconnecté.",
+    "move_other_disk": "le déplacement entre deux disques n'est pas encore possible."
   },
   "actions": {
     "clean": "Nettoyer les tags…",
     "parse": "Tags depuis le nom de fichier…",
     "swap": "Échanger artiste et titre",
     "copyTags": "Copier les tags",
-    "pasteTags": "Coller les tags"
+    "pasteTags": "Coller les tags",
+    "reveal": "Afficher dans l'Explorateur ou le Finder"
   },
   "rename": {
     "title_one": "Renommer {{count}} fichier",
@@ -382,5 +419,47 @@
     "pattern": "Forme des noms de fichier",
     "hint": "{piste} représente un numéro de piste, ignoré. Le nom est lu sans son extension ; les « _ » comptent comme des espaces.",
     "overwrite": "Remplacer aussi les valeurs déjà présentes (sinon, seuls les champs vides sont remplis)"
+  },
+  "move": {
+    "title_one": "Déplacer {{count}} morceau vers « {{folder}} »",
+    "title_other": "Déplacer {{count}} morceaux vers « {{folder}} »",
+    "hint": "Les fichiers changent de dossier sur le disque. Rien n'est écrasé : un fichier du même nom déjà présent est signalé et laissé de côté.",
+    "problems_one": "{{count}} morceau ne sera pas déplacé (voir la liste).",
+    "problems_other": "{{count}} morceaux ne seront pas déplacés (voir la liste).",
+    "apply_one": "Déplacer {{count}} morceau",
+    "apply_other": "Déplacer {{count}} morceaux",
+    "done_one": "{{count}} morceau déplacé",
+    "done_other": "{{count}} morceaux déplacés",
+    "status": {
+      "ok": "à déplacer",
+      "same": "déjà dans ce dossier",
+      "conflict": "nom déjà pris",
+      "offline": "disque déconnecté",
+      "other_disk": "autre disque"
+    }
+  },
+  "onboarding": {
+    "welcome": "Bienvenue",
+    "welcomeText": "Quelques réglages avant de commencer. Tout reste modifiable dans Réglages.",
+    "foldersTitle": "Vos dossiers de musique",
+    "foldersText": "Choisissez le dossier où se trouve votre musique. Si elle est sur un disque externe, branchez-le maintenant.",
+    "library": "Bibliothèque",
+    "libraryHint": "Dossier principal de votre musique.",
+    "inbox": "Dossier d'arrivée (facultatif)",
+    "inboxHint": "Par exemple celui de vos téléchargements Beatport ou Bandcamp. Il sera traité en phase 2.",
+    "inboxPick": "Choisir le dossier d'arrivée",
+    "choose": "Choisir…",
+    "change": "Changer",
+    "exfat": "Conseil : pour un disque utilisé à la fois sur Windows et sur Mac, le format exFAT est le plus pratique.",
+    "onlineTitle": "Recherche en ligne et Rekordbox",
+    "online": "Recherche en ligne",
+    "onlineText": "À partir de la phase 2, l'application pourra compléter vos tags et pochettes depuis MusicBrainz, Deezer et iTunes. Une clé AcoustID gratuite (facultative) permettra de reconnaître les morceaux mal nommés. Rien n'est envoyé sans votre accord.",
+    "rekordboxTitle": "Conseils avec Rekordbox",
+    "tip1": "Rangez et renommez vos morceaux ici avant de les importer dans Rekordbox : ils n'y auront jamais de lien cassé.",
+    "tip2": "Après une modification de tags, utilisez « Reload Tag » dans Rekordbox pour qu'il relise les fichiers.",
+    "tip3": "Pour les WAV, Rekordbox lit le titre, l'artiste, l'album et le genre, mais pas la pochette.",
+    "back": "Retour",
+    "next": "Suivant",
+    "finish": "Commencer"
   }
 }

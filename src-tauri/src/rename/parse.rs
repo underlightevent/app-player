@@ -7,6 +7,8 @@ use super::template::VARIABLES;
 use crate::tags::text::{normalize_key, split_artists, split_title_version};
 use crate::tags::TrackTags;
 
+/// Modèles proposés (les mêmes sont affichés par l'interface).
+#[cfg_attr(not(test), allow(dead_code))]
 pub const PRESETS: &[&str] = &["{artistes} - {titre}", "{piste}. {artistes} - {titre}", "{piste} - {artistes} - {titre}", "{titre}"];
 
 #[derive(Debug, thiserror::Error, PartialEq)]

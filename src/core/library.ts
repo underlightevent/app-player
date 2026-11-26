@@ -18,6 +18,8 @@ export interface LibraryQuery {
   minRating: number;
   status: string | null;
   rootId: number | null;
+  /** Dossier : [disque, chemin relatif] — ses morceaux et ceux de ses sous-dossiers. */
+  folder: [number, string] | null;
   sort: SortKey[];
 }
 
@@ -28,6 +30,7 @@ export const emptyQuery: LibraryQuery = {
   minRating: 0,
   status: null,
   rootId: null,
+  folder: null,
   sort: [],
 };
 
@@ -94,8 +97,9 @@ export interface TaskInfo {
   started_ms: number;
 }
 
-// ---------- Aperçu navigateur : données fictives ----------
-const previewRows: TrackRow[] = Array.from({ length: 2000 }, (_, i) => ({
+// ---------- Aperçu navigateur : données fictives (?rows=100000 pour le test de défilement) ----------
+const previewCount = typeof location !== "undefined" ? Number(new URLSearchParams(location.search).get("rows")) || 2000 : 2000;
+const previewRows: TrackRow[] = Array.from({ length: previewCount }, (_, i) => ({
   id: i + 1,
   title: `Morceau ${i + 1}`,
   version: i % 3 === 0 ? "Extended Mix" : i % 3 === 1 ? "Original Mix" : null,

@@ -108,3 +108,28 @@ Une saisie manuelle verrouille les champs modifiés (pas la pochette). Les modif
 
 ### D-117 · Pochettes en phase 1
 Image décodée (JPEG, PNG, WebP, GIF, BMP), recadrée au carré si l'écart est de 10 % au plus, réduite à 1000 pixels (réglable), jamais agrandie, enregistrée en JPEG qualité 85 (abaissée si le fichier dépasse 1 Mo). Une image nettement rectangulaire est gardée entière : l'éditeur de recadrage arrive en phase 2.
+
+### D-118 · Renommage
+Modèle par défaut `{artiste_principal} - {titre}[ ({version})]`. Les variables portent des noms français (`{annee}`, `{tonalite}`…). L'aperçu est recalculé par le cœur au moment d'appliquer : l'application ne fait jamais confiance à un aperçu ancien. Un fichier n'est **jamais écrasé** : un nom déjà pris est signalé (option « ajouter (2) » ou « ne pas renommer »). Les échanges de noms (A ↔ B) passent par un nom temporaire caché. Comparaison des noms insensible à la casse et aux accents décomposés (NFC). Table de remplacement des caractères interdits : `:` → « - », `/` et `\` et `|` → « - », `"` → « ' », `?` `*` `<` `>` retirés (réglable plus tard, pas d'écran en phase 1).
+
+### D-119 · Nettoyage et lecture des noms de fichier
+Ces actions sont « semi-automatiques » : elles passent toujours par un aperçu, respectent les champs verrouillés et ne verrouillent rien. Les règles et le modèle choisis sont retenus dans les réglages.
+
+### D-120 · Lecteur
+Décodage par Symphonia (déjà utilisé pour les hash), sortie son par rodio/cpal, dans un fil dédié ; l'interface reçoit l'état 5 fois par seconde. La sortie son n'est ouverte qu'à la première lecture. Forme d'onde : 1 000 colonnes calculées à la première écoute puis gardées en base (invalidées si la taille ou la date du fichier change). Le calcul dès l'indexation, prévu en option par le cahier des charges, n'est pas encore proposé (voir IDEES).
+**Écriture pendant la lecture** : le cahier des charges prévoyait de différer l'écriture. Test fait sous Windows (et vrai sous macOS par construction) : le remplacement atomique réussit même quand le lecteur a le fichier ouvert, et la lecture continue sans coupure sur l'ancienne version. Aucun report n'est donc nécessaire ; si un autre programme verrouille le fichier, l'erreur « fichier utilisé par un autre programme » s'affiche et l'original reste intact.
+
+### D-121 · Glisser-déposer interne
+Sous Windows, Tauri intercepte le glisser-déposer du système pour recevoir les fichiers venus de l'Explorateur, ce qui désactive le glisser-déposer HTML5 dans la fenêtre. Les déplacements internes (morceaux vers un dossier, ordre des colonnes, ordre des artistes) utilisent donc un petit module maison basé sur la souris (`src/core/dnd.ts`). Les fichiers venus de l'Explorateur ou du Finder restent gérés par Tauri : images → pochette de la sélection, dossiers → ajoutés à la bibliothèque.
+
+### D-122 · Dossiers
+L'arborescence est lue sur le disque quand il est branché, sinon reconstituée depuis la base. Créer, renommer et déplacer un dossier, ou y déplacer des morceaux, est inscrit dans l'historique et s'annule. Annuler une création ne supprime qu'un dossier resté vide. Le déplacement entre deux disques différents n'est pas proposé en phase 1 (il faudrait copier puis supprimer). La « fusion » de dossiers se fait en glissant les morceaux d'un dossier vers l'autre.
+
+### D-123 · Sauvegardes de la base
+Une copie par jour au démarrage (`backups/library-AAAA-MM-JJ.sqlite`, 7 gardées). Export par `VACUUM INTO` vers le fichier choisi. Import : le fichier est vérifié (base de l'application, version compatible), puis mis en place **au démarrage suivant**, après une copie de la base actuelle (`backups/avant-import-….sqlite`) — remplacer une base ouverte serait risqué.
+
+### D-124 · Performance du tableau
+Les lignes chargées sont gardées dans une table jamais recopiée ; chaque ligne est un composant mémorisé ; étoiles et vignette de pochette sont dessinées en texte et CSS plutôt qu'en icônes. Mesure sur 100 000 morceaux simulés : défilement à la molette à 60 images par seconde (16,7 ms par image) ; traversée complète de la liste en 4 secondes avec la barre de défilement : environ 30 images par seconde.
+
+### D-125 · Édition dans le tableau
+Le cahier des charges prévoit l'édition sur place dans les cellules (clic ou F2). En phase 1, F2 ouvre le panneau de détail sur le champ Titre du morceau sélectionné ; Tab passe au champ suivant, Entrée valide, Échap annule. L'édition directement dans la cellule est notée dans IDEES.

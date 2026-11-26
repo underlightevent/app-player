@@ -2,6 +2,7 @@
 //! surveillance des changements faits en dehors de l'application.
 
 pub mod edit;
+pub mod folders;
 pub mod index;
 pub mod query;
 pub mod volumes;

@@ -311,6 +311,10 @@ impl Library {
                     self.restore_tags(&conn, op.track_id.unwrap_or_default(), &state)
                 }
                 "move" => self.restore_path(&conn, op.track_id.unwrap_or_default(), state_json),
+                "mkdir" | "dir_move" => {
+                    let other = if undo { &op.after } else { &op.before };
+                    self.restore_dir(&conn, &op.kind, state_json, other)
+                }
                 _ => Ok(()),
             };
             match result {

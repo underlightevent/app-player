@@ -256,6 +256,7 @@ pub fn stars_to_popm(stars: u8) -> u8 {
 }
 
 /// POPM (0–255) vers étoiles, avec des plages pour accepter les autres logiciels.
+#[cfg_attr(not(test), allow(dead_code))]
 pub fn popm_to_stars(v: u8) -> u8 {
     match v {
         0 => 0,

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { TFunction } from "i18next";
-import { AlertTriangle, FileAudio, ImageOff, Lock, Star, Unplug } from "lucide-react";
+import { AlertTriangle, Lock, Unplug } from "lucide-react";
 import type { TrackRow } from "../../core/library";
 import { formatBpm, formatDuration, formatKey, formatQuality, isLowBitrate } from "../../core/format";
 
@@ -21,12 +21,12 @@ export interface RenderCtx {
   keyNotation: "camelot" | "musical";
 }
 
+/** Étoiles en caractères (bien plus léger que des icônes pour des milliers de lignes). */
 export function Stars({ value }: { value: number }) {
   return (
-    <span className="stars" aria-label={`${value}/5`}>
-      {[1, 2, 3, 4, 5].map((n) => (
-        <Star key={n} size={12} className={n <= value ? "star on" : "star"} aria-hidden />
-      ))}
+    <span className="stars-text" aria-label={`${value}/5`}>
+      <span className="on">{"★".repeat(value)}</span>
+      <span className="off">{"★".repeat(5 - value)}</span>
     </span>
   );
 }
@@ -52,9 +52,9 @@ export const COLUMNS: ColumnDef[] = [
     defaultVisible: true,
     render: (r, { t }) =>
       r.coverCount > 0 ? (
-        <span className="cover-thumb" aria-label={t("columns.cover")}><FileAudio size={16} aria-hidden /></span>
+        <span className="cover-dot" aria-label={t("columns.cover")} />
       ) : (
-        <span className="cover-thumb missing" title={t("badges.noCover")}><ImageOff size={16} aria-hidden /></span>
+        <span className="cover-dot missing" title={t("badges.noCover")} aria-label={t("badges.noCover")} />
       ),
   },
   { id: "rating", sortField: "rating", width: 84, defaultVisible: true, render: (r) => <Stars value={r.rating} /> },

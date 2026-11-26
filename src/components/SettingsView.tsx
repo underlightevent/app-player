@@ -13,6 +13,10 @@ export interface SettingsProps {
   density: "compact" | "comfortable";
   keyNotation: "camelot" | "musical";
   onSettingChange: (key: string, value: string) => void;
+  /** Valeurs brutes des réglages (écriture des tags…). */
+  values: Record<string, string>;
+  onExport: () => Promise<void>;
+  onImport: () => Promise<void>;
   version: string;
   onToast: (msg: string) => void;
 }
@@ -119,6 +123,52 @@ export function SettingsView(p: SettingsProps) {
             { id: "musical", label: t("settings.keyMusical") },
           ]}
         />
+      </section>
+
+      <section>
+        <h2>{t("settings.writing")}</h2>
+        <p className="hint">{t("settings.writingHint")}</p>
+        <div className="checks">
+          <label>
+            <input type="checkbox" checked={p.values.version_in_title !== "false"} onChange={(e) => p.onSettingChange("version_in_title", String(e.target.checked))} />
+            {t("settings.versionInTitle")}
+          </label>
+          <label>
+            <input type="checkbox" checked={p.values.bpm_decimals === "true"} onChange={(e) => p.onSettingChange("bpm_decimals", String(e.target.checked))} />
+            {t("settings.bpmDecimals")}
+          </label>
+          <label>
+            <input type="checkbox" checked={p.values.single_cover !== "false"} onChange={(e) => p.onSettingChange("single_cover", String(e.target.checked))} />
+            {t("settings.singleCover")}
+          </label>
+        </div>
+        <h3 className="form-label">{t("settings.artistSeparator")}</h3>
+        <Segmented
+          label={t("settings.artistSeparator")}
+          value={(p.values.artist_separator ?? "comma") as "comma" | "ampersand" | "semicolon"}
+          onChange={(v) => p.onSettingChange("artist_separator", v)}
+          options={[
+            { id: "comma", label: "A, B" },
+            { id: "ampersand", label: "A & B" },
+            { id: "semicolon", label: "A; B" },
+          ]}
+        />
+        <h3 className="form-label">{t("settings.coverSize")}</h3>
+        <Segmented
+          label={t("settings.coverSize")}
+          value={(p.values.cover_size ?? "1000") as "500" | "600" | "1000" | "1400"}
+          onChange={(v) => p.onSettingChange("cover_size", v)}
+          options={["500", "600", "1000", "1400"].map((s) => ({ id: s as "500", label: `${s} px` }))}
+        />
+      </section>
+
+      <section>
+        <h2>{t("settings.database")}</h2>
+        <p className="hint">{t("settings.databaseHint")}</p>
+        <div className="folder-actions">
+          <button className="btn" onClick={() => void p.onExport()}>{t("settings.export")}</button>
+          <button className="btn" onClick={() => void p.onImport()}>{t("settings.import")}</button>
+        </div>
       </section>
 
       <section>
