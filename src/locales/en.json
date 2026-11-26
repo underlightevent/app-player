@@ -1,0 +1,109 @@
+{
+  "app": {
+    "name": "DJ Library Manager"
+  },
+  "nav": {
+    "library": "Library",
+    "inbox": "Inbox",
+    "review": "To review",
+    "duplicates": "Duplicates",
+    "health": "Library health",
+    "quarantine": "Quarantine",
+    "playlists": "Playlists and filters",
+    "folders": "Folders",
+    "settings": "Settings",
+    "collapse": "Collapse sidebar",
+    "expand": "Expand sidebar",
+    "sectionCollection": "Collection",
+    "sectionTools": "Tools"
+  },
+  "topbar": {
+    "searchPlaceholder": "Search the library",
+    "searchOnline": "Search online",
+    "rename": "Rename",
+    "online": "Online",
+    "offline": "Offline",
+    "tasks": "Running tasks",
+    "toggleDetail": "Show or hide the detail panel",
+    "themeToLight": "Switch to light theme",
+    "themeToDark": "Switch to dark theme"
+  },
+  "views": {
+    "library": {
+      "title": "Your library is empty",
+      "text": "Add the folder where your music lives, for example on your external drive.",
+      "action": "Add a folder"
+    },
+    "inbox": {
+      "title": "Inbox",
+      "text": "New tracks dropped into your incoming folder will appear here."
+    },
+    "review": {
+      "title": "All up to date",
+      "text": "Tracks with uncertain online information will appear here."
+    },
+    "duplicates": {
+      "title": "Duplicates",
+      "text": "Copies of the same track will be grouped here, with the best version suggested."
+    },
+    "health": {
+      "title": "Library health",
+      "text": "Missing artwork, unreadable files, non-matching names: everything will be counted here."
+    },
+    "quarantine": {
+      "title": "Quarantine is empty",
+      "text": "Set-aside files will be kept here and can be restored in one click."
+    },
+    "playlists": {
+      "title": "Playlists and filters",
+      "text": "Your playlists and smart filters will appear here."
+    },
+    "folders": {
+      "title": "Folders",
+      "text": "The tree of your music folders will appear here."
+    },
+    "comingInPhase": "Available from phase {{phase}}."
+  },
+  "detail": {
+    "title": "Details",
+    "empty": "No track selected.",
+    "hint": "Select a track to see and edit its information."
+  },
+  "player": {
+    "nothing": "Nothing playing",
+    "play": "Play",
+    "previous": "Previous track",
+    "next": "Next track",
+    "volume": "Volume"
+  },
+  "settings": {
+    "title": "Settings",
+    "appearance": "Appearance",
+    "appearanceHint": "Changes apply immediately.",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeSystem": "Follow system",
+    "language": "Language",
+    "languageHint": "Changes apply immediately, no restart needed.",
+    "diagnostic": "Report a problem",
+    "diagnosticHint": "Copies a report (version, system, end of the log) to paste into your message. Nothing is sent automatically.",
+    "diagnosticCopy": "Copy diagnostic report",
+    "diagnosticCopied": "Report copied to the clipboard",
+    "diagnosticFailed": "Could not copy the report",
+    "about": "Version {{version}}"
+  },
+  "languages": {
+    "fr": "Français",
+    "en": "English"
+  },
+  "errors": {
+    "title": "Something went wrong",
+    "database": "The application database could not be read. Your audio files are not affected. Copy the diagnostic report in Settings to report the problem.",
+    "database_too_new": "The database was created by a newer version of the application. Install the latest version to continue. Your audio files are not affected.",
+    "database_unavailable": "The database could not be opened at startup. Your settings will not be saved. Your audio files are not affected.",
+    "io": "The application data folder is not accessible. Check that the computer's disk has free space.",
+    "invalid_setting": "This setting could not be saved.",
+    "internal": "Internal error. Restart the application; if the problem comes back, copy the diagnostic report.",
+    "settingNotSaved": "The setting could not be saved."
+  }
+}

@@ -1,0 +1,109 @@
+{
+  "app": {
+    "name": "DJ Library Manager"
+  },
+  "nav": {
+    "library": "Bibliothèque",
+    "inbox": "Inbox",
+    "review": "À valider",
+    "duplicates": "Doublons",
+    "health": "Santé de la bibliothèque",
+    "quarantine": "Quarantaine",
+    "playlists": "Playlists et filtres",
+    "folders": "Dossiers",
+    "settings": "Réglages",
+    "collapse": "Replier la barre latérale",
+    "expand": "Déplier la barre latérale",
+    "sectionCollection": "Collection",
+    "sectionTools": "Outils"
+  },
+  "topbar": {
+    "searchPlaceholder": "Rechercher dans la bibliothèque",
+    "searchOnline": "Rechercher en ligne",
+    "rename": "Renommer",
+    "online": "En ligne",
+    "offline": "Hors ligne",
+    "tasks": "Tâches en cours",
+    "toggleDetail": "Afficher ou masquer le panneau de détail",
+    "themeToLight": "Passer au thème clair",
+    "themeToDark": "Passer au thème sombre"
+  },
+  "views": {
+    "library": {
+      "title": "Votre bibliothèque est vide",
+      "text": "Ajoutez le dossier où se trouve votre musique, par exemple sur votre disque externe.",
+      "action": "Ajouter un dossier"
+    },
+    "inbox": {
+      "title": "Inbox",
+      "text": "Les nouveaux morceaux déposés dans votre dossier d'arrivée apparaîtront ici."
+    },
+    "review": {
+      "title": "Tout est à jour",
+      "text": "Les morceaux dont les informations en ligne sont incertaines apparaîtront ici."
+    },
+    "duplicates": {
+      "title": "Doublons",
+      "text": "Les copies d'un même morceau seront regroupées ici, avec la meilleure version proposée."
+    },
+    "health": {
+      "title": "Santé de la bibliothèque",
+      "text": "Pochettes manquantes, fichiers illisibles, noms non conformes : tout sera compté ici."
+    },
+    "quarantine": {
+      "title": "Quarantaine vide",
+      "text": "Les fichiers écartés seront rangés ici et pourront être restaurés en un clic."
+    },
+    "playlists": {
+      "title": "Playlists et filtres",
+      "text": "Vos playlists et filtres intelligents apparaîtront ici."
+    },
+    "folders": {
+      "title": "Dossiers",
+      "text": "L'arborescence de vos dossiers de musique apparaîtra ici."
+    },
+    "comingInPhase": "Disponible à partir de la phase {{phase}}."
+  },
+  "detail": {
+    "title": "Détail",
+    "empty": "Aucun morceau sélectionné.",
+    "hint": "Sélectionnez un morceau pour voir et modifier ses informations."
+  },
+  "player": {
+    "nothing": "Aucun morceau en lecture",
+    "play": "Lecture",
+    "previous": "Morceau précédent",
+    "next": "Morceau suivant",
+    "volume": "Volume"
+  },
+  "settings": {
+    "title": "Réglages",
+    "appearance": "Apparence",
+    "appearanceHint": "Le changement est immédiat.",
+    "themeLight": "Clair",
+    "themeDark": "Sombre",
+    "themeSystem": "Suivre le système",
+    "language": "Langue",
+    "languageHint": "Le changement est immédiat, sans redémarrage.",
+    "diagnostic": "Signaler un problème",
+    "diagnosticHint": "Copie un rapport (version, système, fin du journal) à coller dans votre message. Rien n'est envoyé automatiquement.",
+    "diagnosticCopy": "Copier le rapport de diagnostic",
+    "diagnosticCopied": "Rapport copié dans le presse-papiers",
+    "diagnosticFailed": "Impossible de copier le rapport",
+    "about": "Version {{version}}"
+  },
+  "languages": {
+    "fr": "Français",
+    "en": "English"
+  },
+  "errors": {
+    "title": "Un problème est survenu",
+    "database": "La base de données de l'application n'a pas pu être lue. Vos fichiers audio ne sont pas concernés. Copiez le rapport de diagnostic dans Réglages pour signaler le problème.",
+    "database_too_new": "La base de données a été créée par une version plus récente de l'application. Installez la dernière version pour continuer. Vos fichiers audio ne sont pas concernés.",
+    "database_unavailable": "La base de données n'a pas pu être ouverte au démarrage. Vos réglages ne seront pas enregistrés. Vos fichiers audio ne sont pas concernés.",
+    "io": "Le dossier de données de l'application n'est pas accessible. Vérifiez qu'il reste de la place sur le disque de l'ordinateur.",
+    "invalid_setting": "Ce réglage n'a pas pu être enregistré.",
+    "internal": "Erreur interne. Redémarrez l'application ; si le problème revient, copiez le rapport de diagnostic.",
+    "settingNotSaved": "Le réglage n'a pas pu être enregistré."
+  }
+}
