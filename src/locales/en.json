@@ -21,7 +21,9 @@
     "collapse": "Collapse sidebar",
     "expand": "Expand sidebar",
     "sectionCollection": "Collection",
-    "sectionTools": "Tools"
+    "sectionTools": "Tools",
+    "toHandle_one": "{{count}} item to handle",
+    "toHandle_other": "{{count}} items to handle"
   },
   "topbar": {
     "searchPlaceholder": "Search the library",
@@ -34,7 +36,10 @@
     "toggleDetail": "Show or hide the detail panel",
     "themeToLight": "Switch to light theme",
     "themeToDark": "Switch to dark theme",
-    "more": "More actions"
+    "more": "More actions",
+    "queued_one": "{{count}} waiting",
+    "queued_other": "{{count}} waiting",
+    "queueHint": "Online searches waiting: they run as soon as possible, within the services' limits."
   },
   "views": {
     "library": {
@@ -179,7 +184,8 @@
     "coverRemove": "Remove artwork",
     "coverDropHint": "Or drop an image onto the window",
     "offlineReadOnly": "Drive disconnected: track is read-only.",
-    "futureName": "Name from template"
+    "futureName": "Name from template",
+    "manualSearch": "Search online…"
   },
   "folders": {
     "title": "Library folders",
@@ -282,7 +288,10 @@
     "internal": "Internal error. Restart the application; if the problem comes back, copy the diagnostic report.",
     "settingNotSaved": "The setting could not be saved.",
     "offlineFile": "File not found or drive disconnected.",
-    "offline": "The drive is disconnected."
+    "offline": "The drive is disconnected.",
+    "keyring": "The system keychain is not accessible.",
+    "network": "The online search failed.",
+    "artwork": "This image could not be used."
   },
   "history": {
     "editTags": "the tag change",
@@ -292,7 +301,8 @@
     "swap": "the artist / title swap",
     "mkdir": "the folder creation",
     "moveDir": "the folder move",
-    "moveTracks": "the track move"
+    "moveTracks": "the track move",
+    "online": "the online search"
   },
   "edit": {
     "saved_one": "Track updated",
@@ -446,7 +456,7 @@
     "library": "Library",
     "libraryHint": "Main folder of your music.",
     "inbox": "Incoming folder (optional)",
-    "inboxHint": "For example your Beatport or Bandcamp downloads folder. It will be processed in phase 2.",
+    "inboxHint": "For example your Beatport or Bandcamp downloads folder. New files there will be identified and tagged automatically.",
     "inboxPick": "Choose the incoming folder",
     "choose": "Choose…",
     "change": "Change",
@@ -461,5 +471,159 @@
     "back": "Back",
     "next": "Next",
     "finish": "Get started"
+  },
+  "online": {
+    "queued_one": "{{count}} track added to the online search",
+    "queued_other": "{{count}} tracks added to the online search",
+    "queuedOffline_one": "Offline: the search for {{count}} track will run when the network is back",
+    "queuedOffline_other": "Offline: the search for {{count}} tracks will run when the network is back",
+    "caughtUp_one": "Connection restored: {{count}} pending search was done",
+    "caughtUp_other": "Connection restored: {{count}} pending searches were done"
+  },
+  "sources": {
+    "musicbrainz": "MusicBrainz",
+    "coverartarchive": "Cover Art Archive",
+    "acoustid": "AcoustID",
+    "deezer": "Deezer",
+    "itunes": "iTunes"
+  },
+  "review": {
+    "tab": {
+      "review": "To review",
+      "unidentified": "Unidentified",
+      "auto": "Applied automatically"
+    },
+    "empty": {
+      "review": "All up to date",
+      "unidentified": "No unidentified tracks",
+      "auto": "No automatic changes"
+    },
+    "emptyHint": "Select tracks in the library, then “Search online” (Ctrl+L).",
+    "stats": "{{total}} searched · {{auto}} applied automatically · {{accepted}} approved · {{review}} to review · {{unidentified}} unidentified · identification rate {{rate}}%",
+    "candidates": "Suggestions",
+    "field": "Field",
+    "current": "Current",
+    "proposed": "Suggested",
+    "covers": "Suggested artwork",
+    "loadingCovers": "loading…",
+    "keepCover": "Keep current artwork",
+    "noCover": "No artwork",
+    "small": "small",
+    "applied": "already applied automatically: {{fields}}",
+    "noCandidate": "No suggestion. Try a manual search.",
+    "manual": "Manual search",
+    "manualResults": "Search results",
+    "searchAgain": "New search",
+    "searchButton": "Search",
+    "apply": "Apply",
+    "accept": "Accept",
+    "acceptHint": "Enter",
+    "reject": "Reject",
+    "rejectHint": "Escape",
+    "acceptRelease_one": "Accept the whole album ({{count}})",
+    "acceptRelease_other": "Accept the whole album ({{count}})",
+    "nothingFound": "No results. Check the spelling or try fewer words.",
+    "offline": "No internet connection: try again when the network is back.",
+    "searchFailed": "The search failed. Try again in a moment."
+  },
+  "crop": {
+    "title": "Crop artwork",
+    "rotate": "Rotate",
+    "compare": "Compare before / after",
+    "before": "Before",
+    "after": "After",
+    "apply": "Use this crop",
+    "selection": "Kept area (drag to move, corner to resize)",
+    "small": "small artwork",
+    "hint": "Drag the square to choose the part to keep; pull the bottom-right corner to make it bigger or smaller."
+  },
+  "inbox": {
+    "noFolder": "No incoming folder",
+    "noFolderText": "Choose the folder where your new tracks arrive (Beatport, Bandcamp downloads…). Each new file will be identified, tagged, given artwork and renamed automatically when it is safe.",
+    "choose": "Choose the incoming folder",
+    "rekordboxTip": "A track processed here before importing it into Rekordbox will never have a broken link there.",
+    "searchAgain": "Search again",
+    "file_one": "File {{count}} track…",
+    "file_other": "File {{count}} tracks…",
+    "fileLast": "File into “{{name}}”",
+    "filed_one": "{{count}} track filed",
+    "filed_other": "{{count}} tracks filed",
+    "empty": "No new tracks.",
+    "pickTarget": "File into which folder?",
+    "pickHint": "Click the destination folder.",
+    "state": {
+      "pending": "Waiting",
+      "done": "Done",
+      "review": "To review",
+      "unidentified": "Unidentified",
+      "error": "Error",
+      "auto": "Done"
+    }
+  },
+  "palette": {
+    "title": "Command palette",
+    "placeholder": "Type an action or a track…",
+    "nothing": "No results",
+    "undo": "Undo",
+    "redo": "Redo",
+    "goTo": "Go to: {{screen}}"
+  },
+  "onlineSettings": {
+    "title": "Online search",
+    "hint": "The network is only used for the checked sources, and only when you start a search or a track arrives in the Inbox. Everything else works offline.",
+    "sources": "Sources",
+    "src": {
+      "musicbrainz": "title, artists, version, album, year, label",
+      "coverartarchive": "artwork of MusicBrainz releases",
+      "acoustid": "recognises a track by its fingerprint, even badly named (key needed)",
+      "deezer": "matching, album, year, BPM, artwork",
+      "itunes": "high-resolution artwork, album, year, genre"
+    },
+    "warn": {
+      "deezer": "Its terms forbid any local copy of the content: only enable it knowingly, for strictly personal use.",
+      "itunes": "Its terms reserve artwork for promoting the iTunes Store: only enable it knowingly, for strictly personal use."
+    },
+    "acoustid": "AcoustID keys (free)",
+    "step1": "Create an application key at",
+    "step2": "Create your user key (required from 1 January 2027) at",
+    "step3": "Paste them below, then “Save”.",
+    "clientKey": "Application key",
+    "userKey": "User key",
+    "keyPresent": "saved (hidden)",
+    "remove": "Remove",
+    "keyHint": "Keys are stored in the system keychain (Windows Credential Manager, macOS Keychain), never in the database or the code.",
+    "keySaved": "Key saved in the system keychain",
+    "keyRemoved": "Key removed",
+    "keyError": "The system keychain refused to save the key.",
+    "contact": "Contact for MusicBrainz",
+    "contactHint": "MusicBrainz asks for a way to contact the application (website address or e-mail). Nothing is sent while this field is empty.",
+    "thresholds": "Confidence thresholds",
+    "auto": "Apply automatically from",
+    "review": "“To review” queue from",
+    "replaceExisting": "Also replace existing values (otherwise they go to “To review”)",
+    "autoRename": "Rename automatically after applying",
+    "rename": {
+      "inbox": "Inbox only (recommended)",
+      "library": "Whole library",
+      "never": "Never"
+    },
+    "test": "Test the connection",
+    "ok": "connection OK",
+    "noKey": "no key saved",
+    "calls": "Call log",
+    "callsTotal_one": "{{count}} call",
+    "callsTotal_other": "{{count}} calls",
+    "callsMax": {
+      "musicbrainz_one": "at most {{count}} per second (limit: 1)",
+      "musicbrainz_other": "at most {{count}} per second (limit: 1)",
+      "coverartarchive_one": "at most {{count}} per second",
+      "coverartarchive_other": "at most {{count}} per second",
+      "acoustid_one": "at most {{count}} per second (limit: 3)",
+      "acoustid_other": "at most {{count}} per second (limit: 3)",
+      "deezer_one": "at most {{count}} per 5 seconds",
+      "deezer_other": "at most {{count}} per 5 seconds",
+      "itunes_one": "at most {{count}} per minute (limit: 20)",
+      "itunes_other": "at most {{count}} per minute (limit: 20)"
+    }
   }
 }

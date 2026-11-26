@@ -4,6 +4,7 @@ import { ClipboardCopy, Monitor, Moon, Sun } from "lucide-react";
 import { diagnosticReport, logMessage } from "../core/api";
 import type { ThemeSetting } from "../core/theme";
 import { LANGUAGES, type Language } from "../i18n";
+import { OnlineSettings } from "./OnlineSettings";
 
 export interface SettingsProps {
   theme: ThemeSetting;
@@ -124,6 +125,8 @@ export function SettingsView(p: SettingsProps) {
           ]}
         />
       </section>
+
+      <OnlineSettings values={p.values} onSettingChange={p.onSettingChange} onToast={p.onToast} />
 
       <section>
         <h2>{t("settings.writing")}</h2>

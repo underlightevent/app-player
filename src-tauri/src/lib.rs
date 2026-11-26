@@ -388,6 +388,20 @@ async fn online_manual_search(state: State<'_, AppState>, track_id: i64, artist:
     blocking(move || o.manual_search(track_id, &artist, &title)).await
 }
 
+/// Image d'un fichier local (pour l'éditeur de recadrage), 30 Mo au plus.
+#[tauri::command]
+async fn image_data(path: String) -> Result<String, AppError> {
+    blocking(move || {
+        let meta = std::fs::metadata(&path)?;
+        if meta.len() > 30 * 1024 * 1024 {
+            return Err(AppError::Artwork("image trop lourde".into()));
+        }
+        let bytes = std::fs::read(&path)?;
+        Ok(format!("data:image/*;base64,{}", util::b64_encode(&bytes)))
+    })
+    .await
+}
+
 /// Image d'une pochette en ligne en taille réelle (pour l'éditeur de recadrage).
 #[tauri::command]
 async fn online_cover_fetch(state: State<'_, AppState>, url: String, source: String) -> Result<String, AppError> {
@@ -759,6 +773,7 @@ pub fn run() {
             online_manual_search,
             online_cover_previews,
             online_cover_fetch,
+            image_data,
             online_set_key,
             online_key_status,
             online_test,

@@ -10,3 +10,6 @@ Idées notées en chemin, à discuter avant de les réaliser.
 - Phase 1 : vignettes de pochettes dans le tableau (aujourd'hui, un simple repère « pochette / pas de pochette »).
 - Phase 1 : déplacement de morceaux entre deux disques (copie vérifiée puis mise en quarantaine de l'original).
 - Phase 1 : indicateur « en cours de lecture » dans le tableau (sans utiliser la couleur d'accent).
+- Phase 2 : règle « Après validation, déplacer vers [dossier] » pour l'Inbox (désactivée par défaut selon le cahier des charges).
+- Phase 2 : recherche par ISRC quand le fichier en contient déjà un.
+- Phase 2 : glisser une image depuis un navigateur web vers la pochette (aujourd'hui : fichier, presse-papiers, Explorateur / Finder).

@@ -13,6 +13,10 @@ export interface MoreAction {
 }
 
 interface Props {
+  onSearchOnline: () => void;
+  /** Recherches en attente dans la file, et coupure détectée par le cœur. */
+  onlineQueued: number;
+  onlineCoreOffline: boolean;
   onRename: () => void;
   renameDisabled: boolean;
   moreActions: MoreAction[];
@@ -89,7 +93,7 @@ export function TopBar(p: Props) {
         )}
       </label>
 
-      <button className="btn" disabled title={t("views.comingInPhase", { phase: 2 })}>
+      <button className="btn" onClick={p.onSearchOnline} disabled={p.renameDisabled} title={`${t("topbar.searchOnline")} (${p.modKey}+L)`}>
         <Globe size={16} aria-hidden />
         {t("topbar.searchOnline")}
       </button>
@@ -126,9 +130,10 @@ export function TopBar(p: Props) {
 
       <div className="topbar-spacer drag-region" data-tauri-drag-region />
 
-      <span className="status-pill" role="status">
-        <span className={`status-dot ${online ? "online" : "offline"}`} aria-hidden />
-        {online ? t("topbar.online") : t("topbar.offline")}
+      <span className="status-pill" role="status" title={p.onlineQueued ? t("topbar.queueHint") : undefined}>
+        <span className={`status-dot ${online && !p.onlineCoreOffline ? "online" : "offline"}`} aria-hidden />
+        {online && !p.onlineCoreOffline ? t("topbar.online") : t("topbar.offline")}
+        {p.onlineQueued > 0 && <span className="tabular"> · {t("topbar.queued", { count: p.onlineQueued })}</span>}
       </span>
 
       <div className="popover-anchor">

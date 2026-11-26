@@ -14,6 +14,7 @@ import { emptyQuery, libraryAddRoot, libraryRows, onEvent, pickFolder, type Libr
 import {
   clipboardImage,
   coverPrepare,
+  imageData,
   historyApply,
   isImagePath,
   libraryGenres,
@@ -34,6 +35,11 @@ import { RenameDialog } from "./components/RenameDialog";
 import { FolderTree, type FolderTarget } from "./components/FolderTree";
 import { MoveDialog, NameDialog } from "./components/FolderDialogs";
 import { Onboarding } from "./components/Onboarding";
+import { ReviewView, ManualSearchPanel } from "./components/ReviewView";
+import { InboxView } from "./components/InboxView";
+import { CropEditor } from "./components/CropEditor";
+import { CommandPalette, type PaletteAction } from "./components/CommandPalette";
+import { emptyStatus, onlineSearch, onlineStatus, type OnlineStatus } from "./core/online";
 import { databaseExport, databaseImport, folderCreate, folderMove, reveal } from "./core/folders";
 import { CleanDialog, ParseDialog } from "./components/TagsPreviewDialog";
 import { DEFAULT_TEMPLATE, renamePreview, type CleanRules, type SavedTemplate } from "./core/rename";
@@ -278,6 +284,31 @@ export default function App() {
   );
 
   const selectedIds = useCallback(() => [...selection], [selection]);
+  const [cropRequest, setCropRequest] = useState<{ src: string; ids: number[] } | null>(null);
+
+  // ---------- Recherche en ligne ----------
+  const [online, setOnline] = useState<OnlineStatus>(emptyStatus);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [manualSearch, setManualSearch] = useState(false);
+  useEffect(() => {
+    void onlineStatus().then(setOnline).catch(() => {});
+    const a = onEvent<OnlineStatus>("online:status", setOnline);
+    const b = onEvent<number>("online:caught-up", (n) => toast.show(t("online.caughtUp", { count: n })));
+    return () => {
+      a();
+      b();
+    };
+  }, [toast, t]);
+
+  const searchOnline = useCallback(async () => {
+    const ids = [...selection];
+    if (ids.length === 0) {
+      toast.show(t("edit.selectFirst"));
+      return;
+    }
+    await onlineSearch(ids);
+    toast.show(navigator.onLine ? t("online.queued", { count: ids.length }) : t("online.queuedOffline", { count: ids.length }));
+  }, [selection, toast, t]);
 
   const setCoverFrom = useCallback(
     async (source: { path?: string; data?: string }) => {
@@ -288,8 +319,13 @@ export default function App() {
       }
       try {
         const prepared = await coverPrepare(source);
+        if (prepared.notSquare) {
+          // Image nettement rectangulaire : l'éditeur de recadrage s'ouvre.
+          const src = source.path ? await imageData(source.path) : `data:image/*;base64,${source.data}`;
+          setCropRequest({ src, ids });
+          return;
+        }
         await applyEdit(ids, { cover: prepared.cover });
-        if (prepared.notSquare) toast.show(t("edit.coverNotSquare"));
       } catch (e) {
         logMessage("warn", `Pochette : ${JSON.stringify(e)}`);
         toast.show(t("edit.coverUnreadable"), undefined, "error");
@@ -522,6 +558,20 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, [togglePlay, neighbour, playTrack, player.trackId, player.positionMs, player.durationMs, dialog]);
 
+  // ---------- Palette de commandes ----------
+  const go = (v: ViewId) => () => setView(v);
+  const paletteActions: PaletteAction[] = [
+    { id: "search-online", label: t("topbar.searchOnline"), hint: `${modKey}+L`, run: () => void searchOnline() },
+    { id: "rename", label: t("topbar.rename"), hint: `${modKey}+R`, run: () => selection.size && setDialog("rename") },
+    ...moreActions.filter((a) => !a.disabled).map((a) => ({ id: a.id, label: a.label, run: a.run })),
+    { id: "add-folder", label: t("views.library.action"), run: () => void addFolder() },
+    { id: "theme", label: resolved === "dark" ? t("topbar.themeToLight") : t("topbar.themeToDark"), run: () => changeTheme(resolved === "dark" ? "light" : "dark") },
+    { id: "detail", label: t("topbar.toggleDetail"), hint: `${modKey}+I`, run: () => setDetailOpen((o) => !o) },
+    { id: "undo", label: t("palette.undo"), hint: `${modKey}+Z`, run: () => void runHistory(false) },
+    { id: "redo", label: t("palette.redo"), hint: `${modKey}+Maj+Z`, run: () => void runHistory(true) },
+    ...(["library", "inbox", "review", "folders", "settings"] as ViewId[]).map((v) => ({ id: `go-${v}`, label: t("palette.goTo", { screen: t(`nav.${v}`) }), run: go(v) })),
+  ];
+
   onDropRef.current = (paths: string[]) => {
     const images = paths.filter(isImagePath);
     if (images.length > 0) void setCoverFrom({ path: images[0] });
@@ -554,6 +604,12 @@ export default function App() {
       } else if (mod && k === "v") {
         e.preventDefault();
         void pasteCover();
+      } else if (mod && k === "k") {
+        e.preventDefault();
+        setPaletteOpen(true);
+      } else if (mod && k === "l") {
+        e.preventDefault();
+        void searchOnline();
       } else if (mod && k === "r" && !e.shiftKey) {
         e.preventDefault();
         if (selection.size > 0) setDialog("rename");
@@ -583,8 +639,11 @@ export default function App() {
 
   return (
     <div className={`app ${platformClass} ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
-      <Sidebar current={view} onSelect={setView} collapsed={sidebarCollapsed} onToggleCollapsed={() => setSidebarCollapsed((c) => !c)} tree={folderTree} />
+      <Sidebar current={view} onSelect={setView} collapsed={sidebarCollapsed} onToggleCollapsed={() => setSidebarCollapsed((c) => !c)} tree={folderTree} badges={{ inbox: online.inbox, review: online.review }} />
       <TopBar
+        onSearchOnline={() => void searchOnline()}
+        onlineQueued={online.queued}
+        onlineCoreOffline={online.offline}
         onRename={() => setDialog("rename")}
         renameDisabled={selection.size === 0}
         moreActions={moreActions}
@@ -633,6 +692,24 @@ export default function App() {
             />
           ) : view === "folders" ? (
             <FoldersView roots={lib.roots} onAddFolder={() => void addFolder()} onChanged={() => void lib.refresh()} onToast={toast.show} />
+          ) : view === "review" ? (
+            <ReviewView onDone={(r) => reportDone(r, "edit.saved")} />
+          ) : view === "inbox" ? (
+            <InboxView
+              roots={lib.roots}
+              lastTarget={settingsValues.inbox_last_target ?? ""}
+              onAddInbox={async () => {
+                const p = await pickFolder(t("onboarding.inboxPick"));
+                if (p) {
+                  await libraryAddRoot(p, "inbox").catch(() => toast.show(t("library.notAFolder"), undefined, "error"));
+                  void lib.refresh();
+                }
+              }}
+              onDone={(r, key) => {
+                reportDone(r, key);
+                void getSettings().then(setSettingsValues);
+              }}
+            />
           ) : (
             <OtherView
               view={view}
@@ -677,9 +754,46 @@ export default function App() {
             onPasteCover={() => void pasteCover()}
             revision={revision}
             futureName={futureName}
+            onManualSearch={() => setManualSearch(true)}
           />
         )}
       </div>
+      {manualSearch && selectedRows.length === 1 && (
+        <ManualSearchPanel
+          trackId={selectedRows[0].id}
+          current={{ ...selectedRows[0] }}
+          hasCover={selectedRows[0].coverCount > 0}
+          onClose={() => setManualSearch(false)}
+          onDone={(r) => reportDone(r, "edit.saved")}
+        />
+      )}
+      {cropRequest && (
+        <CropEditor
+          src={cropRequest.src}
+          onCancel={() => setCropRequest(null)}
+          onConfirm={async (edit) => {
+            const req = cropRequest;
+            setCropRequest(null);
+            try {
+              const p = await coverPrepare({ data: req.src.split(",")[1] }, edit);
+              await applyEdit(req.ids, { cover: p.cover });
+            } catch {
+              toast.show(t("edit.coverUnreadable"), undefined, "error");
+            }
+          }}
+        />
+      )}
+      {paletteOpen && (
+        <CommandPalette
+          actions={paletteActions}
+          onClose={() => setPaletteOpen(false)}
+          onTrack={(r) => {
+            setView("library");
+            setQuery((q) => ({ ...q, search: "", folder: null }));
+            setSelection(new Set([r.id]));
+          }}
+        />
+      )}
       {dialog === "rename" && (
         <RenameDialog
           ids={selectedIdList}

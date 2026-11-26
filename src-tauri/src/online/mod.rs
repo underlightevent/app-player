@@ -688,24 +688,6 @@ impl Online {
         }
     }
 
-    /// Ajoute la pochette manquante après une application automatique.
-    pub fn complete_cover(&self, id: i64) -> Result<(), AppError> {
-        let conn = self.conn()?;
-        let Some(t) = load_track(&conn, id)? else { return Ok(()) };
-        if t.cover_count > 0 || t.locked.iter().any(|l| l == "cover") {
-            return Ok(());
-        }
-        let cands: String = conn.query_row("SELECT candidates FROM online_results WHERE track_id = ?1", [id], |r| r.get(0)).unwrap_or_else(|_| "[]".into());
-        let cands: Vec<Candidate> = serde_json::from_str(&cands).unwrap_or_default();
-        if let Some(best) = cands.first() {
-            if let Some(cover) = self.fetch_cover(&conn, best, None) {
-                let c = Changes { cover: Some(Some(cover)), ..Default::default() };
-                self.lib.edit_each(vec![(id, c)], Source::Automatic, "history.online", None)?;
-            }
-        }
-        Ok(())
-    }
-
     pub fn results(&self, status: &str, limit: i64) -> Result<Vec<ResultRow>, AppError> {
         let conn = self.conn()?;
         let mut st = conn.prepare(

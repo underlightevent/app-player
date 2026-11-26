@@ -142,6 +142,8 @@ pub fn search(http: &Http, artist: &str, title: &str, limit: usize) -> Result<Ve
     Ok(v.get("recordings").and_then(|r| r.as_array()).map(|a| a.iter().map(parse_recording).collect()).unwrap_or_default())
 }
 
+/// Recherche par ISRC (prévue pour les fichiers qui portent déjà un ISRC).
+#[allow(dead_code)]
 pub fn by_isrc(http: &Http, isrc: &str) -> Result<Vec<Candidate>, NetError> {
     let url = format!("{BASE}/isrc/{}?inc={INC}&fmt=json", encode(isrc));
     let v = http.get_json("musicbrainz", &url, &[], true)?;

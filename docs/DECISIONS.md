@@ -133,3 +133,35 @@ Les lignes chargées sont gardées dans une table jamais recopiée ; chaque lign
 
 ### D-125 · Édition dans le tableau
 Le cahier des charges prévoit l'édition sur place dans les cellules (clic ou F2). En phase 1, F2 ouvre le panneau de détail sur le champ Titre du morceau sélectionné ; Tab passe au champ suivant, Entrée valide, Échap annule. L'édition directement dans la cellule est notée dans IDEES.
+
+## Phase 2
+
+### D-201 · Sources activées par défaut
+MusicBrainz, Cover Art Archive et AcoustID sont activés ; **Deezer et iTunes sont désactivés** : leurs conditions interdisent ce que l'application en ferait (copie locale du contenu pour Deezer, pochettes hors promotion de l'iTunes Store pour Apple). Détail et sources dans `docs/SOURCES.md`. Aucune réponse Deezer n'est gardée en cache, aucune pochette Deezer n'est gardée sur l'ordinateur.
+
+### D-202 · Réseau
+Bibliothèque `ureq` avec la couche de chiffrement **du système** (SChannel sous Windows, Security sous macOS) et ses certificats : aucune liste de certificats embarquée (celle habituellement utilisée est sous une licence hors principe 12). Limites strictes par source : MusicBrainz et Cover Art Archive 1 appel / 1,1 s, AcoustID 1 / 0,5 s, Deezer 1 / 0,25 s, iTunes 1 / 3,1 s. Reprise après 429 / 502 / 503 / 504 : 2, 4, 8, 16 s (ou le délai demandé par le service). Chaque appel est inscrit dans la table `online_calls` ; Réglages › Recherche en ligne affiche le nombre maximal d'appels par fenêtre de temps, preuve du respect des limites.
+
+### D-203 · Contact du User-Agent
+MusicBrainz exige un contact dans l'en-tête User-Agent. Pour ne rien envoyer sur l'utilisateur sans son accord, ce contact est un réglage **vide par défaut** (« contact non renseigné » est alors envoyé). À confirmer par l'utilisateur.
+
+### D-204 · Empreintes
+rusty-chromaprint (licence MIT), réglage « test2 » (celui de l'outil officiel fpcalc), 120 premières secondes, empreinte compressée en base64 sans remplissage. Calculée une fois et gardée en base (table `fingerprints`, avec l'empreinte brute pour les doublons de la phase 3). Recalculée si le fichier change.
+
+### D-205 · Score de confiance (0 à 100)
+Empreinte jusqu'à 45 points ; titre 20 ; artiste principal 15 ; version identique +10, **version différente −60** ; durée à 3 s près +10, au-delà −2 par seconde (40 au plus) ; accord d'une autre source +5. Sans empreinte : +15 mais **plafond à 75**, donc jamais d'application automatique sur le seul nom. Le détail (« empreinte 0,96 · titre identique · durée +1 s ») est affiché dans la file. Seuils par défaut : 90 (automatique) et 60 (à valider), réglables.
+
+### D-206 · Application automatique
+Seuls les champs **vides et non verrouillés** sont remplis ; une valeur existante différente envoie le morceau dans « À valider » (sauf si « Remplacer aussi les valeurs existantes » est coché). Une pochette manquante est ajoutée (Cover Art Archive en priorité). L'application automatique passe par l'écriture sûre et l'historique ; elle ne verrouille rien. Une proposition acceptée par l'utilisateur dans la file verrouille les champs acceptés (c'est son choix).
+
+### D-207 · Choix de la sortie MusicBrainz
+Pour l'album et l'année, l'application préfère la sortie officielle d'origine (album, single, EP) aux compilations, mixes de DJ et « Various Artists », puis la plus ancienne. La recherche par nom peut ne trouver que des enregistrements parus sur des compilations : c'est une des raisons pour lesquelles elle n'est jamais appliquée seule.
+
+### D-208 · File hors connexion
+Les recherches sont rangées dans `online_queue`. Un fil de travail les traite une par une ; sans réseau, il réessaie toutes les 30 secondes et prévient (« Connexion retrouvée : N recherches faites ») quand la file est rattrapée. Trois échecs d'un même morceau (hors coupure) le sortent de la file avec l'état « erreur ».
+
+### D-209 · Inbox
+Un dossier ajouté comme « dossier d'arrivée » est indexé comme les autres ; chaque **nouveau** fichier y est inscrit dans l'Inbox et mis en file de recherche. Après une application automatique, il est renommé selon le modèle (réglage « Inbox seulement » par défaut). Le rangement vers la bibliothèque reste manuel (« Ranger… », le dernier dossier utilisé est proposé). La règle « Après validation, déplacer vers [dossier] » n'est pas encore proposée (voir IDEES) ; elle était prévue désactivée par défaut.
+
+### D-210 · Recadrage
+L'éditeur garde un carré (déplaçable, redimensionnable), pivote par quarts de tour et compare avant / après. Le recadrage est appliqué par le cœur sur l'image d'origine (pas sur l'aperçu). Les images presque carrées (écart de 10 % au plus) sont recadrées automatiquement, sans ouvrir l'éditeur.

@@ -21,7 +21,9 @@
     "collapse": "Replier la barre latérale",
     "expand": "Déplier la barre latérale",
     "sectionCollection": "Collection",
-    "sectionTools": "Outils"
+    "sectionTools": "Outils",
+    "toHandle_one": "{{count}} élément à traiter",
+    "toHandle_other": "{{count}} éléments à traiter"
   },
   "topbar": {
     "searchPlaceholder": "Rechercher dans la bibliothèque",
@@ -34,7 +36,10 @@
     "toggleDetail": "Afficher ou masquer le panneau de détail",
     "themeToLight": "Passer au thème clair",
     "themeToDark": "Passer au thème sombre",
-    "more": "Plus d'actions"
+    "more": "Plus d'actions",
+    "queued_one": "{{count}} en attente",
+    "queued_other": "{{count}} en attente",
+    "queueHint": "Recherches en ligne en attente : elles partent dès que possible, dans le respect des limites des services."
   },
   "views": {
     "library": {
@@ -179,7 +184,8 @@
     "coverRemove": "Retirer la pochette",
     "coverDropHint": "Ou glissez une image sur la fenêtre",
     "offlineReadOnly": "Disque déconnecté : morceau en lecture seule.",
-    "futureName": "Nom selon le modèle"
+    "futureName": "Nom selon le modèle",
+    "manualSearch": "Rechercher en ligne…"
   },
   "folders": {
     "title": "Dossiers de la bibliothèque",
@@ -282,7 +288,10 @@
     "internal": "Erreur interne. Redémarrez l'application ; si le problème revient, copiez le rapport de diagnostic.",
     "settingNotSaved": "Le réglage n'a pas pu être enregistré.",
     "offlineFile": "Fichier introuvable ou disque déconnecté.",
-    "offline": "Le disque est déconnecté."
+    "offline": "Le disque est déconnecté.",
+    "keyring": "Le trousseau du système n'est pas accessible.",
+    "network": "La recherche en ligne a échoué.",
+    "artwork": "Cette image n'a pas pu être utilisée."
   },
   "history": {
     "editTags": "la modification des tags",
@@ -292,7 +301,8 @@
     "swap": "l'échange artiste / titre",
     "mkdir": "la création du dossier",
     "moveDir": "le déplacement du dossier",
-    "moveTracks": "le déplacement des morceaux"
+    "moveTracks": "le déplacement des morceaux",
+    "online": "la recherche en ligne"
   },
   "edit": {
     "saved_one": "Morceau modifié",
@@ -446,7 +456,7 @@
     "library": "Bibliothèque",
     "libraryHint": "Dossier principal de votre musique.",
     "inbox": "Dossier d'arrivée (facultatif)",
-    "inboxHint": "Par exemple celui de vos téléchargements Beatport ou Bandcamp. Il sera traité en phase 2.",
+    "inboxHint": "Par exemple celui de vos téléchargements Beatport ou Bandcamp. Les nouveaux fichiers y seront identifiés et tagués automatiquement.",
     "inboxPick": "Choisir le dossier d'arrivée",
     "choose": "Choisir…",
     "change": "Changer",
@@ -461,5 +471,159 @@
     "back": "Retour",
     "next": "Suivant",
     "finish": "Commencer"
+  },
+  "online": {
+    "queued_one": "{{count}} morceau ajouté à la recherche en ligne",
+    "queued_other": "{{count}} morceaux ajoutés à la recherche en ligne",
+    "queuedOffline_one": "Hors ligne : la recherche de {{count}} morceau partira au retour du réseau",
+    "queuedOffline_other": "Hors ligne : la recherche de {{count}} morceaux partira au retour du réseau",
+    "caughtUp_one": "Connexion retrouvée : {{count}} recherche en attente a été faite",
+    "caughtUp_other": "Connexion retrouvée : {{count}} recherches en attente ont été faites"
+  },
+  "sources": {
+    "musicbrainz": "MusicBrainz",
+    "coverartarchive": "Cover Art Archive",
+    "acoustid": "AcoustID",
+    "deezer": "Deezer",
+    "itunes": "iTunes"
+  },
+  "review": {
+    "tab": {
+      "review": "À valider",
+      "unidentified": "Non identifiés",
+      "auto": "Appliqués automatiquement"
+    },
+    "empty": {
+      "review": "Tout est à jour",
+      "unidentified": "Aucun morceau non identifié",
+      "auto": "Aucune application automatique"
+    },
+    "emptyHint": "Sélectionnez des morceaux dans la bibliothèque puis « Rechercher en ligne » (Ctrl+L).",
+    "stats": "{{total}} recherchés · {{auto}} appliqués automatiquement · {{accepted}} validés · {{review}} à valider · {{unidentified}} non identifiés · taux d'identification {{rate}} %",
+    "candidates": "Propositions",
+    "field": "Champ",
+    "current": "Actuel",
+    "proposed": "Proposé",
+    "covers": "Pochettes proposées",
+    "loadingCovers": "chargement…",
+    "keepCover": "Garder la pochette actuelle",
+    "noCover": "Pas de pochette",
+    "small": "petite",
+    "applied": "déjà appliqué automatiquement : {{fields}}",
+    "noCandidate": "Aucune proposition. Essayez une recherche manuelle.",
+    "manual": "Recherche manuelle",
+    "manualResults": "Résultats de la recherche",
+    "searchAgain": "Nouvelle recherche",
+    "searchButton": "Rechercher",
+    "apply": "Appliquer",
+    "accept": "Accepter",
+    "acceptHint": "Entrée",
+    "reject": "Rejeter",
+    "rejectHint": "Échap",
+    "acceptRelease_one": "Accepter tout l'album ({{count}})",
+    "acceptRelease_other": "Accepter tout l'album ({{count}})",
+    "nothingFound": "Aucun résultat. Vérifiez l'orthographe ou essayez avec moins de mots.",
+    "offline": "Pas de connexion internet : réessayez quand le réseau sera revenu.",
+    "searchFailed": "La recherche a échoué. Réessayez dans un instant."
+  },
+  "crop": {
+    "title": "Recadrer la pochette",
+    "rotate": "Pivoter",
+    "compare": "Comparer avant / après",
+    "before": "Avant",
+    "after": "Après",
+    "apply": "Utiliser ce recadrage",
+    "selection": "Zone gardée (glissez pour la déplacer, coin pour la redimensionner)",
+    "small": "petite pochette",
+    "hint": "Glissez le carré pour choisir la partie à garder ; tirez le coin en bas à droite pour l'agrandir ou la réduire."
+  },
+  "inbox": {
+    "noFolder": "Aucun dossier d'arrivée",
+    "noFolderText": "Choisissez le dossier où arrivent vos nouveaux morceaux (téléchargements Beatport, Bandcamp…). Chaque nouveau fichier y sera identifié, tagué, pourvu d'une pochette et renommé automatiquement quand c'est sûr.",
+    "choose": "Choisir le dossier d'arrivée",
+    "rekordboxTip": "Un morceau traité ici avant son import dans Rekordbox n'y aura jamais de lien cassé.",
+    "searchAgain": "Relancer la recherche",
+    "file_one": "Ranger {{count}} morceau…",
+    "file_other": "Ranger {{count}} morceaux…",
+    "fileLast": "Ranger dans « {{name}} »",
+    "filed_one": "{{count}} morceau rangé",
+    "filed_other": "{{count}} morceaux rangés",
+    "empty": "Aucun nouveau morceau.",
+    "pickTarget": "Ranger dans quel dossier ?",
+    "pickHint": "Cliquez sur le dossier de destination.",
+    "state": {
+      "pending": "En attente",
+      "done": "Traité",
+      "review": "À valider",
+      "unidentified": "Non identifié",
+      "error": "Erreur",
+      "auto": "Traité"
+    }
+  },
+  "palette": {
+    "title": "Palette de commandes",
+    "placeholder": "Tapez une action ou un morceau…",
+    "nothing": "Aucun résultat",
+    "undo": "Annuler",
+    "redo": "Rétablir",
+    "goTo": "Aller à : {{screen}}"
+  },
+  "onlineSettings": {
+    "title": "Recherche en ligne",
+    "hint": "Le réseau ne sert qu'aux sources cochées, et seulement quand vous lancez une recherche ou qu'un morceau arrive dans l'Inbox. Tout le reste fonctionne sans internet.",
+    "sources": "Sources",
+    "src": {
+      "musicbrainz": "titre, artistes, version, album, année, label",
+      "coverartarchive": "pochettes des sorties MusicBrainz",
+      "acoustid": "reconnaît un morceau à son empreinte, même mal nommé (clé nécessaire)",
+      "deezer": "correspondance, album, année, BPM, pochette",
+      "itunes": "pochettes haute définition, album, année, genre"
+    },
+    "warn": {
+      "deezer": "Ses conditions interdisent toute copie locale du contenu : à n'activer qu'en connaissance de cause, pour un usage strictement personnel.",
+      "itunes": "Ses conditions réservent les pochettes à la promotion de l'iTunes Store : à n'activer qu'en connaissance de cause, pour un usage strictement personnel."
+    },
+    "acoustid": "Clés AcoustID (gratuites)",
+    "step1": "Créez une clé d'application sur",
+    "step2": "Créez votre clé utilisateur (obligatoire à partir du 1er janvier 2027) sur",
+    "step3": "Collez-les ci-dessous puis « Enregistrer ».",
+    "clientKey": "Clé d'application",
+    "userKey": "Clé utilisateur",
+    "keyPresent": "enregistrée (cachée)",
+    "remove": "Retirer",
+    "keyHint": "Les clés sont rangées dans le trousseau du système (Gestionnaire d'identification Windows, Trousseau macOS), jamais dans la base ni dans le code.",
+    "keySaved": "Clé enregistrée dans le trousseau du système",
+    "keyRemoved": "Clé retirée",
+    "keyError": "Le trousseau du système a refusé l'enregistrement.",
+    "contact": "Contact pour MusicBrainz",
+    "contactHint": "MusicBrainz demande un moyen de contacter l'application (adresse d'un site ou e-mail). Rien n'est envoyé tant que ce champ est vide.",
+    "thresholds": "Seuils de confiance",
+    "auto": "Application automatique à partir de",
+    "review": "File « À valider » à partir de",
+    "replaceExisting": "Remplacer aussi les valeurs déjà présentes (sinon, elles partent dans « À valider »)",
+    "autoRename": "Renommer automatiquement après application",
+    "rename": {
+      "inbox": "Inbox seulement (recommandé)",
+      "library": "Toute la bibliothèque",
+      "never": "Jamais"
+    },
+    "test": "Tester la connexion",
+    "ok": "connexion réussie",
+    "noKey": "pas de clé enregistrée",
+    "calls": "Journal des appels",
+    "callsTotal_one": "{{count}} appel",
+    "callsTotal_other": "{{count}} appels",
+    "callsMax": {
+      "musicbrainz_one": "au plus {{count}} par seconde (limite : 1)",
+      "musicbrainz_other": "au plus {{count}} par seconde (limite : 1)",
+      "coverartarchive_one": "au plus {{count}} par seconde",
+      "coverartarchive_other": "au plus {{count}} par seconde",
+      "acoustid_one": "au plus {{count}} par seconde (limite : 3)",
+      "acoustid_other": "au plus {{count}} par seconde (limite : 3)",
+      "deezer_one": "au plus {{count}} par 5 secondes",
+      "deezer_other": "au plus {{count}} par 5 secondes",
+      "itunes_one": "au plus {{count}} par minute (limite : 20)",
+      "itunes_other": "au plus {{count}} par minute (limite : 20)"
+    }
   }
 }

@@ -110,9 +110,48 @@ Le panneau de détail montre aussi le nom que donnerait le modèle (« Nom selon
 - L'écran **Dossiers** (barre latérale) liste les dossiers suivis : ajouter, retirer (aucun fichier n'est touché), réindexer.
 - **Ctrl+Maj+R** affiche le fichier sélectionné dans l'Explorateur ou le Finder.
 
+## Recherche en ligne (phase 2)
+
+### Préparer (une fois)
+1. **Réglages › Recherche en ligne**.
+2. Créez vos deux clés AcoustID gratuites (les étapes sont écrites à l'écran) et collez-les, puis « Enregistrer ». Elles vont dans le trousseau de votre ordinateur. Sans clé, l'application cherche seulement par artiste et titre, et n'applique alors **jamais** rien automatiquement.
+3. Renseignez le **contact** demandé par MusicBrainz (adresse d'un site ou e-mail).
+4. « Tester la connexion ».
+
+### Lancer une recherche
+- Sélectionnez des morceaux puis **Rechercher en ligne** (ou **Ctrl+L**). Le témoin en haut à droite montre combien de recherches attendent.
+- Hors connexion, les recherches attendent et partent seules au retour du réseau ; une notification le confirme.
+- Selon la certitude :
+  - **90 et plus** : les champs vides sont remplis et la pochette manquante ajoutée, automatiquement (rien n'est remplacé, rien de verrouillé n'est touché). Tout s'annule avec Ctrl+Z.
+  - **60 à 89** : le morceau part dans **À valider**.
+  - **moins de 60** : **Non identifiés**.
+
+### À valider
+- À gauche les morceaux, à droite les propositions numérotées (score, source, détail : « empreinte 0,96 · titre identique · durée +1 s »).
+- Pour chaque champ : valeur actuelle, valeur proposée, case à cocher. Choisissez la pochette dans la grille (dimensions et source affichées). Une pochette pas carrée ouvre l'éditeur de recadrage.
+- Clavier : **Entrée** accepte, **Échap** rejette, **↑ ↓** changent de morceau, **1 à 9** choisissent une proposition.
+- « Accepter tout l'album » accepte d'un coup tous les morceaux de la même sortie.
+- En haut : le **taux d'identification** de tout ce qui a été recherché.
+
+### Recherche manuelle
+Dans le panneau de détail (un seul morceau sélectionné) : **Rechercher en ligne…**, tapez l'artiste et le titre, puis appliquez tout ou partie du résultat. Aussi disponible dans À valider pour les morceaux mal reconnus.
+
+### Recadrer une pochette
+Glissez le carré, tirez son coin pour l'agrandir, « Pivoter » si besoin, « Comparer avant / après », puis « Utiliser ce recadrage ».
+
+## Inbox (dossier d'arrivée)
+- Choisissez votre dossier de téléchargements (Beatport, Bandcamp…) au premier lancement ou dans l'écran **Inbox**.
+- Chaque nouveau fichier y est identifié, tagué, pourvu d'une pochette et renommé automatiquement **quand c'est sûr** ; sinon il passe par À valider.
+- Quand les morceaux sont prêts : **Ranger…** puis cliquez sur le dossier de destination (le dernier utilisé est proposé).
+- Un morceau traité dans l'Inbox avant son import dans Rekordbox n'y aura jamais de lien cassé.
+
+## Palette de commandes
+**Ctrl+K** (Cmd+K sur Mac) : tapez une action (« renommer », « nettoyer », « aller à »…) ou le nom d'un morceau, puis Entrée.
+
 ## Réglages
 
 - **Apparence**, **Langue**, **Densité du tableau**, **Notation des tonalités**.
+- **Recherche en ligne** : sources, clés AcoustID, contact, seuils, remplacement des valeurs existantes, renommage automatique, test de connexion, journal des appels.
 - **Écriture des tags** : version dans le titre, décimales du BPM, une seule pochette par fichier, séparateur des artistes, taille des pochettes.
 - **Base de données** : une copie est faite chaque jour (7 gardées). « Exporter la base… » pour en garder une copie où vous voulez ; « Importer une base… » la remettra en place au prochain démarrage.
 - **Signaler un problème** : copie un rapport à coller dans votre message.

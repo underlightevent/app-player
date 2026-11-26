@@ -27,6 +27,10 @@ Uniquement des licences permissives (principe 12 du cahier des charges). La list
 | base64 | échange d'images avec l'interface | MIT ou Apache-2.0 |
 | serde, serde_json, log, thiserror | outils | MIT ou Apache-2.0 |
 | windows-sys (Windows), libc (macOS) | identification des disques | MIT ou Apache-2.0 |
+| ureq, native-tls | accès réseau (chiffrement du système) | MIT ou Apache-2.0 |
+| rusty-chromaprint | empreintes audio | MIT |
+| keyring | clés dans le trousseau du système | MIT ou Apache-2.0 |
+| strsim | ressemblance des titres et artistes | MIT |
 | tempfile (tests uniquement) | dossiers temporaires | MIT ou Apache-2.0 |
 
 ## Interface (JavaScript)

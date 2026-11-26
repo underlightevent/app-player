@@ -1,6 +1,17 @@
 # Journal des versions
 
-## 0.2.0 — Phase 1 : bibliothèque et édition hors connexion (à valider)
+## 0.3.0 — Phase 2 : recherche en ligne et Inbox (à valider)
+
+- Empreintes audio calculées sur l'ordinateur ; AcoustID, MusicBrainz et Cover Art Archive (Deezer et iTunes disponibles mais désactivés par défaut, voir docs/SOURCES.md).
+- Score de confiance détaillé ; application automatique prudente (champs vides seulement, jamais sans empreinte, jamais entre deux versions différentes) ; file « À valider » avec comparaison champ par champ, choix du candidat et de la pochette, raccourcis clavier, acceptation d'un album entier ; liste « Non identifiés » ; taux d'identification affiché.
+- Recherche manuelle depuis le panneau de détail.
+- Pochettes : grille de choix, recadrage, rotation, comparaison avant/après.
+- Recherches mises en file hors connexion, reprises au retour du réseau ; limites de débit strictes et journal des appels ; cache de 30 jours.
+- Inbox : nouveaux fichiers du dossier d'arrivée traités automatiquement, puis « Ranger… ».
+- Palette de commandes (Ctrl+K), recherche en ligne de la sélection (Ctrl+L).
+- Clés AcoustID dans le trousseau du système.
+
+## 0.2.0 — Phase 1 : bibliothèque et édition hors connexion (validée sous Windows le 26 novembre 2026)
 
 - Dossiers de bibliothèque, disques externes reconnus même si la lettre ou le point de montage change, morceaux grisés quand le disque est débranché.
 - Indexation en tâche de fond (WAV, MP3, FLAC, AIFF, M4A, OGG, Opus), incrémentale, avec progression et annulation ; surveillance des changements faits hors de l'application ; fichiers illisibles et manquants signalés.

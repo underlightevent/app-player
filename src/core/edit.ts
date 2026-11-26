@@ -76,8 +76,21 @@ export async function trackCover(id: number, size = 600): Promise<string | null>
   return invoke<string | null>("track_cover", { id, size });
 }
 
-export async function coverPrepare(source: { path?: string; data?: string }): Promise<PreparedCover> {
-  return invoke<PreparedCover>("cover_prepare", { path: source.path ?? null, data: source.data ?? null });
+export interface CoverEdit {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  rotate: number;
+}
+
+export async function coverPrepare(source: { path?: string; data?: string }, edit?: CoverEdit): Promise<PreparedCover> {
+  return invoke<PreparedCover>("cover_prepare", { path: source.path ?? null, data: source.data ?? null, edit: edit ?? null });
+}
+
+/** Image d'un fichier local, pour l'éditeur de recadrage. */
+export async function imageData(path: string): Promise<string> {
+  return invoke<string>("image_data", { path });
 }
 
 export async function libraryGenres(): Promise<string[]> {

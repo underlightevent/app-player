@@ -52,9 +52,11 @@ interface Props {
   onToggleCollapsed: () => void;
   /** Arborescence des dossiers, affichée sous « Dossiers ». */
   tree?: React.ReactNode;
+  /** Nombre d'éléments à traiter par écran (Inbox, À valider, Doublons). */
+  badges?: Partial<Record<ViewId, number>>;
 }
 
-export function Sidebar({ current, onSelect, collapsed, onToggleCollapsed, tree }: Props) {
+export function Sidebar({ current, onSelect, collapsed, onToggleCollapsed, tree, badges }: Props) {
   const { t } = useTranslation();
 
   const item = ({ id, icon: Icon }: NavEntry) => (
@@ -67,6 +69,11 @@ export function Sidebar({ current, onSelect, collapsed, onToggleCollapsed, tree 
     >
       <Icon size={20} strokeWidth={1.75} aria-hidden />
       <span className="nav-label">{t(`nav.${id}`)}</span>
+      {!!badges?.[id] && (
+        <span className="nav-badge tabular" aria-label={t("nav.toHandle", { count: badges[id] })}>
+          {badges[id]! > 999 ? "999+" : badges[id]}
+        </span>
+      )}
     </button>
   );
 

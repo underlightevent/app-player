@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { ClipboardPaste, Disc3, ImagePlus, Info, Lock, LockOpen, Star, Trash2, X } from "lucide-react";
+import { ClipboardPaste, Disc3, Globe, ImagePlus, Info, Lock, LockOpen, Star, Trash2, X } from "lucide-react";
 import type { TrackRow } from "../core/library";
 import type { Changes, EditableField } from "../core/edit";
 import { trackCover } from "../core/edit";
@@ -20,6 +20,8 @@ interface Props {
   revision: number;
   /** Nom de fichier que donnerait le modèle de renommage. */
   futureName: string | null;
+  /** Recherche manuelle en ligne pour le morceau sélectionné. */
+  onManualSearch: () => void;
 }
 
 /** Valeur commune à toute la sélection, ou MIXED si elles diffèrent. */
@@ -307,6 +309,12 @@ export function DetailPanel(p: Props) {
         </datalist>
         <RatingField rows={rows} onCommit={(n) => edit({ rating: n })} onLock={p.onLock} />
       </fieldset>
+
+      {single && single.online && (
+        <button className="btn detail-search" onClick={p.onManualSearch}>
+          <Globe size={16} aria-hidden /> {t("detail.manualSearch")}
+        </button>
+      )}
 
       {single && (
         <>
