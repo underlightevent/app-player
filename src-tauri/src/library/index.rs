@@ -258,6 +258,15 @@ pub fn store(
         params![volume_id, rel],
         |r| r.get(0),
     )?;
+    // Nouveau fichier dans un dossier d'arrivée : il entre dans l'Inbox (phase 2).
+    if previous.is_none() && res.is_ok() {
+        if let Some(rid) = root_id {
+            let kind: Option<String> = conn.query_row("SELECT kind FROM roots WHERE id = ?1", [rid], |r| r.get(0)).optional()?;
+            if kind.as_deref() == Some("inbox") {
+                crate::online::register_inbox(conn, id)?;
+            }
+        }
+    }
 
     let info = match res {
         Ok(info) => info,

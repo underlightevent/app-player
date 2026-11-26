@@ -25,8 +25,14 @@ pub enum AppError {
     #[error("image : {0}")]
     Artwork(String),
 
-    #[error("disque déconnecté")]
+    #[error("disque déconnecté ou pas de connexion")]
     Offline,
+
+    #[error("trousseau du système : {0}")]
+    Keyring(String),
+
+    #[error("recherche en ligne : {0}")]
+    Network(String),
 
     #[error("état interne indisponible")]
     Poisoned,
@@ -42,6 +48,8 @@ impl AppError {
             AppError::DatabaseUnavailable => "database_unavailable",
             AppError::Artwork(_) => "artwork",
             AppError::Offline => "offline",
+            AppError::Keyring(_) => "keyring",
+            AppError::Network(_) => "network",
             AppError::Poisoned => "internal",
         }
     }

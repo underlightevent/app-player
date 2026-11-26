@@ -21,6 +21,16 @@ const KNOWN: &[(&str, &[&str], &str)] = &[
     ("bpm_decimals", &["true", "false"], "false"),
     ("single_cover", &["true", "false"], "true"),
     ("cover_size", &["500", "600", "1000", "1400"], "1000"),
+    // Recherche en ligne (docs/SOURCES.md : Deezer et iTunes désactivés par défaut)
+    ("src_musicbrainz", &["true", "false"], "true"),
+    ("src_coverartarchive", &["true", "false"], "true"),
+    ("src_acoustid", &["true", "false"], "true"),
+    ("src_deezer", &["true", "false"], "false"),
+    ("src_itunes", &["true", "false"], "false"),
+    ("auto_threshold", &["70", "75", "80", "85", "90", "95", "100"], "90"),
+    ("review_threshold", &["40", "45", "50", "55", "60", "65", "70"], "60"),
+    ("replace_existing", &["true", "false"], "false"),
+    ("auto_rename", &["inbox", "library", "never"], "inbox"),
 ];
 
 /// Réglages en texte libre (modèles, règles), avec leur valeur par défaut.
@@ -29,6 +39,8 @@ const FREE_TEXT: &[(&str, &str)] = &[
     ("rename_templates", "[]"),
     ("parse_pattern", "{artistes} - {titre}"),
     ("clean_rules", ""),
+    ("online_contact", ""),
+    ("inbox_last_target", ""),
 ];
 const MAX_FREE_TEXT: usize = 20_000;
 

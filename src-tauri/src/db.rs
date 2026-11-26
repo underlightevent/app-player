@@ -141,6 +141,49 @@ const MIGRATIONS: &[&str] = &[
         mtime    INTEGER NOT NULL,
         data     BLOB NOT NULL
     );",
+    // 5 — Recherche en ligne : empreintes, cache, journal des appels, résultats, file d'attente, Inbox.
+    "CREATE TABLE fingerprints (
+        track_id    INTEGER PRIMARY KEY REFERENCES tracks(id) ON DELETE CASCADE,
+        size        INTEGER NOT NULL,
+        mtime       INTEGER NOT NULL,
+        duration_s  INTEGER NOT NULL,
+        fingerprint TEXT NOT NULL,
+        raw         BLOB
+    );
+    CREATE TABLE online_cache (
+        key        TEXT PRIMARY KEY,
+        body       BLOB NOT NULL,
+        fetched_at INTEGER NOT NULL
+    );
+    CREATE TABLE online_calls (
+        id          INTEGER PRIMARY KEY,
+        ts_ms       INTEGER NOT NULL,
+        source      TEXT NOT NULL,
+        status      INTEGER NOT NULL,
+        duration_ms INTEGER NOT NULL,
+        cached      INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE INDEX online_calls_ts ON online_calls(ts_ms);
+    CREATE TABLE online_results (
+        track_id   INTEGER PRIMARY KEY REFERENCES tracks(id) ON DELETE CASCADE,
+        status     TEXT NOT NULL,
+        score      INTEGER NOT NULL DEFAULT 0,
+        candidates TEXT NOT NULL DEFAULT '[]',
+        applied    TEXT,
+        detail     TEXT,
+        updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+    CREATE INDEX online_results_status ON online_results(status);
+    CREATE TABLE online_queue (
+        track_id     INTEGER PRIMARY KEY REFERENCES tracks(id) ON DELETE CASCADE,
+        requested_at INTEGER NOT NULL DEFAULT (unixepoch()),
+        attempts     INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE TABLE inbox_items (
+        track_id INTEGER PRIMARY KEY REFERENCES tracks(id) ON DELETE CASCADE,
+        state    TEXT NOT NULL DEFAULT 'pending',
+        added_at INTEGER NOT NULL DEFAULT (unixepoch())
+    );",
 ];
 
 /// Ouvre une connexion supplémentaire (tâches de fond). La base doit déjà exister et être migrée.

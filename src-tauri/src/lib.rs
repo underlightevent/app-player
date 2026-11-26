@@ -11,6 +11,7 @@ mod diagnostics;
 mod error;
 mod history;
 mod library;
+mod online;
 mod rename;
 mod settings;
 mod tags;
@@ -47,6 +48,7 @@ pub struct AppState {
     library: Option<Arc<Library>>,
     tasks: Arc<Tasks>,
     player: audio::player::PlayerHandle,
+    online: Option<Arc<online::Online>>,
 }
 
 impl AppState {
@@ -331,6 +333,156 @@ async fn database_import(state: State<'_, AppState>, path: String) -> Result<(),
     db::stage_import(&data_dir, std::path::Path::new(&path))
 }
 
+// ---------- Recherche en ligne ----------
+
+impl AppState {
+    fn online(&self) -> Result<&Arc<online::Online>, AppError> {
+        self.online.as_ref().ok_or(AppError::DatabaseUnavailable)
+    }
+}
+
+#[tauri::command]
+async fn online_search(state: State<'_, AppState>, ids: Vec<i64>) -> Result<(), AppError> {
+    state.online()?.enqueue(&ids)
+}
+
+#[tauri::command]
+async fn online_status(state: State<'_, AppState>) -> Result<online::OnlineStatus, AppError> {
+    let o = state.online()?.clone();
+    blocking(move || o.status()).await
+}
+
+#[tauri::command]
+async fn online_results(state: State<'_, AppState>, status: String) -> Result<Vec<online::ResultRow>, AppError> {
+    let o = state.online()?.clone();
+    blocking(move || o.results(&status, 500)).await
+}
+
+#[tauri::command]
+async fn online_accept(
+    state: State<'_, AppState>,
+    track_id: i64,
+    candidate: online::model::Candidate,
+    fields: Vec<String>,
+    cover_url: Option<String>,
+) -> Result<EditReport, AppError> {
+    let o = state.online()?.clone();
+    blocking(move || o.accept(track_id, &candidate, &fields, cover_url.as_deref())).await
+}
+
+#[tauri::command]
+async fn online_reject(state: State<'_, AppState>, track_id: i64) -> Result<(), AppError> {
+    let o = state.online()?.clone();
+    blocking(move || o.reject(track_id)).await
+}
+
+#[tauri::command]
+async fn online_manual_search(state: State<'_, AppState>, track_id: i64, artist: String, title: String) -> Result<Vec<online::model::Candidate>, AppError> {
+    let o = state.online()?.clone();
+    blocking(move || o.manual_search(track_id, &artist, &title)).await
+}
+
+#[tauri::command]
+async fn online_cover_previews(state: State<'_, AppState>, candidates: Vec<online::model::Candidate>) -> Result<Vec<online::CoverPreview>, AppError> {
+    let o = state.online()?.clone();
+    blocking(move || Ok(o.cover_previews(&candidates))).await
+}
+
+/// Clés AcoustID : rangées dans le trousseau du système, jamais dans la base ni dans le code.
+#[tauri::command]
+async fn online_set_key(name: String, value: String) -> Result<(), AppError> {
+    if name != "acoustid_client" && name != "acoustid_user" {
+        return Err(AppError::InvalidSetting(name));
+    }
+    blocking(move || online::key_set(&name, &value)).await
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct KeyStatus {
+    client: bool,
+    user: bool,
+}
+
+#[tauri::command]
+async fn online_key_status() -> Result<KeyStatus, AppError> {
+    blocking(|| Ok(KeyStatus { client: online::key_get("acoustid_client").is_some(), user: online::key_get("acoustid_user").is_some() })).await
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ConnectionTest {
+    musicbrainz: String,
+    acoustid: String,
+}
+
+/// « Tester la connexion » : une requête MusicBrainz et, s'il y a une clé, une requête AcoustID.
+#[tauri::command]
+async fn online_test(state: State<'_, AppState>) -> Result<ConnectionTest, AppError> {
+    let o = state.online()?.clone();
+    let contact = state.with_db(|c| Ok(online::load_settings(c).contact))?;
+    blocking(move || {
+        o.http.set_contact(&contact);
+        let mb = match online::musicbrainz::search(&o.http, "Daft Punk", "One More Time", 1) {
+            Ok(_) => "ok".to_string(),
+            Err(e) => e.to_string(),
+        };
+        let ac = match online::key_get("acoustid_client") {
+            None => "no_key".to_string(),
+            Some(k) => {
+                // Empreinte factice : une clé valide donne une réponse « ok » sans résultat.
+                match online::acoustid::lookup(&o.http, &k, online::key_get("acoustid_user").as_deref(), "AQAAAA", 30) {
+                    Ok(_) => "ok".to_string(),
+                    Err(e) => e.to_string(),
+                }
+            }
+        };
+        Ok(ConnectionTest { musicbrainz: mb, acoustid: ac })
+    })
+    .await
+}
+
+/// Journal des appels : nombre maximal d'appels réels par fenêtre, par source.
+#[tauri::command]
+async fn online_call_stats(state: State<'_, AppState>) -> Result<Vec<(String, i64, i64)>, AppError> {
+    state.with_db(|c| {
+        let mut out = Vec::new();
+        for (src, window) in [("musicbrainz", 1000), ("coverartarchive", 1000), ("acoustid", 1000), ("deezer", 5000), ("itunes", 60_000)] {
+            let total: i64 = c.query_row("SELECT count(*) FROM online_calls WHERE source = ?1 AND cached = 0", [src], |r| r.get(0))?;
+            out.push((src.to_string(), total, online::http::max_calls_in_window(c, src, window)?));
+        }
+        Ok(out)
+    })
+}
+
+#[tauri::command]
+async fn inbox_list(state: State<'_, AppState>) -> Result<Vec<(i64, String)>, AppError> {
+    state.with_db(|c| {
+        let mut st = c.prepare("SELECT track_id, state FROM inbox_items ORDER BY added_at DESC")?;
+        let rows = st.query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?.collect::<Result<Vec<_>, _>>()?;
+        Ok(rows)
+    })
+}
+
+/// « Ranger… » : déplace les morceaux traités de l'Inbox vers un dossier de la bibliothèque.
+#[tauri::command]
+async fn inbox_file(state: State<'_, AppState>, ids: Vec<i64>, volume_id: i64, target: String) -> Result<EditReport, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        let r = lib.move_tracks(&ids, volume_id, &target)?;
+        let conn = db::open_worker(lib.db_path())?;
+        for id in &ids {
+            conn.execute("DELETE FROM inbox_items WHERE track_id = ?1 AND state = 'done'", [id])?;
+        }
+        conn.execute(
+            "INSERT INTO settings (key, value) VALUES ('inbox_last_target', ?1) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            [format!("{volume_id}|{target}")],
+        )?;
+        Ok(r)
+    })
+    .await
+}
+
 // ---------- Lecteur et forme d'onde ----------
 
 #[tauri::command]
@@ -554,7 +706,11 @@ pub fn run() {
                 });
             }
             let player = audio::player::PlayerHandle::spawn(Some(app.handle().clone()));
-            app.manage(AppState { db: Mutex::new(db), db_path, db_error, log_dir, library, tasks, player });
+            let online = library.as_ref().map(|lib| online::Online::new(lib.clone(), data_dir.clone(), Some(app.handle().clone())));
+            if let Some(o) = &online {
+                o.start_worker();
+            }
+            app.manage(AppState { db: Mutex::new(db), db_path, db_error, log_dir, library, tasks, player, online });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -578,6 +734,19 @@ pub fn run() {
             history_apply,
             track_cover,
             cover_prepare,
+            online_search,
+            online_status,
+            online_results,
+            online_accept,
+            online_reject,
+            online_manual_search,
+            online_cover_previews,
+            online_set_key,
+            online_key_status,
+            online_test,
+            online_call_stats,
+            inbox_list,
+            inbox_file,
             folders_list,
             folder_create,
             folder_move,
