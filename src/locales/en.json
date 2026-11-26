@@ -3,7 +3,8 @@
     "name": "DJ Library Manager"
   },
   "common": {
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "undo": "Undo"
   },
   "nav": {
     "library": "Library",
@@ -156,7 +157,21 @@
     "cover": "Artwork",
     "coverCount_one": "{{count}} image",
     "coverCount_other": "{{count}} images",
-    "file": "File"
+    "file": "File",
+    "mixed": "Multiple values",
+    "lock": "Lock (no automation will change this field)",
+    "unlock": "Unlock",
+    "artistDragHint": "Drag to reorder",
+    "makeMain": "Make {{name}} the main artist",
+    "removeArtist": "Remove {{name}}",
+    "addArtist": "Add an artist…",
+    "stars_one": "{{count}} star",
+    "stars_other": "{{count}} stars",
+    "coverPick": "Choose an image…",
+    "coverPaste": "Paste image from clipboard",
+    "coverRemove": "Remove artwork",
+    "coverDropHint": "Or drop an image onto the window",
+    "offlineReadOnly": "Drive disconnected: track is read-only."
   },
   "folders": {
     "title": "Library folders",
@@ -179,7 +194,8 @@
       "done": "Done",
       "cancelled": "Cancelled",
       "error": "Error"
-    }
+    },
+    "edit": "Writing tags"
   },
   "player": {
     "nothing": "Nothing playing",
@@ -225,5 +241,37 @@
     "invalid_setting": "This setting could not be saved.",
     "internal": "Internal error. Restart the application; if the problem comes back, copy the diagnostic report.",
     "settingNotSaved": "The setting could not be saved."
+  },
+  "history": {
+    "editTags": "the tag change"
+  },
+  "edit": {
+    "saved_one": "Track updated",
+    "saved_other": "{{count}} tracks updated",
+    "undone": "Undone: {{what}}",
+    "redone": "Redone: {{what}}",
+    "nothingToUndo": "Nothing to undo",
+    "nothingToRedo": "Nothing to redo",
+    "failedOne": "“{{file}}” was not changed: {{reason}}",
+    "failedMany": "{{count}} tracks were not changed. For example: {{reason}}",
+    "selectFirst": "Select one or more tracks first.",
+    "coverNotSquare": "The image is not square: it was kept whole. Cropping is coming in phase 2.",
+    "coverUnreadable": "This image could not be read. Try a JPEG or PNG file.",
+    "noImageInClipboard": "The clipboard does not contain an image.",
+    "locked": "Field “{{field}}” locked: no automation will change it",
+    "unlocked": "Field “{{field}}” unlocked"
+  },
+  "writeErrors": {
+    "read_only": "the file or drive is read-only. Check that it is not write-protected.",
+    "in_use": "the file is open in another program. Close it and try again.",
+    "disk_full": "the drive is full. Free up some space and try again.",
+    "unsupported": "this format cannot be edited yet.",
+    "unsafe_tags": "its current tags cannot be read back safely, so it was left untouched.",
+    "verify": "the check after writing failed; the original file is intact.",
+    "audio_changed": "the audio would have changed; the original file is intact.",
+    "io": "file access error; the original file is intact.",
+    "offline": "the drive is disconnected.",
+    "unreadable": "the file is unreadable.",
+    "internal": "internal error; the original file is intact."
   }
 }

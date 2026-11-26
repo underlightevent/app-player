@@ -9,7 +9,7 @@ use lofty::picture::{PictureInformation, PictureType};
 use lofty::tag::{Accessor, ItemKey, Tag, TagExt, TagType};
 
 use super::chunks;
-use super::text::{normalize_key, split_artists, split_title_version};
+use super::text::{normalize_key, rating_text_to_stars, split_artists, split_title_version};
 use super::{CoverInfo, FileInfo, TrackTags};
 
 #[derive(Debug, thiserror::Error)]
@@ -47,6 +47,20 @@ fn parse_bpm(s: &str) -> Option<f64> {
     s.trim().replace(',', ".").parse::<f64>().ok().filter(|v| *v > 0.0 && *v < 1000.0)
 }
 
+/// Note en étoiles. ID3 : l'entrée POPM de l'application (échelle de l'Explorateur Windows)
+/// est prioritaire sur celles des autres logiciels. Vorbis : champ RATING (0–5, 0–10 ou 0–100).
+fn read_rating(tag: &Tag) -> u8 {
+    if tag.tag_type() == TagType::VorbisComments {
+        return tag.get_string(ItemKey::Popularimeter).and_then(rating_text_to_stars).unwrap_or(0);
+    }
+    let all: Vec<_> = tag.ratings().collect();
+    all.iter()
+        .find(|p| p.email() == super::write::POPM_EMAIL)
+        .or_else(|| all.first())
+        .map(|p| (p.rating as u8).min(5))
+        .unwrap_or(0)
+}
+
 /// Extrait les champs du modèle depuis un tag générique lofty.
 fn tags_from(tag: &Tag, exceptions: &[String]) -> TrackTags {
     let raw_title = clean(tag.get_string(ItemKey::TrackTitle));
@@ -79,7 +93,7 @@ fn tags_from(tag: &Tag, exceptions: &[String]) -> TrackTags {
         .and_then(parse_bpm)
         .or_else(|| tag.get_string(ItemKey::IntegerBpm).and_then(parse_bpm));
     let key = tag.get_string(ItemKey::InitialKey).and_then(normalize_key);
-    let rating = tag.ratings().next().map(|p| p.rating as u8).unwrap_or(0).min(5);
+    let rating = read_rating(tag);
     TrackTags {
         title,
         version,

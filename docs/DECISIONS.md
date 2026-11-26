@@ -88,3 +88,23 @@ Les fichiers de test sont fabriqués par le code (`src-tauri/src/testdata.rs`) :
 
 ### D-112 · Licences de la surveillance des dossiers (à confirmer)
 `notify`, recommandé par le cahier des charges pour surveiller les dossiers, est sous licence **CC0-1.0** (domaine public) et utilise `xxhash-rust`, sous licence **BSL-1.0** (Boost). Ces deux licences ne figurent pas mot pour mot dans la liste du principe 12, mais elles sont permissives : aucune obligation de publier le code, partage et usage commercial permis, rien de comparable à la GPL. Elles sont donc acceptées par le contrôle automatique des licences. Si l'utilisateur préfère s'en tenir strictement à la liste, la solution de repli est une vérification périodique des dossiers (sans surveillance en temps réel), au prix d'une détection des changements moins rapide.
+
+### D-113 · Déroulé d'une écriture de tags
+1. Hash du flux audio de l'original. 2. Copie temporaire cachée (`.djlm-tmp-…`) dans le même dossier, modifiée : seuls les champs demandés sont touchés. 3. Relecture complète de la copie : chaque champ modifié doit être relu à l'identique, et le hash audio doit être le même. 4. Remplacement de l'original par la copie (`rename`, atomique sur le même disque). À la moindre erreur, la copie est supprimée et l'original n'a pas bougé. Les tags existants sont lus en mode strict : s'ils ne se relisent pas parfaitement, l'application refuse d'écrire plutôt que de risquer une perte. Une erreur interne de la bibliothèque de tags est interceptée et transformée en message, sans plantage.
+Optimisation non appliquée : le hash de l'original est recalculé à chaque écriture (lecture complète du fichier). Pour un WAV de 100 Mo sur USB 3, compter environ une seconde par morceau. C'est le prix de la garantie « flux audio identique ».
+
+### D-114 · Correspondance des champs par format
+- ID3 (MP3 et WAV en v2.3, AIFF en v2.4), texte en UTF-16 : TIT2 (titre composé « Titre (Version) »), TIT3 (version), TPE1 (artistes), TPE4 (remixeur déduit de la version), TALB, TCON, année (TYER en v2.3, TDRC en v2.4), TBPM, TKEY, POPM (adresse « Windows Media Player 9 Series », échelle 1/64/128/196/255 ; les notes des autres logiciels sont conservées), APIC « Cover (front) ».
+- RIFF INFO (WAV), écrit en même temps que l'ID3 : INAM, IART, IPRD, IGNR, ICRD. Encodage : UTF-8. Les autres entrées RIFF INFO (ICMT, ISFT…) sont recopiées octet pour octet. **À vérifier par l'utilisateur dans Rekordbox** avec des accents (é, ü, ñ) : si Rekordbox affiche mal les accents, passer à Windows-1252 (une ligne à changer).
+- Vorbis (FLAC, OGG, Opus) : TITLE, SUBTITLE (version), REMIXER, ARTIST, ALBUM, GENRE, DATE, BPM, INITIALKEY, RATING (0–100, soit 20 par étoile), image « Cover (front) ».
+- M4A : atomes iTunes via lofty. La note n'est pas écrite dans les M4A (aucun usage commun) : elle reste dans la base de l'application et partira vers Rekordbox par l'export XML (phase 4).
+- Tonalité écrite dans la notation choisie dans les réglages (Camelot par défaut), BPM arrondi à l'entier par défaut.
+
+### D-115 · Historique
+Chaque action forme un « lot » (table `history_batches`) ; chaque fichier touché y ajoute l'état avant et après des seuls champs concernés, avec les cadenas. Les pochettes remplacées sont gardées dans la base (`history_blobs`) pour être remises à l'identique. Annuler ou rétablir réécrit les fichiers avec la même écriture sûre. Une nouvelle action efface la possibilité de rétablir les actions annulées (comportement habituel). Seuls les 2 000 derniers lots sont conservés.
+
+### D-116 · Cadenas et liste d'exceptions
+Une saisie manuelle verrouille les champs modifiés (pas la pochette). Les modifications automatiques (phase 2) passent par le même chemin avec la source « automatique », qui ignore les champs verrouillés. Quand l'utilisateur garde entier un nom d'artiste contenant un séparateur (« Duo & Compagnie »), ce nom est ajouté à la liste d'exceptions.
+
+### D-117 · Pochettes en phase 1
+Image décodée (JPEG, PNG, WebP, GIF, BMP), recadrée au carré si l'écart est de 10 % au plus, réduite à 1000 pixels (réglable), jamais agrandie, enregistrée en JPEG qualité 85 (abaissée si le fichier dépasse 1 Mo). Une image nettement rectangulaire est gardée entière : l'éditeur de recadrage arrive en phase 2.

@@ -1129,3 +1129,228 @@ button {
   font-size: var(--font-size-small);
   color: var(--color-text-secondary);
 }
+
+/* ---------- Édition dans le panneau de détail ---------- */
+.cover-box {
+  position: relative;
+  margin-bottom: var(--space-3);
+}
+
+.cover-box img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: var(--radius-card);
+  background: var(--color-surface-hover);
+}
+
+.cover-actions {
+  position: absolute;
+  right: var(--space-2);
+  bottom: calc(var(--space-2) + 20px);
+  display: flex;
+  gap: var(--space-1);
+  padding: 2px;
+  border-radius: var(--radius-field);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-menu);
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.cover-box:hover .cover-actions,
+.cover-box:focus-within .cover-actions {
+  opacity: 1;
+}
+
+.cover-hint {
+  margin-top: var(--space-1);
+  font-size: var(--font-size-small);
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.detail-count {
+  font-weight: 600;
+}
+
+.edit-form {
+  border: 0;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.edit-form:disabled {
+  opacity: 0.6;
+}
+
+.edit-field {
+  display: grid;
+  grid-template-columns: 1fr 24px;
+  grid-template-areas:
+    "label label"
+    "input lock";
+  align-items: center;
+  column-gap: var(--space-1);
+  margin-bottom: var(--space-2);
+  min-width: 0;
+}
+
+.edit-field > label {
+  grid-area: label;
+  font-size: var(--font-size-small);
+  color: var(--color-text-secondary);
+  margin-bottom: 2px;
+}
+
+.edit-field > input,
+.edit-field > .artist-tags,
+.edit-field > .rating-input {
+  grid-area: input;
+  min-width: 0;
+}
+
+.edit-field input {
+  height: 30px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-field);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.edit-field input:hover {
+  border-color: var(--color-text-secondary);
+}
+
+.edit-field input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-accent-soft);
+}
+
+.edit-field input::placeholder {
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
+.edit-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.lock-btn {
+  grid-area: lock;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: var(--radius-field);
+  background: transparent;
+  color: var(--color-border);
+  cursor: pointer;
+}
+
+.lock-btn:hover {
+  color: var(--color-text-secondary);
+  background: var(--color-surface-hover);
+}
+
+.lock-btn.on {
+  color: var(--color-text);
+}
+
+.artist-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 30px;
+  padding: 3px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-field);
+  background: var(--color-surface);
+}
+
+.artist-tags .artist-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: grab;
+}
+
+.tag-btn {
+  display: inline-flex;
+  padding: 1px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.tag-btn:hover {
+  color: var(--color-text);
+}
+
+.artist-add {
+  flex: 1;
+  min-width: 90px;
+  height: 22px !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 var(--space-1) !important;
+}
+
+.rating-input {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 30px;
+}
+
+.rating-input button {
+  display: inline-flex;
+  padding: 2px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.small {
+  font-size: var(--font-size-small);
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  z-index: 50;
+}
+
+.toast-error {
+  background: var(--color-error);
+  color: var(--color-on-error);
+}
+
+.toast-action {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+}

@@ -1,6 +1,7 @@
 //! Bibliothèque : dossiers racines, disques, indexation en tâche de fond,
 //! surveillance des changements faits en dehors de l'application.
 
+pub mod edit;
 pub mod index;
 pub mod query;
 pub mod volumes;
@@ -47,7 +48,7 @@ pub struct RootInfo {
 
 pub struct Library {
     db_path: PathBuf,
-    mounts: RwLock<HashMap<i64, PathBuf>>,
+    pub(crate) mounts: RwLock<HashMap<i64, PathBuf>>,
     pub tasks: Arc<Tasks>,
     app: Option<AppHandle>,
     watcher: Mutex<Option<notify::RecommendedWatcher>>,
@@ -74,6 +75,10 @@ impl Library {
 
     fn conn(&self) -> Result<Connection, AppError> {
         db::open_worker(&self.db_path)
+    }
+
+    pub fn db_path(&self) -> &Path {
+        &self.db_path
     }
 
     pub fn mounts(&self) -> HashMap<i64, PathBuf> {

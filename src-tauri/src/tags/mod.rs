@@ -4,6 +4,7 @@
 pub mod chunks;
 pub mod read;
 pub mod text;
+pub mod write;
 
 use serde::{Deserialize, Serialize};
 

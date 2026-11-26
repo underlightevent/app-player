@@ -165,9 +165,17 @@ fn cp1252(b: u8) -> char {
 /// Contenu à mettre à la place des blocs de tags.
 pub struct Replacement<'a> {
     /// Données du bloc LIST (commençant par « INFO »), ou None pour ne pas y toucher.
+    /// Une liste vide (« INFO » seul) supprime le bloc.
     pub info: Option<&'a [u8]>,
     /// Tag ID3 complet (en-tête compris), ou None pour ne pas y toucher.
+    /// Des données vides suppriment le bloc.
     pub id3: Option<&'a [u8]>,
+}
+
+/// Bloc neuf, sauf s'il est vide (dans ce cas il est supprimé).
+fn new_part(id: [u8; 4], data: &[u8]) -> Option<Part> {
+    let empty = if &id == b"LIST" { data.len() <= 4 } else { data.is_empty() };
+    (!empty).then(|| Part::New(id, data.to_vec()))
 }
 
 /// Écrit dans `out` une copie de `src` où seuls les blocs de tags sont remplacés.
@@ -175,7 +183,6 @@ pub struct Replacement<'a> {
 pub fn rewrite<R: Read + Seek, W: Write>(src: &mut R, layout: &Layout, rep: &Replacement, out: &mut W) -> io::Result<()> {
     let le = layout.container == Container::Wav;
     let id3_id: &[u8; 4] = if le { b"id3 " } else { b"ID3 " };
-    let mut body: Vec<u8> = Vec::new(); // seulement les petits blocs ; l'audio est copié en flux
     let mut parts: Vec<Part> = Vec::new();
     let mut info_done = rep.info.is_none();
     let mut id3_done = rep.id3.is_none();
@@ -184,14 +191,14 @@ pub fn rewrite<R: Read + Seek, W: Write>(src: &mut R, layout: &Layout, rep: &Rep
     for (i, c) in layout.chunks.iter().enumerate() {
         if Some(i) == info_index {
             if !info_done {
-                parts.push(Part::New(*b"LIST", rep.info.unwrap().to_vec()));
+                parts.extend(new_part(*b"LIST", rep.info.unwrap()));
                 info_done = true;
             }
             continue;
         }
         if c.is_id3() && rep.id3.is_some() {
             if !id3_done {
-                parts.push(Part::New(*id3_id, rep.id3.unwrap().to_vec()));
+                parts.extend(new_part(*id3_id, rep.id3.unwrap()));
                 id3_done = true;
             }
             continue; // doublons éventuels supprimés : un seul bloc ID3
@@ -199,10 +206,10 @@ pub fn rewrite<R: Read + Seek, W: Write>(src: &mut R, layout: &Layout, rep: &Rep
         parts.push(Part::Copy(i));
     }
     if !info_done {
-        parts.push(Part::New(*b"LIST", rep.info.unwrap().to_vec()));
+        parts.extend(new_part(*b"LIST", rep.info.unwrap()));
     }
     if !id3_done {
-        parts.push(Part::New(*id3_id, rep.id3.unwrap().to_vec()));
+        parts.extend(new_part(*id3_id, rep.id3.unwrap()));
     }
 
     // Taille totale du conteneur.
@@ -217,7 +224,6 @@ pub fn rewrite<R: Read + Seek, W: Write>(src: &mut R, layout: &Layout, rep: &Rep
     if total > u32::MAX as u64 {
         return Err(invalid("fichier trop grand pour le format WAV/AIFF"));
     }
-    body.clear();
     out.write_all(if le { b"RIFF" } else { b"FORM" })?;
     out.write_all(&size_bytes(total as u32, le))?;
     out.write_all(&layout.form_type)?;

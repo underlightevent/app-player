@@ -18,6 +18,7 @@
   --color-warning: #d97706;
   --color-error: #dc2626;
   --color-error-soft: #fef2f2;
+  --color-on-error: #ffffff;
   --color-focus: #4f46e5;
   --shadow-menu: 0 8px 24px rgb(28 25 23 / 0.12);
 
@@ -72,6 +73,7 @@
   --color-warning: #fbbf24;
   --color-error: #f87171;
   --color-error-soft: #2a1212;
+  --color-on-error: #0c0a09;
   --color-focus: #818cf8;
   --shadow-menu: 0 8px 24px rgb(0 0 0 / 0.5);
 

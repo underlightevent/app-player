@@ -22,6 +22,9 @@ pub enum AppError {
     #[error("la base de données n'a pas pu être ouverte au démarrage")]
     DatabaseUnavailable,
 
+    #[error("image : {0}")]
+    Artwork(String),
+
     #[error("état interne indisponible")]
     Poisoned,
 }
@@ -34,6 +37,7 @@ impl AppError {
             AppError::DatabaseTooNew { .. } => "database_too_new",
             AppError::InvalidSetting(_) => "invalid_setting",
             AppError::DatabaseUnavailable => "database_unavailable",
+            AppError::Artwork(_) => "artwork",
             AppError::Poisoned => "internal",
         }
     }

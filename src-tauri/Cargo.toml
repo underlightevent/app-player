@@ -30,6 +30,8 @@ rayon = "1"
 blake3 = "1"
 walkdir = "2"
 unicode-normalization = "0.1"
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp", "gif", "bmp"] }
+base64 = "0.23"
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = ["Win32_Storage_FileSystem", "Win32_Foundation", "Win32_System_Diagnostics_Debug"] }

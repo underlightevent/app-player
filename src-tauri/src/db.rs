@@ -112,6 +112,28 @@ const MIGRATIONS: &[&str] = &[
         INSERT INTO tracks_fts(rowid, title, version, artists, album, genre, file_name)
         VALUES (new.id, new.title, new.version, new.artists, new.album, new.genre, new.file_name);
     END;",
+    // 3 — Historique des opérations (annulation, même après redémarrage).
+    "CREATE TABLE history_batches (
+        id         INTEGER PRIMARY KEY,
+        label      TEXT NOT NULL,
+        detail     TEXT,
+        created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+        undone     INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE TABLE history_ops (
+        id       INTEGER PRIMARY KEY,
+        batch_id INTEGER NOT NULL REFERENCES history_batches(id) ON DELETE CASCADE,
+        kind     TEXT NOT NULL,
+        track_id INTEGER,
+        before   TEXT NOT NULL,
+        after    TEXT NOT NULL
+    );
+    CREATE INDEX history_ops_batch ON history_ops(batch_id);
+    CREATE TABLE history_blobs (
+        hash TEXT PRIMARY KEY,
+        mime TEXT NOT NULL,
+        data BLOB NOT NULL
+    );",
 ];
 
 /// Ouvre une connexion supplémentaire (tâches de fond). La base doit déjà exister et être migrée.

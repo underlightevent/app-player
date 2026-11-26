@@ -4,14 +4,17 @@
 //! library, tags, rename, online, artwork, duplicates, quality, audio,
 //! history, rekordbox.
 
+mod artwork;
 mod audio;
 mod db;
 mod diagnostics;
 mod error;
+mod history;
 mod library;
 mod settings;
 mod tags;
 mod tasks;
+mod util;
 #[cfg(test)]
 mod testdata;
 
@@ -25,7 +28,9 @@ use tauri::{Manager, State};
 use tauri_plugin_log::{RotationStrategy, Target, TargetKind};
 
 use error::{AppError, ErrorInfo};
+use library::edit::{EditReport, Source};
 use library::query::{Query, TrackRow};
+use tags::write::Changes;
 use library::{Library, RootInfo, VolumeStatus};
 use tasks::{TaskInfo, Tasks};
 
@@ -157,6 +162,102 @@ async fn library_genres(state: State<'_, AppState>) -> Result<Vec<String>, AppEr
     state.with_db(library::query::genres)
 }
 
+// ---------- Édition, historique, pochettes ----------
+
+/// Lance un travail long hors du fil principal (l'interface ne se fige jamais).
+async fn blocking<T: Send + 'static>(f: impl FnOnce() -> Result<T, AppError> + Send + 'static) -> Result<T, AppError> {
+    tauri::async_runtime::spawn_blocking(f).await.map_err(|e| AppError::Io(std::io::Error::other(e.to_string())))?
+}
+
+#[tauri::command]
+async fn tracks_edit(state: State<'_, AppState>, ids: Vec<i64>, changes: Changes) -> Result<EditReport, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        let task = (ids.len() > 3).then(|| lib.tasks.start("tasks.edit", None));
+        let r = lib.edit(&ids, changes, Source::Manual, "history.editTags", task.as_ref());
+        if let Some(t) = task {
+            t.finish();
+        }
+        r
+    })
+    .await
+}
+
+#[tauri::command]
+async fn tracks_set_lock(state: State<'_, AppState>, ids: Vec<i64>, field: String, locked: bool) -> Result<(), AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || lib.set_lock(&ids, &field, locked)).await
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct HistoryResult {
+    report: EditReport,
+    label: Option<String>,
+}
+
+#[tauri::command]
+async fn history_list(state: State<'_, AppState>) -> Result<Vec<history::BatchInfo>, AppError> {
+    state.with_db(|c| history::list(c, 200))
+}
+
+/// Annule le lot `batch` (ou le dernier) ; `redo` : rétablit le prochain lot annulé.
+#[tauri::command]
+async fn history_apply(state: State<'_, AppState>, batch: Option<i64>, redo: bool) -> Result<HistoryResult, AppError> {
+    let lib = state.library()?.clone();
+    let target = match batch {
+        Some(b) => Some(b),
+        None => state.with_db(|c| if redo { history::next_redoable(c) } else { history::last_undoable(c) })?,
+    };
+    let Some(b) = target else {
+        return Ok(HistoryResult { report: EditReport::default(), label: None });
+    };
+    let label = state.with_db(|c| history::batch_label(c, b))?.map(|(l, _)| l);
+    let report = blocking(move || lib.apply_history(b, !redo)).await?;
+    Ok(HistoryResult { report, label })
+}
+
+/// Pochette d'un morceau, réduite pour l'affichage (adresse « data: »).
+#[tauri::command]
+async fn track_cover(state: State<'_, AppState>, id: i64, size: Option<u32>) -> Result<Option<String>, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        let conn = db::open_worker(lib.db_path())?;
+        let Some(path) = lib.track_path(&conn, id)? else { return Ok(None) };
+        let Ok(Some(cover)) = tags::write::current_cover(&path) else { return Ok(None) };
+        let thumb = artwork::thumbnail(&cover.data, size.unwrap_or(600)).unwrap_or(cover.data);
+        Ok(Some(format!("data:image/jpeg;base64,{}", util::b64_encode(&thumb))))
+    })
+    .await
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PreparedCover {
+    cover: tags::write::CoverData,
+    width: u32,
+    height: u32,
+    not_square: bool,
+    preview: String,
+}
+
+/// Prépare une pochette (fichier choisi, glissé ou image collée) : carré, redimensionné, JPEG.
+#[tauri::command]
+async fn cover_prepare(state: State<'_, AppState>, path: Option<String>, data: Option<String>) -> Result<PreparedCover, AppError> {
+    let size: u32 = state.with_db(settings::get_all)?.get("cover_size").and_then(|s| s.parse().ok()).unwrap_or(1000);
+    blocking(move || {
+        let bytes = match (path, data) {
+            (Some(p), _) => std::fs::read(p)?,
+            (None, Some(d)) => util::b64_decode(&d).map_err(AppError::InvalidSetting)?,
+            _ => return Err(AppError::InvalidSetting("aucune image".into())),
+        };
+        let p = artwork::prepare(&bytes, size).map_err(|e| AppError::Artwork(e.to_string()))?;
+        let preview = format!("data:image/jpeg;base64,{}", util::b64_encode(&p.cover.data));
+        Ok(PreparedCover { cover: p.cover, width: p.width, height: p.height, not_square: p.not_square, preview })
+    })
+    .await
+}
+
 #[tauri::command]
 fn tasks_list(state: State<'_, AppState>) -> Vec<TaskInfo> {
     state.tasks.list()
@@ -263,6 +364,12 @@ pub fn run() {
             library_query,
             library_rows,
             library_genres,
+            tracks_edit,
+            tracks_set_lock,
+            history_list,
+            history_apply,
+            track_cover,
+            cover_prepare,
             tasks_list,
             task_cancel
         ])

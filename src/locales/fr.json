@@ -3,7 +3,8 @@
     "name": "DJ Library Manager"
   },
   "common": {
-    "cancel": "Annuler"
+    "cancel": "Annuler",
+    "undo": "Annuler"
   },
   "nav": {
     "library": "Bibliothèque",
@@ -156,7 +157,21 @@
     "cover": "Pochette",
     "coverCount_one": "{{count}} image",
     "coverCount_other": "{{count}} images",
-    "file": "Fichier"
+    "file": "Fichier",
+    "mixed": "Valeurs multiples",
+    "lock": "Verrouiller (aucune automatisation ne modifiera ce champ)",
+    "unlock": "Déverrouiller",
+    "artistDragHint": "Glissez pour changer l'ordre",
+    "makeMain": "Faire de {{name}} l'artiste principal",
+    "removeArtist": "Retirer {{name}}",
+    "addArtist": "Ajouter un artiste…",
+    "stars_one": "{{count}} étoile",
+    "stars_other": "{{count}} étoiles",
+    "coverPick": "Choisir une image…",
+    "coverPaste": "Coller l'image du presse-papiers",
+    "coverRemove": "Retirer la pochette",
+    "coverDropHint": "Ou glissez une image sur la fenêtre",
+    "offlineReadOnly": "Disque déconnecté : morceau en lecture seule."
   },
   "folders": {
     "title": "Dossiers de la bibliothèque",
@@ -179,7 +194,8 @@
       "done": "Terminé",
       "cancelled": "Annulé",
       "error": "Erreur"
-    }
+    },
+    "edit": "Écriture des tags"
   },
   "player": {
     "nothing": "Aucun morceau en lecture",
@@ -225,5 +241,37 @@
     "invalid_setting": "Ce réglage n'a pas pu être enregistré.",
     "internal": "Erreur interne. Redémarrez l'application ; si le problème revient, copiez le rapport de diagnostic.",
     "settingNotSaved": "Le réglage n'a pas pu être enregistré."
+  },
+  "history": {
+    "editTags": "la modification des tags"
+  },
+  "edit": {
+    "saved_one": "Morceau modifié",
+    "saved_other": "{{count}} morceaux modifiés",
+    "undone": "Annulé : {{what}}",
+    "redone": "Rétabli : {{what}}",
+    "nothingToUndo": "Rien à annuler",
+    "nothingToRedo": "Rien à rétablir",
+    "failedOne": "« {{file}} » n'a pas été modifié : {{reason}}",
+    "failedMany": "{{count}} morceaux n'ont pas été modifiés. Par exemple : {{reason}}",
+    "selectFirst": "Sélectionnez d'abord un ou plusieurs morceaux.",
+    "coverNotSquare": "L'image n'est pas carrée : elle a été gardée entière. Le recadrage arrivera en phase 2.",
+    "coverUnreadable": "Cette image n'a pas pu être lue. Essayez un fichier JPEG ou PNG.",
+    "noImageInClipboard": "Le presse-papiers ne contient pas d'image.",
+    "locked": "Champ « {{field}} » verrouillé : aucune automatisation ne le modifiera",
+    "unlocked": "Champ « {{field}} » déverrouillé"
+  },
+  "writeErrors": {
+    "read_only": "le fichier ou le disque est en lecture seule. Vérifiez qu'il n'est pas protégé en écriture.",
+    "in_use": "le fichier est ouvert dans un autre programme. Fermez-le puis réessayez.",
+    "disk_full": "le disque est plein. Libérez de la place puis réessayez.",
+    "unsupported": "ce format ne peut pas encore être modifié.",
+    "unsafe_tags": "ses tags actuels ne peuvent pas être relus sans risque, il n'a donc pas été touché.",
+    "verify": "la vérification après écriture a échoué ; le fichier d'origine est intact.",
+    "audio_changed": "le son aurait été modifié ; le fichier d'origine est intact.",
+    "io": "erreur d'accès au fichier ; le fichier d'origine est intact.",
+    "offline": "le disque est déconnecté.",
+    "unreadable": "le fichier est illisible.",
+    "internal": "erreur interne ; le fichier d'origine est intact."
   }
 }

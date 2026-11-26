@@ -16,6 +16,11 @@ const KNOWN: &[(&str, &[&str], &str)] = &[
     ("onboarding_done", &["true", "false"], "false"),
     ("table_density", &["compact", "comfortable"], "compact"),
     ("key_notation", &["camelot", "musical"], "camelot"),
+    ("version_in_title", &["true", "false"], "true"),
+    ("artist_separator", &["comma", "ampersand", "semicolon"], "comma"),
+    ("bpm_decimals", &["true", "false"], "false"),
+    ("single_cover", &["true", "false"], "true"),
+    ("cover_size", &["500", "600", "1000", "1400"], "1000"),
 ];
 
 fn validate(key: &str, value: &str) -> Result<(), AppError> {
