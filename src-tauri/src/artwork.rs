@@ -42,13 +42,44 @@ fn square_if_close(img: DynamicImage) -> (DynamicImage, bool) {
     }
 }
 
+/// Recadrage choisi dans l'éditeur : rectangle en proportions (0 à 1) de l'image
+/// après rotation, et nombre de quarts de tour dans le sens des aiguilles d'une montre.
+#[derive(Debug, Clone, Copy, serde::Deserialize)]
+pub struct Edit {
+    pub x: f64,
+    pub y: f64,
+    pub w: f64,
+    pub h: f64,
+    #[serde(default)]
+    pub rotate: u8,
+}
+
 /// Transforme une image quelconque (JPEG, PNG, WebP…) en pochette prête à écrire.
 pub fn prepare(bytes: &[u8], target: u32) -> Result<Prepared, ArtworkError> {
-    let img = ImageReader::new(Cursor::new(bytes))
+    prepare_with(bytes, target, None)
+}
+
+/// Idem, avec la rotation et le recadrage choisis dans l'éditeur.
+pub fn prepare_with(bytes: &[u8], target: u32, edit: Option<Edit>) -> Result<Prepared, ArtworkError> {
+    let mut img = ImageReader::new(Cursor::new(bytes))
         .with_guessed_format()
         .map_err(|e| ArtworkError::Decode(e.to_string()))?
         .decode()
         .map_err(|e| ArtworkError::Decode(e.to_string()))?;
+    if let Some(e) = edit {
+        img = match e.rotate % 4 {
+            1 => img.rotate90(),
+            2 => img.rotate180(),
+            3 => img.rotate270(),
+            _ => img,
+        };
+        let (w, h) = img.dimensions();
+        let x = (e.x.clamp(0.0, 1.0) * w as f64) as u32;
+        let y = (e.y.clamp(0.0, 1.0) * h as f64) as u32;
+        let cw = ((e.w.clamp(0.0, 1.0) * w as f64) as u32).min(w - x.min(w - 1)).max(1);
+        let ch = ((e.h.clamp(0.0, 1.0) * h as f64) as u32).min(h - y.min(h - 1)).max(1);
+        img = img.crop_imm(x.min(w - 1), y.min(h - 1), cw, ch);
+    }
     let (w, h) = img.dimensions();
     if w < 64 || h < 64 {
         return Err(ArtworkError::TooSmall(w, h));
@@ -118,6 +149,15 @@ mod tests {
     fn petite_image_non_agrandie() {
         let p = prepare(&test_png(300, 300), 1000).unwrap();
         assert_eq!(p.width, 300);
+    }
+
+    #[test]
+    fn recadrage_et_rotation() {
+        // Image 1600×900 : on garde un carré au centre, après un quart de tour (900×1600).
+        let e = Edit { x: 0.0, y: 0.25, w: 1.0, h: 900.0 / 1600.0, rotate: 1 };
+        let p = prepare_with(&test_png(1600, 900), 1000, Some(e)).unwrap();
+        assert!(!p.not_square);
+        assert_eq!((p.width, p.height), (900, 900));
     }
 
     #[test]

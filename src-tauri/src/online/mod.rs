@@ -633,12 +633,26 @@ impl Online {
     }
 
     /// Accepte un candidat (file « À valider » ou recherche manuelle) : champs cochés, pochette choisie.
-    pub fn accept(&self, id: i64, candidate: &Candidate, fields: &[String], cover_url: Option<&str>) -> Result<EditReport, AppError> {
+    pub fn fetch_cover_bytes(&self, url: &str, source: &str) -> Result<Vec<u8>, NetError> {
+        covers::fetch(&self.http, &self.cover_dir, url, source)
+    }
+
+    pub fn accept(
+        &self,
+        id: i64,
+        candidate: &Candidate,
+        fields: &[String],
+        cover_url: Option<&str>,
+        cover: Option<crate::tags::write::CoverData>,
+    ) -> Result<EditReport, AppError> {
         let conn = self.conn()?;
         let s = load_settings(&conn);
         let Some(t) = load_track(&conn, id)? else { return Err(AppError::InvalidSetting("morceau introuvable".into())) };
         let (mut changes, _) = self.changes_for(&t, candidate, &s, Some(fields), false);
-        if let Some(url) = cover_url {
+        if let Some(c) = cover {
+            // Pochette déjà préparée (recadrée dans l'éditeur).
+            changes.cover = Some(Some(c));
+        } else if let Some(url) = cover_url {
             if let Some(cover) = self.fetch_cover(&conn, candidate, Some(url)) {
                 changes.cover = Some(Some(cover));
             }

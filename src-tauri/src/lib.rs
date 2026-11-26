@@ -255,7 +255,12 @@ struct PreparedCover {
 
 /// Prépare une pochette (fichier choisi, glissé ou image collée) : carré, redimensionné, JPEG.
 #[tauri::command]
-async fn cover_prepare(state: State<'_, AppState>, path: Option<String>, data: Option<String>) -> Result<PreparedCover, AppError> {
+async fn cover_prepare(
+    state: State<'_, AppState>,
+    path: Option<String>,
+    data: Option<String>,
+    edit: Option<artwork::Edit>,
+) -> Result<PreparedCover, AppError> {
     let size: u32 = state.with_db(settings::get_all)?.get("cover_size").and_then(|s| s.parse().ok()).unwrap_or(1000);
     blocking(move || {
         let bytes = match (path, data) {
@@ -263,7 +268,7 @@ async fn cover_prepare(state: State<'_, AppState>, path: Option<String>, data: O
             (None, Some(d)) => util::b64_decode(&d).map_err(AppError::InvalidSetting)?,
             _ => return Err(AppError::InvalidSetting("aucune image".into())),
         };
-        let p = artwork::prepare(&bytes, size).map_err(|e| AppError::Artwork(e.to_string()))?;
+        let p = artwork::prepare_with(&bytes, size, edit).map_err(|e| AppError::Artwork(e.to_string()))?;
         let preview = format!("data:image/jpeg;base64,{}", util::b64_encode(&p.cover.data));
         Ok(PreparedCover { cover: p.cover, width: p.width, height: p.height, not_square: p.not_square, preview })
     })
@@ -365,9 +370,10 @@ async fn online_accept(
     candidate: online::model::Candidate,
     fields: Vec<String>,
     cover_url: Option<String>,
+    cover: Option<tags::write::CoverData>,
 ) -> Result<EditReport, AppError> {
     let o = state.online()?.clone();
-    blocking(move || o.accept(track_id, &candidate, &fields, cover_url.as_deref())).await
+    blocking(move || o.accept(track_id, &candidate, &fields, cover_url.as_deref(), cover)).await
 }
 
 #[tauri::command]
@@ -380,6 +386,17 @@ async fn online_reject(state: State<'_, AppState>, track_id: i64) -> Result<(), 
 async fn online_manual_search(state: State<'_, AppState>, track_id: i64, artist: String, title: String) -> Result<Vec<online::model::Candidate>, AppError> {
     let o = state.online()?.clone();
     blocking(move || o.manual_search(track_id, &artist, &title)).await
+}
+
+/// Image d'une pochette en ligne en taille réelle (pour l'éditeur de recadrage).
+#[tauri::command]
+async fn online_cover_fetch(state: State<'_, AppState>, url: String, source: String) -> Result<String, AppError> {
+    let o = state.online()?.clone();
+    blocking(move || {
+        let bytes = o.fetch_cover_bytes(&url, &source).map_err(|e| AppError::Network(e.to_string()))?;
+        Ok(format!("data:image/jpeg;base64,{}", util::b64_encode(&bytes)))
+    })
+    .await
 }
 
 #[tauri::command]
@@ -741,6 +758,7 @@ pub fn run() {
             online_reject,
             online_manual_search,
             online_cover_previews,
+            online_cover_fetch,
             online_set_key,
             online_key_status,
             online_test,
