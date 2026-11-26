@@ -132,7 +132,7 @@ impl Library {
         Ok(self.mounts().get(&loc.volume_id).map(|m| volumes::join_rel(m, &loc.rel_path)))
     }
 
-    /// Applique `changes` aux morceaux `ids`, dans un nouveau lot d'historique.
+    /// Applique les mêmes `changes` aux morceaux `ids`, dans un nouveau lot d'historique.
     pub fn edit(
         &self,
         ids: &[i64],
@@ -141,26 +141,41 @@ impl Library {
         label: &str,
         task: Option<&TaskHandle>,
     ) -> Result<EditReport, AppError> {
-        let changes = changes.normalized();
-        if changes.is_empty() || ids.is_empty() {
+        let items: Vec<(i64, Changes)> = ids.iter().map(|id| (*id, changes.clone())).collect();
+        self.edit_each(items, source, label, task)
+    }
+
+    /// Applique à chaque morceau ses propres changements, dans un seul lot d'historique
+    /// (nettoyage, tags depuis le nom de fichier…).
+    pub fn edit_each(
+        &self,
+        items: Vec<(i64, Changes)>,
+        source: Source,
+        label: &str,
+        task: Option<&TaskHandle>,
+    ) -> Result<EditReport, AppError> {
+        let items: Vec<(i64, Changes)> =
+            items.into_iter().map(|(id, c)| (id, c.normalized())).filter(|(_, c)| !c.is_empty()).collect();
+        if items.is_empty() {
             return Ok(EditReport::default());
         }
         let conn = db_conn(self)?;
         let batch = history::begin_batch(&conn, label, None)?;
         let mut report = EditReport { batch_id: Some(batch), ..Default::default() };
         if let Some(t) = task {
-            t.set_total(ids.len() as u64);
+            t.set_total(items.len() as u64);
         }
-        if source == Source::Manual {
-            if let Some(a) = &changes.artists {
-                learn_exceptions(&conn, a)?;
-            }
-        }
-        for (n, &id) in ids.iter().enumerate() {
+        for (n, (id, changes)) in items.iter().enumerate() {
+            let id = *id;
             if task.map(|t| t.is_cancelled()).unwrap_or(false) {
                 break;
             }
-            match self.edit_one(&conn, id, &changes, source, batch) {
+            if source == Source::Manual {
+                if let Some(a) = &changes.artists {
+                    learn_exceptions(&conn, a)?;
+                }
+            }
+            match self.edit_one(&conn, id, changes, source, batch) {
                 Ok(()) => report.ok += 1,
                 Err(f) => report.failures.push(f),
             }
@@ -326,9 +341,8 @@ impl Library {
         Ok(())
     }
 
-    /// Placeholder rempli au lot C (renommage et déplacement).
-    fn restore_path(&self, _conn: &Connection, id: i64, _state: &str) -> Result<(), EditFailure> {
-        Err(failure(None, id, "internal", "opération non prise en charge".into()))
+    fn restore_path(&self, conn: &Connection, id: i64, state: &str) -> Result<(), EditFailure> {
+        self.restore_path_state(conn, id, state)
     }
 }
 
@@ -371,6 +385,35 @@ fn db_conn(lib: &Library) -> Result<Connection, AppError> {
 }
 
 #[cfg(test)]
+pub(crate) mod tests_support {
+    use super::*;
+
+    /// Bibliothèque de test sur le dossier `music` : base dans `dir/data`, indexation faite.
+    pub fn library_on(dir: &tempfile::TempDir, music: &std::path::Path) -> (std::sync::Arc<Library>, Vec<i64>) {
+        let (conn, db_path) = crate::db::open(&dir.path().join("data")).unwrap();
+        drop(conn);
+        let lib = Library::new(db_path, crate::tasks::Tasks::new(None), None);
+        let (vol, rel) = volumes::locate(music).unwrap();
+        let conn = crate::db::open_worker(lib.db_path()).unwrap();
+        let vol_id = index::upsert_volume(&conn, &vol).unwrap();
+        let root = index::add_root(&conn, vol_id, &rel, "library").unwrap();
+        drop(conn);
+        lib.refresh_mounts().unwrap();
+        let mut conn = crate::db::open_worker(lib.db_path()).unwrap();
+        let row = index::RootRow { id: root, volume_id: vol_id, rel_path: rel };
+        index::scan_root(&mut conn, &row, &vol.mount, &[], None, &|| {}).unwrap();
+        let ids: Vec<i64> = conn
+            .prepare("SELECT id FROM tracks WHERE status = 'ok' ORDER BY id")
+            .unwrap()
+            .query_map([], |r| r.get(0))
+            .unwrap()
+            .map(|r| r.unwrap())
+            .collect();
+        (lib, ids)
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::tags::write::CoverData;
@@ -382,19 +425,7 @@ mod tests {
         let music = dir.path().join("musique");
         std::fs::create_dir_all(&music).unwrap();
         testdata::all_formats(&music);
-        let (conn, db_path) = crate::db::open(&dir.path().join("data")).unwrap();
-        drop(conn);
-        let lib = Library::new(db_path, crate::tasks::Tasks::new(None), None);
-        let (vol, rel) = volumes::locate(&music).unwrap();
-        let conn = crate::db::open_worker(lib.db_path()).unwrap();
-        let vol_id = index::upsert_volume(&conn, &vol).unwrap();
-        let root = index::add_root(&conn, vol_id, &rel, "library").unwrap();
-        drop(conn);
-        lib.refresh_mounts().unwrap();
-        let mut conn = crate::db::open_worker(lib.db_path()).unwrap();
-        let row = index::RootRow { id: root, volume_id: vol_id, rel_path: rel };
-        index::scan_root(&mut conn, &row, &vol.mount, &[], None, &|| {}).unwrap();
-        let ids: Vec<i64> = conn.prepare("SELECT id FROM tracks ORDER BY id").unwrap().query_map([], |r| r.get(0)).unwrap().map(|r| r.unwrap()).collect();
+        let (lib, ids) = tests_support::library_on(&dir, &music);
         (dir, lib, ids)
     }
 

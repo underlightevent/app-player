@@ -56,6 +56,11 @@ export async function tracksEdit(ids: number[], changes: Changes): Promise<EditR
   return invoke<EditReport>("tracks_edit", { ids, changes });
 }
 
+export async function tracksEditEach(items: [number, Changes][], label: string): Promise<EditReport> {
+  if (!inTauri) return { batchId: null, ok: items.length, failures: [] };
+  return invoke<EditReport>("tracks_edit_each", { items, label });
+}
+
 export async function tracksSetLock(ids: number[], field: EditableField, locked: boolean): Promise<void> {
   if (!inTauri) return;
   await invoke("tracks_set_lock", { ids, field, locked });

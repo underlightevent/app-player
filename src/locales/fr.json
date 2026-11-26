@@ -4,7 +4,8 @@
   },
   "common": {
     "cancel": "Annuler",
-    "undo": "Annuler"
+    "undo": "Annuler",
+    "close": "Fermer"
   },
   "nav": {
     "library": "Bibliothèque",
@@ -31,7 +32,8 @@
     "tasks": "Tâches en cours",
     "toggleDetail": "Afficher ou masquer le panneau de détail",
     "themeToLight": "Passer au thème clair",
-    "themeToDark": "Passer au thème sombre"
+    "themeToDark": "Passer au thème sombre",
+    "more": "Plus d'actions"
   },
   "views": {
     "library": {
@@ -171,7 +173,8 @@
     "coverPaste": "Coller l'image du presse-papiers",
     "coverRemove": "Retirer la pochette",
     "coverDropHint": "Ou glissez une image sur la fenêtre",
-    "offlineReadOnly": "Disque déconnecté : morceau en lecture seule."
+    "offlineReadOnly": "Disque déconnecté : morceau en lecture seule.",
+    "futureName": "Nom selon le modèle"
   },
   "folders": {
     "title": "Dossiers de la bibliothèque",
@@ -243,7 +246,11 @@
     "settingNotSaved": "Le réglage n'a pas pu être enregistré."
   },
   "history": {
-    "editTags": "la modification des tags"
+    "editTags": "la modification des tags",
+    "rename": "le renommage",
+    "clean": "le nettoyage",
+    "parseFilename": "la lecture des noms de fichier",
+    "swap": "l'échange artiste / titre"
   },
   "edit": {
     "saved_one": "Morceau modifié",
@@ -259,7 +266,8 @@
     "coverUnreadable": "Cette image n'a pas pu être lue. Essayez un fichier JPEG ou PNG.",
     "noImageInClipboard": "Le presse-papiers ne contient pas d'image.",
     "locked": "Champ « {{field}} » verrouillé : aucune automatisation ne le modifiera",
-    "unlocked": "Champ « {{field}} » déverrouillé"
+    "unlocked": "Champ « {{field}} » déverrouillé",
+    "tagsCopied": "Tags copiés : sélectionnez d'autres morceaux puis « Coller les tags »"
   },
   "writeErrors": {
     "read_only": "le fichier ou le disque est en lecture seule. Vérifiez qu'il n'est pas protégé en écriture.",
@@ -272,6 +280,98 @@
     "io": "erreur d'accès au fichier ; le fichier d'origine est intact.",
     "offline": "le disque est déconnecté.",
     "unreadable": "le fichier est illisible.",
-    "internal": "erreur interne ; le fichier d'origine est intact."
+    "internal": "erreur interne ; le fichier d'origine est intact.",
+    "rename_conflict": "le nom visé est déjà pris.",
+    "rename_reserved": "ce nom est interdit par Windows.",
+    "rename_empty": "un champ nécessaire au nom est vide.",
+    "rename_offline": "le disque est déconnecté.",
+    "rename_missing": "le fichier est introuvable.",
+    "rename_io": "le fichier n'a pas pu être renommé ; il est resté à sa place."
+  },
+  "actions": {
+    "clean": "Nettoyer les tags…",
+    "parse": "Tags depuis le nom de fichier…",
+    "swap": "Échanger artiste et titre",
+    "copyTags": "Copier les tags",
+    "pasteTags": "Coller les tags"
+  },
+  "rename": {
+    "title_one": "Renommer {{count}} fichier",
+    "title_other": "Renommer {{count}} fichiers",
+    "template": "Modèle de nom",
+    "variables": "Variables",
+    "savedTemplates": "Modèles enregistrés…",
+    "reset": "Modèle par défaut",
+    "optionalHint": "Ce qui est entre crochets [ ] disparaît quand le champ qu'il contient est vide. Les caractères interdits par Windows ou macOS sont remplacés automatiquement.",
+    "conflicts": "Si deux fichiers visent le même nom",
+    "conflictSuffix": "Ajouter « (2) » au second",
+    "conflictSkip": "Ne pas renommer le second",
+    "longPaths_one": "{{count}} chemin dépassera 250 caractères : Rekordbox sur Mac pourrait ne pas le lire.",
+    "longPaths_other": "{{count}} chemins dépasseront 250 caractères : Rekordbox sur Mac pourrait ne pas les lire.",
+    "summary": "{{ok}} à renommer · {{same}} déjà conformes · {{problems}} écartés",
+    "apply_one": "Renommer {{count}} fichier",
+    "apply_other": "Renommer {{count}} fichiers",
+    "nothing": "Tous les fichiers ont déjà le bon nom.",
+    "more": "Seuls les 300 premiers sont affichés.",
+    "suffixed": "suffixe ajouté",
+    "long": "chemin long",
+    "saveAs": "Enregistrer ce modèle sous un nom",
+    "templateName": "Nom du modèle",
+    "save": "Enregistrer",
+    "done_one": "{{count}} fichier renommé",
+    "done_other": "{{count}} fichiers renommés",
+    "status": {
+      "ok": "à renommer",
+      "same": "inchangé",
+      "conflict": "nom déjà pris",
+      "reserved": "nom interdit par Windows",
+      "empty": "champ vide",
+      "offline": "disque déconnecté",
+      "missing": "fichier introuvable"
+    },
+    "var": {
+      "artiste_principal": "Artiste principal (le premier de la liste)",
+      "artistes": "Tous les artistes",
+      "titre": "Titre, sans la version",
+      "version": "Version (Extended Mix, DJ X Remix…)",
+      "album": "Album",
+      "annee": "Année",
+      "genre": "Genre",
+      "bpm": "BPM arrondi",
+      "tonalite": "Tonalité",
+      "note": "Note (1 à 5)"
+    }
+  },
+  "clean": {
+    "title_one": "Nettoyer {{count}} morceau",
+    "title_other": "Nettoyer {{count}} morceaux",
+    "summary_one": "{{count}} morceau modifié",
+    "summary_other": "{{count}} morceaux modifiés",
+    "apply_one": "Appliquer à {{count}} morceau",
+    "apply_other": "Appliquer à {{count}} morceaux",
+    "nothing": "Aucun changement : les tags sont déjà propres.",
+    "custom": "Règles personnelles (rechercher / remplacer)",
+    "find": "Rechercher",
+    "replace": "Remplacer par",
+    "regex": "Expression régulière",
+    "addRule": "Ajouter une règle",
+    "removeRule": "Supprimer la règle",
+    "lockedHint": "Les champs verrouillés ne sont jamais modifiés par le nettoyage.",
+    "rule": {
+      "junk": "Retirer les mentions parasites (sites web, [Free Download], (Official Video)…)",
+      "trackNumbers": "Retirer les numéros de piste en tête (« 01 - »)",
+      "underscores": "Remplacer les « _ » par des espaces",
+      "featToArtists": "Déplacer « feat. » du titre vers les artistes",
+      "extractVersion": "Séparer la version du titre (« Titre (Extended Mix) »)",
+      "versionCase": "Harmoniser la casse des versions (« extended mix » → « Extended Mix »)",
+      "titleCase": "Majuscule à chaque mot du titre (respecte mal les noms stylisés)"
+    }
+  },
+  "parse": {
+    "title_one": "Tags depuis le nom de {{count}} fichier",
+    "title_other": "Tags depuis le nom de {{count}} fichiers",
+    "pattern": "Forme des noms de fichier",
+    "hint": "{piste} représente un numéro de piste, ignoré. Le nom est lu sans son extension ; les « _ » comptent comme des espaces.",
+    "overwrite": "Remplacer aussi les valeurs déjà présentes (sinon, seuls les champs vides sont remplis)"
   }
 }

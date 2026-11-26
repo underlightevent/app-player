@@ -1354,3 +1354,242 @@ button {
   cursor: pointer;
   padding: 0;
 }
+
+/* ---------- Fenêtres de dialogue (renommage, nettoyage…) ---------- */
+.modal {
+  position: fixed;
+  z-index: 41;
+  left: 50%;
+  top: 8vh;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  width: min(560px, calc(100vw - 32px));
+  max-height: 84vh;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-menu);
+}
+
+.modal.wide {
+  width: min(860px, calc(100vw - 32px));
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-6) var(--space-2);
+}
+
+.modal-head h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.modal-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-2) var(--space-6) var(--space-4);
+}
+
+.modal-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-6);
+  border-top: 1px solid var(--color-border);
+}
+
+.modal-foot > .muted {
+  margin-right: auto;
+}
+
+.form-label {
+  display: block;
+  margin: var(--space-3) 0 var(--space-1);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.text-input {
+  height: 32px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-field);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  min-width: 0;
+}
+
+.text-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-accent-soft);
+}
+
+.mono {
+  font-family: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace;
+  font-size: 13px;
+}
+
+.template-row {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.template-row > .text-input:first-child {
+  flex: 1;
+}
+
+.chips-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
+.chips-row .chip {
+  font-family: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace;
+}
+
+.hint {
+  color: var(--color-text-secondary);
+}
+
+.radio-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin: var(--space-3) 0;
+  padding: 0;
+  border: 0;
+}
+
+.radio-row legend {
+  width: 100%;
+  margin-bottom: var(--space-1);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.preview-list {
+  margin-top: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-field);
+  max-height: 40vh;
+  overflow-y: auto;
+  font-size: var(--font-size-table);
+}
+
+.preview-list[aria-busy="true"] {
+  opacity: 0.6;
+}
+
+.preview-item {
+  display: grid;
+  grid-template-columns: 1fr 16px 1fr;
+  gap: var(--space-2);
+  align-items: center;
+  padding: 4px var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.preview-item > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preview-old {
+  color: var(--color-text-secondary);
+}
+
+.preview-new .badge {
+  margin-left: var(--space-1);
+}
+
+.preview-item.status-conflict .preview-new,
+.preview-item.status-reserved .preview-new,
+.preview-item.status-empty .preview-new {
+  color: var(--color-text-secondary);
+  text-decoration: line-through;
+}
+
+.save-template {
+  margin-top: var(--space-3);
+  font-size: var(--font-size-small);
+}
+
+.save-template summary {
+  cursor: pointer;
+  color: var(--color-text-secondary);
+}
+
+.save-template .template-row {
+  margin-top: var(--space-2);
+}
+
+.checks {
+  display: grid;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.checks label,
+.radio-row label {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+
+.custom-rule {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto 32px;
+  gap: var(--space-2);
+  align-items: center;
+  margin-bottom: var(--space-2);
+}
+
+.tag-preview {
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tag-preview-file {
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.tag-preview-field {
+  display: grid;
+  grid-template-columns: 90px 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.tag-preview-field del {
+  color: var(--color-text-secondary);
+}
+
+.tag-preview-field ins {
+  text-decoration: none;
+  color: var(--color-success);
+}
+
+.popover-menu {
+  position: absolute;
+  right: 0;
+  top: 40px;
+}
+
+.menu-item:disabled {
+  color: var(--color-text-secondary);
+  cursor: default;
+  background: transparent;
+}

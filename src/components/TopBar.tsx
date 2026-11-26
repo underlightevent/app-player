@@ -1,11 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Globe, ListTodo, Loader2, Moon, PanelRight, PenLine, Search, Sun, X } from "lucide-react";
+import { Globe, ListTodo, Loader2, Moon, MoreHorizontal, PanelRight, PenLine, Search, Sun, X } from "lucide-react";
 import type { ResolvedTheme } from "../core/theme";
 import type { TaskInfo } from "../core/library";
 import { TasksPanel } from "./TasksPanel";
 
+export interface MoreAction {
+  id: string;
+  label: string;
+  disabled?: boolean;
+  run: () => void;
+}
+
 interface Props {
+  onRename: () => void;
+  renameDisabled: boolean;
+  moreActions: MoreAction[];
   search: string;
   onSearchChange: (s: string) => void;
   resolvedTheme: ResolvedTheme;
@@ -36,6 +46,7 @@ export function TopBar(p: Props) {
   const { t } = useTranslation();
   const online = useOnline();
   const [tasksOpen, setTasksOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const themeLabel = p.resolvedTheme === "dark" ? t("topbar.themeToLight") : t("topbar.themeToDark");
 
@@ -82,10 +93,36 @@ export function TopBar(p: Props) {
         <Globe size={16} aria-hidden />
         {t("topbar.searchOnline")}
       </button>
-      <button className="btn" disabled title={t("views.comingInLot")}>
+      <button className="btn" onClick={p.onRename} disabled={p.renameDisabled} title={`${t("topbar.rename")} (${p.modKey}+R)`}>
         <PenLine size={16} aria-hidden />
         {t("topbar.rename")}
       </button>
+      <div className="popover-anchor">
+        <button className="icon-btn" onClick={() => setMoreOpen((o) => !o)} aria-label={t("topbar.more")} aria-expanded={moreOpen} title={t("topbar.more")}>
+          <MoreHorizontal size={20} aria-hidden />
+        </button>
+        {moreOpen && (
+          <>
+            <div className="menu-backdrop" onClick={() => setMoreOpen(false)} />
+            <div className="menu popover-menu" role="menu">
+              {p.moreActions.map((a) => (
+                <button
+                  key={a.id}
+                  role="menuitem"
+                  className="menu-item"
+                  disabled={a.disabled}
+                  onClick={() => {
+                    setMoreOpen(false);
+                    a.run();
+                  }}
+                >
+                  {a.label}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
 
       <div className="topbar-spacer drag-region" data-tauri-drag-region />
 

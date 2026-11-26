@@ -4,7 +4,8 @@
   },
   "common": {
     "cancel": "Cancel",
-    "undo": "Undo"
+    "undo": "Undo",
+    "close": "Close"
   },
   "nav": {
     "library": "Library",
@@ -31,7 +32,8 @@
     "tasks": "Running tasks",
     "toggleDetail": "Show or hide the detail panel",
     "themeToLight": "Switch to light theme",
-    "themeToDark": "Switch to dark theme"
+    "themeToDark": "Switch to dark theme",
+    "more": "More actions"
   },
   "views": {
     "library": {
@@ -171,7 +173,8 @@
     "coverPaste": "Paste image from clipboard",
     "coverRemove": "Remove artwork",
     "coverDropHint": "Or drop an image onto the window",
-    "offlineReadOnly": "Drive disconnected: track is read-only."
+    "offlineReadOnly": "Drive disconnected: track is read-only.",
+    "futureName": "Name from template"
   },
   "folders": {
     "title": "Library folders",
@@ -243,7 +246,11 @@
     "settingNotSaved": "The setting could not be saved."
   },
   "history": {
-    "editTags": "the tag change"
+    "editTags": "the tag change",
+    "rename": "the renaming",
+    "clean": "the clean-up",
+    "parseFilename": "reading file names",
+    "swap": "the artist / title swap"
   },
   "edit": {
     "saved_one": "Track updated",
@@ -259,7 +266,8 @@
     "coverUnreadable": "This image could not be read. Try a JPEG or PNG file.",
     "noImageInClipboard": "The clipboard does not contain an image.",
     "locked": "Field “{{field}}” locked: no automation will change it",
-    "unlocked": "Field “{{field}}” unlocked"
+    "unlocked": "Field “{{field}}” unlocked",
+    "tagsCopied": "Tags copied: select other tracks, then “Paste tags”"
   },
   "writeErrors": {
     "read_only": "the file or drive is read-only. Check that it is not write-protected.",
@@ -272,6 +280,98 @@
     "io": "file access error; the original file is intact.",
     "offline": "the drive is disconnected.",
     "unreadable": "the file is unreadable.",
-    "internal": "internal error; the original file is intact."
+    "internal": "internal error; the original file is intact.",
+    "rename_conflict": "the target name is already taken.",
+    "rename_reserved": "this name is forbidden by Windows.",
+    "rename_empty": "a field needed for the name is empty.",
+    "rename_offline": "the drive is disconnected.",
+    "rename_missing": "the file cannot be found.",
+    "rename_io": "the file could not be renamed; it stayed where it was."
+  },
+  "actions": {
+    "clean": "Clean up tags…",
+    "parse": "Tags from file name…",
+    "swap": "Swap artist and title",
+    "copyTags": "Copy tags",
+    "pasteTags": "Paste tags"
+  },
+  "rename": {
+    "title_one": "Rename {{count}} file",
+    "title_other": "Rename {{count}} files",
+    "template": "Name template",
+    "variables": "Variables",
+    "savedTemplates": "Saved templates…",
+    "reset": "Default template",
+    "optionalHint": "Anything in square brackets [ ] disappears when the field inside is empty. Characters forbidden by Windows or macOS are replaced automatically.",
+    "conflicts": "If two files would get the same name",
+    "conflictSuffix": "Add “(2)” to the second one",
+    "conflictSkip": "Do not rename the second one",
+    "longPaths_one": "{{count}} path will exceed 250 characters: Rekordbox on Mac may not read it.",
+    "longPaths_other": "{{count}} paths will exceed 250 characters: Rekordbox on Mac may not read them.",
+    "summary": "{{ok}} to rename · {{same}} already matching · {{problems}} skipped",
+    "apply_one": "Rename {{count}} file",
+    "apply_other": "Rename {{count}} files",
+    "nothing": "All files already have the right name.",
+    "more": "Only the first 300 are shown.",
+    "suffixed": "suffix added",
+    "long": "long path",
+    "saveAs": "Save this template under a name",
+    "templateName": "Template name",
+    "save": "Save",
+    "done_one": "{{count}} file renamed",
+    "done_other": "{{count}} files renamed",
+    "status": {
+      "ok": "to rename",
+      "same": "unchanged",
+      "conflict": "name already taken",
+      "reserved": "name forbidden by Windows",
+      "empty": "empty field",
+      "offline": "drive disconnected",
+      "missing": "file not found"
+    },
+    "var": {
+      "artiste_principal": "Main artist (first in the list)",
+      "artistes": "All artists",
+      "titre": "Title, without the version",
+      "version": "Version (Extended Mix, DJ X Remix…)",
+      "album": "Album",
+      "annee": "Year",
+      "genre": "Genre",
+      "bpm": "Rounded BPM",
+      "tonalite": "Key",
+      "note": "Rating (1 to 5)"
+    }
+  },
+  "clean": {
+    "title_one": "Clean up {{count}} track",
+    "title_other": "Clean up {{count}} tracks",
+    "summary_one": "{{count}} track changed",
+    "summary_other": "{{count}} tracks changed",
+    "apply_one": "Apply to {{count}} track",
+    "apply_other": "Apply to {{count}} tracks",
+    "nothing": "No changes: the tags are already clean.",
+    "custom": "Custom rules (find / replace)",
+    "find": "Find",
+    "replace": "Replace with",
+    "regex": "Regular expression",
+    "addRule": "Add a rule",
+    "removeRule": "Remove the rule",
+    "lockedHint": "Locked fields are never changed by the clean-up.",
+    "rule": {
+      "junk": "Remove junk mentions (websites, [Free Download], (Official Video)…)",
+      "trackNumbers": "Remove leading track numbers (“01 - ”)",
+      "underscores": "Replace “_” with spaces",
+      "featToArtists": "Move “feat.” from the title to the artists",
+      "extractVersion": "Split the version from the title (“Title (Extended Mix)”)",
+      "versionCase": "Harmonise version case (“extended mix” → “Extended Mix”)",
+      "titleCase": "Capitalise each word of the title (can break stylised names)"
+    }
+  },
+  "parse": {
+    "title_one": "Tags from the name of {{count}} file",
+    "title_other": "Tags from the names of {{count}} files",
+    "pattern": "File name pattern",
+    "hint": "{piste} stands for a track number, which is ignored. The name is read without its extension; “_” counts as a space.",
+    "overwrite": "Also replace existing values (otherwise only empty fields are filled)"
   }
 }

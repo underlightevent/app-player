@@ -749,6 +749,7 @@ dependencies = [
  "log",
  "notify",
  "rayon",
+ "regex",
  "rusqlite",
  "serde",
  "serde_json",

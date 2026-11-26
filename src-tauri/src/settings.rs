@@ -23,7 +23,19 @@ const KNOWN: &[(&str, &[&str], &str)] = &[
     ("cover_size", &["500", "600", "1000", "1400"], "1000"),
 ];
 
+/// Réglages en texte libre (modèles, règles), avec leur valeur par défaut.
+const FREE_TEXT: &[(&str, &str)] = &[
+    ("rename_template", crate::rename::template::DEFAULT_TEMPLATE),
+    ("rename_templates", "[]"),
+    ("parse_pattern", "{artistes} - {titre}"),
+    ("clean_rules", ""),
+];
+const MAX_FREE_TEXT: usize = 20_000;
+
 fn validate(key: &str, value: &str) -> Result<(), AppError> {
+    if FREE_TEXT.iter().any(|(k, _)| *k == key) {
+        return if value.len() <= MAX_FREE_TEXT { Ok(()) } else { Err(AppError::InvalidSetting(format!("{key} trop long"))) };
+    }
     match KNOWN.iter().find(|(k, _, _)| *k == key) {
         Some((_, allowed, _)) if allowed.contains(&value) => Ok(()),
         Some(_) => Err(AppError::InvalidSetting(format!("{key} = {value}"))),
@@ -33,8 +45,11 @@ fn validate(key: &str, value: &str) -> Result<(), AppError> {
 
 /// Tous les réglages, valeurs par défaut comprises.
 pub fn get_all(conn: &Connection) -> Result<BTreeMap<String, String>, AppError> {
-    let mut map: BTreeMap<String, String> =
-        KNOWN.iter().map(|(k, _, d)| (k.to_string(), d.to_string())).collect();
+    let mut map: BTreeMap<String, String> = KNOWN
+        .iter()
+        .map(|(k, _, d)| (k.to_string(), d.to_string()))
+        .chain(FREE_TEXT.iter().map(|(k, d)| (k.to_string(), d.to_string())))
+        .collect();
     let mut stmt = conn.prepare("SELECT key, value FROM settings")?;
     let rows = stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))?;
     for row in rows {

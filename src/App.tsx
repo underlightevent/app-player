@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AlertTriangle } from "lucide-react";
 import {
@@ -19,6 +19,7 @@ import {
   libraryGenres,
   pickImage,
   tracksEdit,
+  tracksEditEach,
   tracksSetLock,
   type Changes,
   type EditableField,
@@ -28,7 +29,10 @@ import { useLibrary } from "./core/useLibrary";
 import { applyTheme, isThemeSetting, resolveTheme, systemPrefersDark, type ThemeSetting } from "./core/theme";
 import { LANGUAGES, setLanguage, type Language } from "./i18n";
 import { Sidebar, type ViewId } from "./components/Sidebar";
-import { TopBar } from "./components/TopBar";
+import { TopBar, type MoreAction } from "./components/TopBar";
+import { RenameDialog } from "./components/RenameDialog";
+import { CleanDialog, ParseDialog } from "./components/TagsPreviewDialog";
+import { DEFAULT_TEMPLATE, renamePreview, type CleanRules, type SavedTemplate } from "./core/rename";
 import { OtherView } from "./components/MainView";
 import { LibraryView } from "./components/LibraryView";
 import { FoldersView } from "./components/FoldersView";
@@ -190,6 +194,27 @@ export default function App() {
 
   // ---------- Modification des tags, annulation ----------
   const [revision, setRevision] = useState(0);
+  // Liste stable des morceaux sélectionnés (évite de relancer les aperçus à chaque affichage).
+  const selectedIdList = useMemo(() => [...selection], [selection]);
+
+  // Le panneau de détail charge lui-même les morceaux sélectionnés (ils peuvent être hors de l'écran).
+  const [selectedRows, setSelectedRows] = useState<TrackRow[]>([]);
+  useEffect(() => {
+    const wanted = [...selection].slice(0, 500);
+    if (wanted.length === 0) {
+      setSelectedRows([]);
+      return;
+    }
+    let stale = false;
+    libraryRows(wanted)
+      .then((r) => {
+        if (!stale) setSelectedRows(r);
+      })
+      .catch((e) => logMessage("warn", `Sélection : ${JSON.stringify(e)}`));
+    return () => {
+      stale = true;
+    };
+  }, [selection, lib.ids, revision]);
   const [genres, setGenres] = useState<string[]>([]);
   useEffect(() => {
     void libraryGenres().then(setGenres).catch(() => {});
@@ -274,6 +299,82 @@ export default function App() {
     else toast.show(t("edit.noImageInClipboard"));
   }, [setCoverFrom, toast, t]);
 
+  // ---------- Renommage, nettoyage, tags depuis le nom ----------
+  const [dialog, setDialog] = useState<null | "rename" | "clean" | "parse">(null);
+  const [renameTemplate, setRenameTemplate] = useState(DEFAULT_TEMPLATE);
+  const [savedTemplates, setSavedTemplates] = useState<SavedTemplate[]>([]);
+  const [parsePattern, setParsePattern] = useState("");
+  const [cleanRules, setCleanRules] = useState<CleanRules | null>(null);
+  const [copiedTags, setCopiedTags] = useState<Changes | null>(null);
+  useEffect(() => {
+    getSettings()
+      .then((s) => {
+        if (s.rename_template) setRenameTemplate(s.rename_template);
+        try {
+          setSavedTemplates(JSON.parse(s.rename_templates || "[]"));
+        } catch {
+          /* réglage abîmé : liste vide */
+        }
+        if (s.parse_pattern) setParsePattern(s.parse_pattern);
+        try {
+          if (s.clean_rules) setCleanRules(JSON.parse(s.clean_rules));
+        } catch {
+          /* idem */
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const reportDone = useCallback(
+    (r: EditReport, okKey: string) => {
+      setRevision((n) => n + 1);
+      const undo = r.batchId != null ? { label: t("common.undo"), run: () => void runHistory(false, r.batchId!) } : undefined;
+      if (r.failures.length) toast.show(describeFailures(r), r.ok > 0 ? undo : undefined, "error");
+      else toast.show(t(okKey, { count: r.ok }), undo);
+    },
+    [t, toast, runHistory, describeFailures],
+  );
+
+  const swapArtistTitle = useCallback(async () => {
+    const items: [number, Changes][] = selectedRows.map((r) => [
+      r.id,
+      { title: r.artists.join(", ") || null, artists: r.title ? [r.title] : [] },
+    ]);
+    if (items.length) reportDone(await tracksEditEach(items, "history.swap"), "edit.saved");
+  }, [selectedRows, reportDone]);
+
+  const copyTags = useCallback(() => {
+    const r = selectedRows[0];
+    if (!r) return;
+    setCopiedTags({ title: r.title, version: r.version, artists: r.artists, album: r.album, year: r.year, genre: r.genre, bpm: r.bpm, key: r.key, rating: r.rating });
+    toast.show(t("edit.tagsCopied"));
+  }, [selectedRows, toast, t]);
+
+  const moreActions: MoreAction[] = [
+    { id: "clean", label: t("actions.clean"), disabled: selection.size === 0, run: () => setDialog("clean") },
+    { id: "parse", label: t("actions.parse"), disabled: selection.size === 0, run: () => setDialog("parse") },
+    { id: "swap", label: t("actions.swap"), disabled: selection.size === 0, run: () => void swapArtistTitle() },
+    { id: "copy", label: t("actions.copyTags"), disabled: selection.size !== 1, run: copyTags },
+    { id: "paste", label: t("actions.pasteTags"), disabled: selection.size === 0 || !copiedTags, run: () => copiedTags && void applyEdit([...selection], copiedTags) },
+  ];
+
+  // Aperçu du futur nom de fichier dans le panneau de détail.
+  const [futureName, setFutureName] = useState<string | null>(null);
+  useEffect(() => {
+    const r = selectedRows.length === 1 ? selectedRows[0] : null;
+    if (!r || !r.online) {
+      setFutureName(null);
+      return;
+    }
+    let stale = false;
+    renamePreview([r.id], renameTemplate, "suffix")
+      .then((p) => !stale && setFutureName(p[0]?.newName ?? null))
+      .catch(() => !stale && setFutureName(null));
+    return () => {
+      stale = true;
+    };
+  }, [selectedRows, renameTemplate]);
+
   onDropRef.current = (paths: string[]) => {
     const images = paths.filter(isImagePath);
     if (images.length > 0) void setCoverFrom({ path: images[0] });
@@ -306,6 +407,9 @@ export default function App() {
       } else if (mod && k === "v") {
         e.preventDefault();
         void pasteCover();
+      } else if (mod && k === "r" && !e.shiftKey) {
+        e.preventDefault();
+        if (selection.size > 0) setDialog("rename");
       } else if (!mod && !e.altKey && /^[0-5]$/.test(e.key) && selection.size > 0 && view === "library") {
         e.preventDefault();
         void applyEdit([...selection], { rating: Number(e.key) });
@@ -315,25 +419,6 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, [runHistory, pasteCover, applyEdit, selection, view]);
 
-  // Le panneau de détail charge lui-même les morceaux sélectionnés (ils peuvent être hors de l'écran).
-  const [selectedRows, setSelectedRows] = useState<TrackRow[]>([]);
-  useEffect(() => {
-    const wanted = [...selection].slice(0, 500);
-    if (wanted.length === 0) {
-      setSelectedRows([]);
-      return;
-    }
-    let stale = false;
-    libraryRows(wanted)
-      .then((r) => {
-        if (!stale) setSelectedRows(r);
-      })
-      .catch((e) => logMessage("warn", `Sélection : ${JSON.stringify(e)}`));
-    return () => {
-      stale = true;
-    };
-  }, [selection, lib.ids, revision]);
-
   const platformClass = isMac ? "platform-macos" : "platform-other";
   const dbError = status && !status.database_ok ? status.database_error : null;
 
@@ -341,6 +426,9 @@ export default function App() {
     <div className={`app ${platformClass} ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
       <Sidebar current={view} onSelect={setView} collapsed={sidebarCollapsed} onToggleCollapsed={() => setSidebarCollapsed((c) => !c)} />
       <TopBar
+        onRename={() => setDialog("rename")}
+        renameDisabled={selection.size === 0}
+        moreActions={moreActions}
         search={query.search}
         onSearchChange={(search) => {
           setQuery((q) => ({ ...q, search }));
@@ -412,9 +500,49 @@ export default function App() {
             onPickCover={() => void pickCover()}
             onPasteCover={() => void pasteCover()}
             revision={revision}
+            futureName={futureName}
           />
         )}
       </div>
+      {dialog === "rename" && (
+        <RenameDialog
+          ids={selectedIdList}
+          template={renameTemplate}
+          saved={savedTemplates}
+          onSaveTemplates={(tpl, list) => {
+            setRenameTemplate(tpl);
+            setSavedTemplates(list);
+            save("rename_template", tpl);
+            save("rename_templates", JSON.stringify(list));
+          }}
+          onClose={() => setDialog(null)}
+          onDone={(r) => reportDone(r, "rename.done")}
+        />
+      )}
+      {dialog === "clean" && (
+        <CleanDialog
+          ids={selectedIdList}
+          initial={cleanRules}
+          onSaveRules={(r) => {
+            setCleanRules(r);
+            save("clean_rules", JSON.stringify(r));
+          }}
+          onClose={() => setDialog(null)}
+          onDone={(r) => reportDone(r, "edit.saved")}
+        />
+      )}
+      {dialog === "parse" && (
+        <ParseDialog
+          ids={selectedIdList}
+          initial={parsePattern}
+          onSavePattern={(p) => {
+            setParsePattern(p);
+            save("parse_pattern", p);
+          }}
+          onClose={() => setDialog(null)}
+          onDone={(r) => reportDone(r, "edit.saved")}
+        />
+      )}
       <PlayerBar />
       <Toast toast={toast.toast} onHide={toast.hide} />
     </div>

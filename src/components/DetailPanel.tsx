@@ -17,6 +17,8 @@ interface Props {
   onPasteCover: () => void;
   /** Change à chaque modification du morceau : relance le chargement de la pochette. */
   revision: number;
+  /** Nom de fichier que donnerait le modèle de renommage. */
+  futureName: string | null;
 }
 
 /** Valeur commune à toute la sélection, ou MIXED si elles diffèrent. */
@@ -307,6 +309,7 @@ export function DetailPanel(p: Props) {
             {info(t("detail.channels"), single.channels)}
             {info(t("detail.cover"), single.coverCount > 0 ? `${single.coverWidth ?? "?"} px${single.coverCount > 1 ? ` · ${t("detail.coverCount", { count: single.coverCount })}` : ""}` : t("badges.noCover"))}
             {info(t("detail.file"), <span className="path">{single.path ?? `${single.volumeLabel}/${single.relPath}`}</span>)}
+            {p.futureName && p.futureName !== single.fileName && info(t("detail.futureName"), <span className="path">{p.futureName}</span>)}
           </dl>
         </>
       )}

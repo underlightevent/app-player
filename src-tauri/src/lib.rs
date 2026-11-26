@@ -11,6 +11,7 @@ mod diagnostics;
 mod error;
 mod history;
 mod library;
+mod rename;
 mod settings;
 mod tags;
 mod tasks;
@@ -183,6 +184,14 @@ async fn tracks_edit(state: State<'_, AppState>, ids: Vec<i64>, changes: Changes
     .await
 }
 
+/// Changements différents pour chaque morceau, en un seul lot (échanger artiste et titre…).
+#[tauri::command]
+async fn tracks_edit_each(state: State<'_, AppState>, items: Vec<(i64, Changes)>, label: String) -> Result<EditReport, AppError> {
+    let lib = state.library()?.clone();
+    let label = if label.starts_with("history.") { label } else { "history.editTags".to_string() };
+    blocking(move || lib.edit_each(items, Source::Manual, &label, None)).await
+}
+
 #[tauri::command]
 async fn tracks_set_lock(state: State<'_, AppState>, ids: Vec<i64>, field: String, locked: bool) -> Result<(), AppError> {
     let lib = state.library()?.clone();
@@ -254,6 +263,71 @@ async fn cover_prepare(state: State<'_, AppState>, path: Option<String>, data: O
         let p = artwork::prepare(&bytes, size).map_err(|e| AppError::Artwork(e.to_string()))?;
         let preview = format!("data:image/jpeg;base64,{}", util::b64_encode(&p.cover.data));
         Ok(PreparedCover { cover: p.cover, width: p.width, height: p.height, not_square: p.not_square, preview })
+    })
+    .await
+}
+
+// ---------- Renommage, nettoyage, tags depuis le nom ----------
+
+#[tauri::command]
+async fn rename_preview(
+    state: State<'_, AppState>,
+    ids: Vec<i64>,
+    template: String,
+    on_conflict: rename::OnConflict,
+) -> Result<Vec<rename::PlanItem>, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        let conn = db::open_worker(lib.db_path())?;
+        rename::plan(&lib, &conn, &ids, &template, on_conflict)
+    })
+    .await
+}
+
+#[tauri::command]
+async fn rename_apply(
+    state: State<'_, AppState>,
+    ids: Vec<i64>,
+    template: String,
+    on_conflict: rename::OnConflict,
+) -> Result<EditReport, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || lib.rename(&ids, &template, on_conflict)).await
+}
+
+#[tauri::command]
+async fn rename_validate(template: String) -> Result<Option<String>, AppError> {
+    Ok(rename::template::validate(&template).err().map(|e| e.to_string()))
+}
+
+#[tauri::command]
+async fn clean_preview(state: State<'_, AppState>, ids: Vec<i64>, rules: rename::clean::CleanRules) -> Result<Vec<rename::ops::TagPreview>, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || lib.clean_preview(&ids, &rules)).await
+}
+
+#[tauri::command]
+async fn clean_apply(state: State<'_, AppState>, ids: Vec<i64>, rules: rename::clean::CleanRules) -> Result<EditReport, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        let p = lib.clean_preview(&ids, &rules)?;
+        lib.apply_previews(p, "history.clean")
+    })
+    .await
+}
+
+#[tauri::command]
+async fn parse_preview(state: State<'_, AppState>, ids: Vec<i64>, pattern: String, overwrite: bool) -> Result<Vec<rename::ops::TagPreview>, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || lib.parse_preview(&ids, &pattern, overwrite)).await
+}
+
+#[tauri::command]
+async fn parse_apply(state: State<'_, AppState>, ids: Vec<i64>, pattern: String, overwrite: bool) -> Result<EditReport, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        let p = lib.parse_preview(&ids, &pattern, overwrite)?;
+        lib.apply_previews(p, "history.parseFilename")
     })
     .await
 }
@@ -335,6 +409,9 @@ pub fn run() {
                     if let Err(e) = lib.refresh_mounts() {
                         log::warn!("Détection des disques : {e}");
                     }
+                    if let Err(e) = db::open_worker(lib.db_path()).and_then(|c| history::prune(&c)) {
+                        log::warn!("Nettoyage de l'historique : {e}");
+                    }
                     // Réservé aux essais automatiques de développement : ajoute un dossier au démarrage.
                     #[cfg(debug_assertions)]
                     if let Ok(dir) = std::env::var("DJLM_DEV_ADD_ROOT") {
@@ -365,11 +442,19 @@ pub fn run() {
             library_rows,
             library_genres,
             tracks_edit,
+            tracks_edit_each,
             tracks_set_lock,
             history_list,
             history_apply,
             track_cover,
             cover_prepare,
+            rename_preview,
+            rename_apply,
+            rename_validate,
+            clean_preview,
+            clean_apply,
+            parse_preview,
+            parse_apply,
             tasks_list,
             task_cancel
         ])
