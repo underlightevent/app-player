@@ -205,7 +205,16 @@
     "play": "Lecture",
     "previous": "Morceau précédent",
     "next": "Morceau suivant",
-    "volume": "Volume"
+    "volume": "Volume",
+    "label": "Lecteur",
+    "pause": "Pause",
+    "position": "Position dans le morceau",
+    "space": "Espace",
+    "errors": {
+      "unreadable": "Ce fichier ne peut pas être lu.",
+      "offline": "Lecture impossible : disque déconnecté ou fichier introuvable.",
+      "audio_output": "Aucune sortie son disponible. Vérifiez vos haut-parleurs ou votre casque."
+    }
   },
   "settings": {
     "title": "Réglages",

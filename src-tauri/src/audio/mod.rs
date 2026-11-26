@@ -1,4 +1,6 @@
-//! Audio : empreinte du flux (doublons exacts, contrôle après écriture).
-//! La lecture et la forme d'onde arrivent au lot D.
+//! Audio : empreinte du flux, décodage, lecteur et forme d'onde.
 
+pub mod decode;
 pub mod hash;
+pub mod player;
+pub mod waveform;

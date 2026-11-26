@@ -10,7 +10,7 @@ import {
   startupStatus,
   type StartupStatus,
 } from "./core/api";
-import { emptyQuery, libraryAddRoot, libraryRows, pickFolder, type LibraryQuery, type TrackRow } from "./core/library";
+import { emptyQuery, libraryAddRoot, libraryRows, onEvent, pickFolder, type LibraryQuery, type TrackRow } from "./core/library";
 import {
   clipboardImage,
   coverPrepare,
@@ -39,6 +39,7 @@ import { FoldersView } from "./components/FoldersView";
 import { DetailPanel } from "./components/DetailPanel";
 import { PlayerBar } from "./components/PlayerBar";
 import { useTasks } from "./components/TasksPanel";
+import { initialPlayerState, playerCommand, playerLoad, playerState, type PlayerState } from "./core/player";
 import { Toast, useToast } from "./components/Toast";
 
 function isLanguage(v: unknown): v is Language {
@@ -375,6 +376,92 @@ export default function App() {
     };
   }, [selectedRows, renameTemplate]);
 
+  // ---------- Lecteur ----------
+  const [player, setPlayer] = useState<PlayerState>(initialPlayerState);
+  const [playingRow, setPlayingRow] = useState<TrackRow | null>(null);
+  useEffect(() => {
+    void playerState().then(setPlayer);
+    return onEvent<PlayerState>("player:state", setPlayer);
+  }, []);
+  useEffect(() => {
+    if (player.trackId == null) {
+      setPlayingRow(null);
+      return;
+    }
+    let stale = false;
+    void libraryRows([player.trackId]).then((r) => !stale && setPlayingRow(r[0] ?? null));
+    return () => {
+      stale = true;
+    };
+  }, [player.trackId, revision]);
+
+  const playTrack = useCallback(
+    async (id: number) => {
+      try {
+        await playerLoad(id, true);
+      } catch (e) {
+        logMessage("warn", `Lecture : ${JSON.stringify(e)}`);
+        toast.show(t("player.errors.offline"), undefined, "error");
+      }
+    },
+    [toast, t],
+  );
+
+  /** Morceau voisin dans l'ordre du tableau (le morceau en cours, sinon la sélection). */
+  const neighbour = useCallback(
+    (delta: number): number | null => {
+      const ref = player.trackId ?? [...selection][0];
+      const i = ref == null ? -1 : lib.ids.indexOf(ref);
+      const j = i + delta;
+      return j >= 0 && j < lib.ids.length ? lib.ids[j] : null;
+    },
+    [player.trackId, selection, lib.ids],
+  );
+
+  const togglePlay = useCallback(() => {
+    if (player.trackId == null) {
+      const first = [...selection][0];
+      if (first != null) void playTrack(first);
+      return;
+    }
+    playerCommand(player.playing ? "pause" : "play");
+  }, [player.trackId, player.playing, selection, playTrack]);
+
+  // Fin du morceau : on enchaîne sur le suivant du tableau.
+  const endedRef = useRef(false);
+  useEffect(() => {
+    if (player.ended && !endedRef.current) {
+      endedRef.current = true;
+      const next = neighbour(1);
+      if (next != null) void playTrack(next);
+    } else if (!player.ended) {
+      endedRef.current = false;
+    }
+  }, [player.ended, neighbour, playTrack]);
+
+  // Raccourcis du lecteur.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable)) return;
+      if (dialog) return;
+      if (e.key === " " && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        togglePlay();
+      } else if (e.shiftKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+        e.preventDefault();
+        const id = neighbour(e.key === "ArrowLeft" ? -1 : 1);
+        if (id != null) void playTrack(id);
+      } else if (!e.shiftKey && !e.ctrlKey && !e.metaKey && (e.key === "ArrowLeft" || e.key === "ArrowRight") && player.trackId != null) {
+        e.preventDefault();
+        const ms = player.positionMs + (e.key === "ArrowLeft" ? -10_000 : 10_000);
+        playerCommand("seek", Math.min(Math.max(0, ms), player.durationMs));
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [togglePlay, neighbour, playTrack, player.trackId, player.positionMs, player.durationMs, dialog]);
+
   onDropRef.current = (paths: string[]) => {
     const images = paths.filter(isImagePath);
     if (images.length > 0) void setCoverFrom({ path: images[0] });
@@ -466,6 +553,7 @@ export default function App() {
               volumes={lib.volumes}
               selection={selection}
               onSelectionChange={(s) => setSelection(s)}
+              onActivate={(id) => void playTrack(id)}
               onAddFolder={() => void addFolder()}
               density={density}
               keyNotation={keyNotation}
@@ -543,7 +631,25 @@ export default function App() {
           onDone={(r) => reportDone(r, "edit.saved")}
         />
       )}
-      <PlayerBar />
+      <PlayerBar
+        state={player}
+        track={playingRow}
+        onToggle={togglePlay}
+        onPrev={() => {
+          // Comme sur les lecteurs habituels : après 3 s, « précédent » revient au début.
+          if (player.positionMs > 3000) playerCommand("seek", 0);
+          else {
+            const id = neighbour(-1);
+            if (id != null) void playTrack(id);
+          }
+        }}
+        onNext={() => {
+          const id = neighbour(1);
+          if (id != null) void playTrack(id);
+        }}
+        onSeek={(ms) => playerCommand("seek", ms)}
+        onVolume={(v) => playerCommand("volume", v)}
+      />
       <Toast toast={toast.toast} onHide={toast.hide} />
     </div>
   );

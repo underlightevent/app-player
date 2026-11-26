@@ -134,6 +134,13 @@ const MIGRATIONS: &[&str] = &[
         mime TEXT NOT NULL,
         data BLOB NOT NULL
     );",
+    // 4 — Formes d'onde en cache.
+    "CREATE TABLE waveforms (
+        track_id INTEGER PRIMARY KEY REFERENCES tracks(id) ON DELETE CASCADE,
+        size     INTEGER NOT NULL,
+        mtime    INTEGER NOT NULL,
+        data     BLOB NOT NULL
+    );",
 ];
 
 /// Ouvre une connexion supplémentaire (tâches de fond). La base doit déjà exister et être migrée.

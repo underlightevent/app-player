@@ -205,7 +205,16 @@
     "play": "Play",
     "previous": "Previous track",
     "next": "Next track",
-    "volume": "Volume"
+    "volume": "Volume",
+    "label": "Player",
+    "pause": "Pause",
+    "position": "Position in the track",
+    "space": "Space",
+    "errors": {
+      "unreadable": "This file cannot be played.",
+      "offline": "Cannot play: drive disconnected or file not found.",
+      "audio_output": "No audio output available. Check your speakers or headphones."
+    }
   },
   "settings": {
     "title": "Settings",

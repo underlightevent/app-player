@@ -269,6 +269,23 @@ fn flac_commentaires_inconnus_preserves() {
 }
 
 #[test]
+fn ecriture_pendant_la_lecture() {
+    // Le lecteur garde le fichier ouvert : l'écriture doit réussir sans couper la lecture.
+    let dir = tempfile::tempdir().unwrap();
+    for p in testdata::all_formats(dir.path()) {
+        let mut playing = crate::audio::decode::Decoder::open(&p).unwrap();
+        let mut buf = Vec::new();
+        assert!(playing.next_block(&mut buf).unwrap());
+        let current = read_file(&p, &[]).unwrap().tags;
+        let c = Changes { title: Some(Some("Pendant la lecture".into())), ..Default::default() };
+        write_tags(&p, &current, &c, &WriteSettings::default(), &[]).unwrap_or_else(|e| panic!("{}: {e}", p.display()));
+        assert_eq!(read_file(&p, &[]).unwrap().tags.title.as_deref(), Some("Pendant la lecture"));
+        // La lecture continue sur l'ancienne version du fichier.
+        while playing.next_block(&mut buf).unwrap() {}
+    }
+}
+
+#[test]
 fn fichier_en_lecture_seule_intact() {
     let dir = tempfile::tempdir().unwrap();
     let p = testdata::write(dir.path(), "ro.mp3", &testdata::mp3_bytes());

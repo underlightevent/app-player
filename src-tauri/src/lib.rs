@@ -46,6 +46,7 @@ pub struct AppState {
     log_dir: PathBuf,
     library: Option<Arc<Library>>,
     tasks: Arc<Tasks>,
+    player: audio::player::PlayerHandle,
 }
 
 impl AppState {
@@ -267,6 +268,64 @@ async fn cover_prepare(state: State<'_, AppState>, path: Option<String>, data: O
     .await
 }
 
+// ---------- Lecteur et forme d'onde ----------
+
+#[tauri::command]
+async fn player_load(state: State<'_, AppState>, id: i64, autoplay: bool) -> Result<(), AppError> {
+    let lib = state.library()?.clone();
+    let player = state.player.clone();
+    blocking(move || {
+        let conn = db::open_worker(lib.db_path())?;
+        let Some(path) = lib.track_path(&conn, id)? else { return Err(AppError::InvalidSetting("disque déconnecté".into())) };
+        let duration: i64 = conn.query_row("SELECT coalesce(duration_ms, 0) FROM tracks WHERE id = ?1", [id], |r| r.get(0))?;
+        player.load(id, path, duration.max(0) as u64, autoplay);
+        Ok(())
+    })
+    .await
+}
+
+#[tauri::command]
+fn player_command(state: State<'_, AppState>, action: String, value: Option<f64>) {
+    let p = &state.player;
+    match action.as_str() {
+        "play" => p.play(),
+        "pause" => p.pause(),
+        "stop" => p.stop(),
+        "seek" => p.seek(value.unwrap_or(0.0).max(0.0) as u64),
+        "volume" => p.set_volume(value.unwrap_or(0.8) as f32),
+        _ => {}
+    }
+}
+
+#[tauri::command]
+fn player_state(state: State<'_, AppState>) -> audio::player::PlayerState {
+    state.player.snapshot()
+}
+
+/// Forme d'onde (1 000 valeurs de 0 à 255), calculée à la première demande puis gardée en cache.
+#[tauri::command]
+async fn waveform(state: State<'_, AppState>, id: i64) -> Result<Option<Vec<u8>>, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        let conn = db::open_worker(lib.db_path())?;
+        if let Some(w) = audio::waveform::cached(&conn, id)? {
+            return Ok(Some(w));
+        }
+        let Some(path) = lib.track_path(&conn, id)? else { return Ok(None) };
+        match audio::waveform::compute(&path) {
+            Ok(w) => {
+                audio::waveform::store(&conn, id, &w)?;
+                Ok(Some(w))
+            }
+            Err(e) => {
+                log::warn!("Forme d'onde impossible pour {} : {e}", path.display());
+                Ok(None)
+            }
+        }
+    })
+    .await
+}
+
 // ---------- Renommage, nettoyage, tags depuis le nom ----------
 
 #[tauri::command]
@@ -424,7 +483,8 @@ pub fn run() {
                     lib.start_monitor();
                 });
             }
-            app.manage(AppState { db: Mutex::new(db), db_path, db_error, log_dir, library, tasks });
+            let player = audio::player::PlayerHandle::spawn(Some(app.handle().clone()));
+            app.manage(AppState { db: Mutex::new(db), db_path, db_error, log_dir, library, tasks, player });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -448,6 +508,10 @@ pub fn run() {
             history_apply,
             track_cover,
             cover_prepare,
+            player_load,
+            player_command,
+            player_state,
+            waveform,
             rename_preview,
             rename_apply,
             rename_validate,

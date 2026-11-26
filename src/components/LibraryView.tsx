@@ -18,6 +18,7 @@ interface Props {
   selection: Set<number>;
   onSelectionChange: (s: Set<number>, focus: number | null) => void;
   onAddFolder: () => void;
+  onActivate: (id: number) => void;
   density: "compact" | "comfortable";
   keyNotation: "camelot" | "musical";
 }
@@ -114,6 +115,7 @@ export function LibraryView(p: Props) {
           onSortChange={(sort: SortKey[]) => set({ sort })}
           selection={p.selection}
           onSelectionChange={p.onSelectionChange}
+          onActivate={p.onActivate}
           density={p.density}
           keyNotation={p.keyNotation}
         />
