@@ -461,9 +461,11 @@ async fn online_test(state: State<'_, AppState>) -> Result<ConnectionTest, AppEr
         let ac = match online::key_get("acoustid_client") {
             None => "no_key".to_string(),
             Some(k) => {
-                // Empreinte factice : une clé valide donne une réponse « ok » sans résultat.
-                match online::acoustid::lookup(&o.http, &k, online::key_get("acoustid_user").as_deref(), "AQAAAA", 30) {
+                // Vraie empreinte d'un son synthétique : une clé valide donne « ok » (sans résultat).
+                let fp = online::fingerprint::synthetic();
+                match online::acoustid::lookup(&o.http, &k, online::key_get("acoustid_user").as_deref(), &fp.encoded, fp.duration_s) {
                     Ok(_) => "ok".to_string(),
+                    Err(online::http::NetError::Bad(_, m)) if m.starts_with("acoustid:") => m.trim_start_matches("acoustid:").to_string(),
                     Err(e) => e.to_string(),
                 }
             }

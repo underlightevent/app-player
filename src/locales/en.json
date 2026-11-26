@@ -624,6 +624,13 @@
       "deezer_other": "at most {{count}} per 5 seconds",
       "itunes_one": "at most {{count}} per minute (limit: 20)",
       "itunes_other": "at most {{count}} per minute (limit: 20)"
+    },
+    "result": {
+      "ok": "connection OK, key accepted",
+      "no_key": "no key saved",
+      "invalid_client_key": "application key rejected: check it on acoustid.org (copy it without spaces)",
+      "invalid_user_key": "user key rejected: check it on acoustid.org/api-key",
+      "invalid_fingerprint": "fingerprint rejected by AcoustID (application problem, please copy the diagnostic report)"
     }
   }
 }

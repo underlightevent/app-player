@@ -57,6 +57,31 @@ pub fn compute(path: &Path) -> Result<Fingerprint, String> {
     Ok(Fingerprint { encoded, raw, duration_s })
 }
 
+/// Empreinte valide d'un son synthétique de 15 s (sert à tester les clés AcoustID
+/// sans envoyer aucun morceau de l'utilisateur).
+pub fn synthetic() -> Fingerprint {
+    let config = Configuration::preset_test2();
+    let mut fp = Fingerprinter::new(&config);
+    let rate = 44_100u32;
+    let _ = fp.start(rate, 2);
+    let mut pcm = Vec::with_capacity(rate as usize * 2);
+    for sec in 0..15u32 {
+        pcm.clear();
+        for i in 0..rate {
+            let t = i as f64 / rate as f64;
+            let f = 220.0 + (sec % 5) as f64 * 55.0;
+            let v = ((t * f * std::f64::consts::TAU).sin() * 8000.0) as i16;
+            pcm.push(v);
+            pcm.push(v / 2);
+        }
+        fp.consume(&pcm);
+    }
+    fp.finish();
+    let raw = fp.fingerprint().to_vec();
+    let compressed = FingerprintCompressor::from(&config).compress(&raw);
+    Fingerprint { encoded: base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(compressed), raw, duration_s: 15 }
+}
+
 fn raw_to_bytes(raw: &[u32]) -> Vec<u8> {
     raw.iter().flat_map(|v| v.to_le_bytes()).collect()
 }

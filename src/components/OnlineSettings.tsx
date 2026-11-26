@@ -140,7 +140,7 @@ export function OnlineSettings({ values, onSettingChange, onToast }: Props) {
           {(["musicbrainz", "acoustid"] as const).map((k) => (
             <li key={k}>
               {test[k] === "ok" ? <CheckCircle2 size={14} className="text-success" aria-hidden /> : <AlertTriangle size={14} className="text-warning" aria-hidden />}{" "}
-              {t(`sources.${k}`)} : {test[k] === "ok" ? t("onlineSettings.ok") : test[k] === "no_key" ? t("onlineSettings.noKey") : test[k]}
+              {t(`sources.${k}`)} : {t(`onlineSettings.result.${test[k]}`, { defaultValue: test[k] })}
             </li>
           ))}
         </ul>

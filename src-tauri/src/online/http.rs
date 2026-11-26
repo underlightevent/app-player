@@ -20,6 +20,8 @@ pub enum NetError {
     Bad(String, String),
     #[error("introuvable")]
     NotFound,
+    #[error("{service} a refusé la demande (code {status})")]
+    Rejected { service: String, status: u16, body: String },
 }
 
 /// Intervalle minimal entre deux appels, par source (docs/SOURCES.md).
@@ -122,7 +124,20 @@ impl Http {
     /// GET avec cache, limite de débit et reprise après 429 / 503.
     /// `cache` : faux pour les sources dont les conditions interdisent la copie locale.
     pub fn get(&self, source: &str, url: &str, headers: &[(&str, &str)], cache: bool) -> Result<Vec<u8>, NetError> {
-        let key = format!("{source} {url}");
+        self.request(source, url, None, headers, cache)
+    }
+
+    /// POST d'un formulaire (AcoustID recommande POST pour les longues empreintes).
+    pub fn post_form(&self, source: &str, url: &str, form: &[(&str, &str)], cache: bool) -> Result<Vec<u8>, NetError> {
+        let body = form.iter().map(|(k, v)| format!("{}={}", encode(k), encode(v))).collect::<Vec<_>>().join("&");
+        self.request(source, url, Some(&body), &[], cache)
+    }
+
+    fn request(&self, source: &str, url: &str, form: Option<&str>, headers: &[(&str, &str)], cache: bool) -> Result<Vec<u8>, NetError> {
+        let key = match form {
+            Some(f) => format!("{source} {url} {}", blake3::hash(f.as_bytes()).to_hex()),
+            None => format!("{source} {url}"),
+        };
         if cache {
             if let Some(body) = self.cache_get(&key) {
                 self.log_call(source, 200, Instant::now(), true);
@@ -134,11 +149,28 @@ impl Http {
         for attempt in 0..5 {
             self.throttle(source);
             let started = Instant::now();
-            let mut req = self.agent.get(url).header("User-Agent", &ua).header("Accept", "application/json");
-            for (k, v) in headers {
-                req = req.header(*k, *v);
-            }
-            let resp = match req.call() {
+            let result = match form {
+                Some(body) => {
+                    let mut req = self
+                        .agent
+                        .post(url)
+                        .header("User-Agent", &ua)
+                        .header("Accept", "application/json")
+                        .header("Content-Type", "application/x-www-form-urlencoded");
+                    for (k, v) in headers {
+                        req = req.header(*k, *v);
+                    }
+                    req.send(body)
+                }
+                None => {
+                    let mut req = self.agent.get(url).header("User-Agent", &ua).header("Accept", "application/json");
+                    for (k, v) in headers {
+                        req = req.header(*k, *v);
+                    }
+                    req.call()
+                }
+            };
+            let resp = match result {
                 Ok(r) => r,
                 Err(e) => {
                     self.log_call(source, 0, started, false);
@@ -176,10 +208,24 @@ impl Http {
                     std::thread::sleep(retry_after.unwrap_or(delay).min(Duration::from_secs(60)));
                     delay *= 2;
                 }
-                _ => return Err(NetError::Bad(source.into(), format!("code {status}"))),
+                _ => {
+                    // Le service explique souvent le refus dans la réponse : on la garde.
+                    let text = resp
+                        .into_body()
+                        .with_config()
+                        .limit(64 * 1024)
+                        .read_to_string()
+                        .unwrap_or_default();
+                    return Err(NetError::Rejected { service: source.into(), status, body: text });
+                }
             }
         }
         Err(NetError::Unavailable(source.into()))
+    }
+
+    pub fn post_form_json(&self, source: &str, url: &str, form: &[(&str, &str)], cache: bool) -> Result<serde_json::Value, NetError> {
+        let body = self.post_form(source, url, form, cache)?;
+        serde_json::from_slice(&body).map_err(|e| NetError::Bad(source.into(), e.to_string()))
     }
 
     pub fn get_json(&self, source: &str, url: &str, headers: &[(&str, &str)], cache: bool) -> Result<serde_json::Value, NetError> {
