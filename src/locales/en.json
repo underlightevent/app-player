@@ -2,6 +2,9 @@
   "app": {
     "name": "DJ Library Manager"
   },
+  "common": {
+    "cancel": "Cancel"
+  },
   "nav": {
     "library": "Library",
     "inbox": "Inbox",
@@ -19,6 +22,7 @@
   },
   "topbar": {
     "searchPlaceholder": "Search the library",
+    "clearSearch": "Clear search",
     "searchOnline": "Search online",
     "rename": "Rename",
     "online": "Online",
@@ -32,7 +36,9 @@
     "library": {
       "title": "Your library is empty",
       "text": "Add the folder where your music lives, for example on your external drive.",
-      "action": "Add a folder"
+      "action": "Add a folder",
+      "pickTitle": "Choose a music folder",
+      "dropHint": "You can also drag a folder from Explorer or Finder onto this window."
     },
     "inbox": {
       "title": "Inbox",
@@ -62,12 +68,118 @@
       "title": "Folders",
       "text": "The tree of your music folders will appear here."
     },
-    "comingInPhase": "Available from phase {{phase}}."
+    "comingInPhase": "Available from phase {{phase}}.",
+    "comingInLot": "Coming soon in this phase."
+  },
+  "library": {
+    "diskOffline": "Drive {{disk}} disconnected",
+    "filters": "Quick filters",
+    "noCover": "No artwork",
+    "problems": "Problem files",
+    "minRating": "Minimum rating",
+    "anyRating": "Any",
+    "clearFilters": "Clear filters",
+    "count_one": "{{formatted}} track",
+    "count_other": "{{formatted}} tracks",
+    "selected_one": "{{formatted}} selected",
+    "selected_other": "{{formatted}} selected",
+    "noResults": "No matching tracks",
+    "noResultsHint": "Try another search or clear the filters.",
+    "folderAdded": "Folder added: indexing in progress",
+    "notAFolder": "This is not an accessible folder."
+  },
+  "table": {
+    "label": "Tracks",
+    "sortHint": "Click to sort; Shift + click to sort on several columns",
+    "columnsMenu": "Visible columns",
+    "resetColumns": "Reset to default columns"
+  },
+  "columns": {
+    "cover": "Artwork",
+    "rating": "Rating",
+    "mainArtist": "Main artist",
+    "title": "Title",
+    "version": "Version",
+    "artists": "Artists",
+    "album": "Album",
+    "year": "Year",
+    "genre": "Genre",
+    "bpm": "BPM",
+    "key": "Key",
+    "format": "Format",
+    "quality": "Quality",
+    "duration": "Duration",
+    "fileName": "File name",
+    "status": "Status"
+  },
+  "fields": {
+    "title": "Title",
+    "version": "Version",
+    "artists": "Artists",
+    "album": "Album",
+    "year": "Year",
+    "genre": "Genre",
+    "bpm": "BPM",
+    "key": "Key",
+    "rating": "Rating",
+    "cover": "Artwork",
+    "remixer": "Remixer",
+    "label": "Label"
+  },
+  "badges": {
+    "offline": "Drive {{disk}} disconnected: track is read-only",
+    "offlineShort": "Offline",
+    "missing": "File not found: deleted or moved outside the application",
+    "missingShort": "Missing",
+    "unreadable": "Unreadable or corrupted file",
+    "unreadableShort": "Unreadable",
+    "locked": "Locked fields: {{fields}}",
+    "wav": "Rekordbox will read title, artist, album, genre and comment, but not the artwork",
+    "desync": "The two tag blocks of this WAV (RIFF INFO and ID3) disagree",
+    "desyncShort": "Tags disagree",
+    "noCover": "No artwork",
+    "lowBitrate": "Bitrate below 320 kbit/s"
   },
   "detail": {
     "title": "Details",
     "empty": "No track selected.",
-    "hint": "Select a track to see and edit its information."
+    "hint": "Select a track to see and edit its information.",
+    "multiple_one": "{{count}} track selected.",
+    "multiple_other": "{{count}} tracks selected.",
+    "multipleHint": "Editing several tracks at once is coming very soon.",
+    "mainArtist": "Main artist",
+    "technical": "Technical information",
+    "quality": "Quality",
+    "duration": "Duration",
+    "size": "Size",
+    "channels": "Channels",
+    "cover": "Artwork",
+    "coverCount_one": "{{count}} image",
+    "coverCount_other": "{{count}} images",
+    "file": "File"
+  },
+  "folders": {
+    "title": "Library folders",
+    "hint": "Folders indexed by the application. External drives are recognised even if their letter or mount point changes.",
+    "rescan": "Re-index",
+    "remove": "Remove from library",
+    "removeTitle": "Remove this folder?",
+    "removeText": "“{{path}}” will no longer be followed by the application. No file is deleted or moved on the drive.",
+    "removed": "Folder removed from the library"
+  },
+  "tasks": {
+    "title": "Running tasks",
+    "none": "No tasks.",
+    "cancel": "Cancel task",
+    "remaining": "about {{minutes}} min left",
+    "scan": "Indexing the library",
+    "hash": "Computing file fingerprints",
+    "state": {
+      "running": "Running",
+      "done": "Done",
+      "cancelled": "Cancelled",
+      "error": "Error"
+    }
   },
   "player": {
     "nothing": "Nothing playing",
@@ -85,6 +197,14 @@
     "themeSystem": "Follow system",
     "language": "Language",
     "languageHint": "Changes apply immediately, no restart needed.",
+    "density": "Table density",
+    "densityHint": "Compact shows more tracks on screen.",
+    "densityCompact": "Compact",
+    "densityComfortable": "Comfortable",
+    "keyNotation": "Key notation",
+    "keyNotationHint": "Camelot (8A) or musical notation (Am).",
+    "keyCamelot": "Camelot (8A)",
+    "keyMusical": "Musical (Am)",
     "diagnostic": "Report a problem",
     "diagnosticHint": "Copies a report (version, system, end of the log) to paste into your message. Nothing is sent automatically.",
     "diagnosticCopy": "Copy diagnostic report",

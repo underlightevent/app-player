@@ -14,6 +14,8 @@ const KNOWN: &[(&str, &[&str], &str)] = &[
     ("theme", &["light", "dark", "system"], "light"),
     ("language", &["fr", "en"], "fr"),
     ("onboarding_done", &["true", "false"], "false"),
+    ("table_density", &["compact", "comfortable"], "compact"),
+    ("key_notation", &["camelot", "musical"], "camelot"),
 ];
 
 fn validate(key: &str, value: &str) -> Result<(), AppError> {

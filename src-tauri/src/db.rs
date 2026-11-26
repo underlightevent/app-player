@@ -18,7 +18,108 @@ const MIGRATIONS: &[&str] = &[
         value      TEXT NOT NULL,
         updated_at INTEGER NOT NULL DEFAULT (unixepoch())
     );",
+    // 2 — Bibliothèque : volumes, racines, morceaux, artistes, état des champs.
+    "CREATE TABLE volumes (
+        id         INTEGER PRIMARY KEY,
+        uid        TEXT NOT NULL UNIQUE,
+        label      TEXT NOT NULL DEFAULT '',
+        last_mount TEXT
+    );
+    CREATE TABLE roots (
+        id        INTEGER PRIMARY KEY,
+        volume_id INTEGER NOT NULL REFERENCES volumes(id),
+        rel_path  TEXT NOT NULL,
+        kind      TEXT NOT NULL DEFAULT 'library',
+        added_at  INTEGER NOT NULL DEFAULT (unixepoch()),
+        UNIQUE (volume_id, rel_path)
+    );
+    CREATE TABLE tracks (
+        id           INTEGER PRIMARY KEY,
+        volume_id    INTEGER NOT NULL REFERENCES volumes(id),
+        rel_path     TEXT NOT NULL,
+        file_name    TEXT NOT NULL,
+        root_id      INTEGER REFERENCES roots(id) ON DELETE SET NULL,
+        size         INTEGER NOT NULL DEFAULT 0,
+        mtime        INTEGER NOT NULL DEFAULT 0,
+        format       TEXT NOT NULL DEFAULT '',
+        codec        TEXT,
+        bitrate      INTEGER,
+        sample_rate  INTEGER,
+        bit_depth    INTEGER,
+        channels     INTEGER,
+        duration_ms  INTEGER,
+        audio_hash   TEXT,
+        title        TEXT,
+        version      TEXT,
+        artists      TEXT,
+        main_artist  TEXT,
+        album        TEXT,
+        year         INTEGER,
+        genre        TEXT,
+        bpm          REAL,
+        musical_key  TEXT,
+        rating       INTEGER NOT NULL DEFAULT 0,
+        remixer      TEXT,
+        label        TEXT,
+        cover_count  INTEGER NOT NULL DEFAULT 0,
+        cover_width  INTEGER,
+        cover_height INTEGER,
+        wav_desync   INTEGER NOT NULL DEFAULT 0,
+        status       TEXT NOT NULL DEFAULT 'ok',
+        error        TEXT,
+        indexed_at   INTEGER,
+        UNIQUE (volume_id, rel_path)
+    );
+    CREATE INDEX tracks_root ON tracks(root_id);
+    CREATE INDEX tracks_status ON tracks(status);
+    CREATE INDEX tracks_hash ON tracks(audio_hash);
+    CREATE TABLE track_artists (
+        track_id INTEGER NOT NULL REFERENCES tracks(id) ON DELETE CASCADE,
+        position INTEGER NOT NULL,
+        name     TEXT NOT NULL,
+        PRIMARY KEY (track_id, position)
+    );
+    CREATE TABLE field_state (
+        track_id INTEGER NOT NULL REFERENCES tracks(id) ON DELETE CASCADE,
+        field    TEXT NOT NULL,
+        locked   INTEGER NOT NULL DEFAULT 0,
+        source   TEXT NOT NULL DEFAULT 'file',
+        PRIMARY KEY (track_id, field)
+    );
+    CREATE TABLE artist_exceptions (
+        name TEXT PRIMARY KEY COLLATE NOCASE
+    );
+    INSERT INTO artist_exceptions(name) VALUES
+        ('Above & Beyond'), ('Simon & Garfunkel'), ('Earth, Wind & Fire'),
+        ('Crosby, Stills, Nash & Young'), ('Chase & Status'), ('Sigma & Example'),
+        ('Mumford & Sons'), ('Florence + The Machine'), ('Lost & Found');
+    CREATE VIRTUAL TABLE tracks_fts USING fts5(
+        title, version, artists, album, genre, file_name,
+        content='tracks', content_rowid='id',
+        tokenize='unicode61 remove_diacritics 2'
+    );
+    CREATE TRIGGER tracks_ai AFTER INSERT ON tracks BEGIN
+        INSERT INTO tracks_fts(rowid, title, version, artists, album, genre, file_name)
+        VALUES (new.id, new.title, new.version, new.artists, new.album, new.genre, new.file_name);
+    END;
+    CREATE TRIGGER tracks_ad AFTER DELETE ON tracks BEGIN
+        INSERT INTO tracks_fts(tracks_fts, rowid, title, version, artists, album, genre, file_name)
+        VALUES ('delete', old.id, old.title, old.version, old.artists, old.album, old.genre, old.file_name);
+    END;
+    CREATE TRIGGER tracks_au AFTER UPDATE OF title, version, artists, album, genre, file_name ON tracks BEGIN
+        INSERT INTO tracks_fts(tracks_fts, rowid, title, version, artists, album, genre, file_name)
+        VALUES ('delete', old.id, old.title, old.version, old.artists, old.album, old.genre, old.file_name);
+        INSERT INTO tracks_fts(rowid, title, version, artists, album, genre, file_name)
+        VALUES (new.id, new.title, new.version, new.artists, new.album, new.genre, new.file_name);
+    END;",
 ];
+
+/// Ouvre une connexion supplémentaire (tâches de fond). La base doit déjà exister et être migrée.
+pub fn open_worker(path: &Path) -> Result<Connection, AppError> {
+    let conn = Connection::open(path)?;
+    configure(&conn)?;
+    Ok(conn)
+}
 
 /// Numéro de la dernière migration connue de cette version de l'application.
 pub fn latest_version() -> i64 {

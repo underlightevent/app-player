@@ -12,7 +12,9 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@tanstack/react-virtual": "^3.14.28",
     "@tauri-apps/api": "^2.12.5",
+    "@tauri-apps/plugin-dialog": "^2.8.4",
     "i18next": "^27.2.9",
     "lucide-react": "^1.81.0",
     "react": "^19.3.1",

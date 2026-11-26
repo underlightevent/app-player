@@ -2,6 +2,9 @@
   "app": {
     "name": "DJ Library Manager"
   },
+  "common": {
+    "cancel": "Annuler"
+  },
   "nav": {
     "library": "Bibliothèque",
     "inbox": "Inbox",
@@ -19,6 +22,7 @@
   },
   "topbar": {
     "searchPlaceholder": "Rechercher dans la bibliothèque",
+    "clearSearch": "Effacer la recherche",
     "searchOnline": "Rechercher en ligne",
     "rename": "Renommer",
     "online": "En ligne",
@@ -32,7 +36,9 @@
     "library": {
       "title": "Votre bibliothèque est vide",
       "text": "Ajoutez le dossier où se trouve votre musique, par exemple sur votre disque externe.",
-      "action": "Ajouter un dossier"
+      "action": "Ajouter un dossier",
+      "pickTitle": "Choisir un dossier de musique",
+      "dropHint": "Vous pouvez aussi glisser un dossier depuis l'Explorateur ou le Finder sur cette fenêtre."
     },
     "inbox": {
       "title": "Inbox",
@@ -62,12 +68,118 @@
       "title": "Dossiers",
       "text": "L'arborescence de vos dossiers de musique apparaîtra ici."
     },
-    "comingInPhase": "Disponible à partir de la phase {{phase}}."
+    "comingInPhase": "Disponible à partir de la phase {{phase}}.",
+    "comingInLot": "Bientôt disponible dans cette phase."
+  },
+  "library": {
+    "diskOffline": "Disque {{disk}} déconnecté",
+    "filters": "Filtres rapides",
+    "noCover": "Sans pochette",
+    "problems": "Fichiers à problème",
+    "minRating": "Note minimale",
+    "anyRating": "Toutes",
+    "clearFilters": "Effacer les filtres",
+    "count_one": "{{formatted}} morceau",
+    "count_other": "{{formatted}} morceaux",
+    "selected_one": "{{formatted}} sélectionné",
+    "selected_other": "{{formatted}} sélectionnés",
+    "noResults": "Aucun morceau ne correspond",
+    "noResultsHint": "Essayez une autre recherche ou effacez les filtres.",
+    "folderAdded": "Dossier ajouté : indexation en cours",
+    "notAFolder": "Ce n'est pas un dossier accessible."
+  },
+  "table": {
+    "label": "Morceaux",
+    "sortHint": "Cliquez pour trier ; Maj + clic pour trier sur plusieurs colonnes",
+    "columnsMenu": "Colonnes affichées",
+    "resetColumns": "Rétablir les colonnes par défaut"
+  },
+  "columns": {
+    "cover": "Pochette",
+    "rating": "Note",
+    "mainArtist": "Artiste principal",
+    "title": "Titre",
+    "version": "Version",
+    "artists": "Artistes",
+    "album": "Album",
+    "year": "Année",
+    "genre": "Genre",
+    "bpm": "BPM",
+    "key": "Tonalité",
+    "format": "Format",
+    "quality": "Qualité",
+    "duration": "Durée",
+    "fileName": "Nom de fichier",
+    "status": "État"
+  },
+  "fields": {
+    "title": "Titre",
+    "version": "Version",
+    "artists": "Artistes",
+    "album": "Album",
+    "year": "Année",
+    "genre": "Genre",
+    "bpm": "BPM",
+    "key": "Tonalité",
+    "rating": "Note",
+    "cover": "Pochette",
+    "remixer": "Remixeur",
+    "label": "Label"
+  },
+  "badges": {
+    "offline": "Disque {{disk}} déconnecté : morceau en lecture seule",
+    "offlineShort": "Hors ligne",
+    "missing": "Fichier introuvable : supprimé ou déplacé hors de l'application",
+    "missingShort": "Manquant",
+    "unreadable": "Fichier illisible ou corrompu",
+    "unreadableShort": "Illisible",
+    "locked": "Champs verrouillés : {{fields}}",
+    "wav": "Rekordbox lira titre, artiste, album, genre et commentaire, mais pas la pochette",
+    "desync": "Les deux blocs de tags de ce WAV (RIFF INFO et ID3) ne disent pas la même chose",
+    "desyncShort": "Tags désaccordés",
+    "noCover": "Pas de pochette",
+    "lowBitrate": "Débit inférieur à 320 kbit/s"
   },
   "detail": {
     "title": "Détail",
     "empty": "Aucun morceau sélectionné.",
-    "hint": "Sélectionnez un morceau pour voir et modifier ses informations."
+    "hint": "Sélectionnez un morceau pour voir et modifier ses informations.",
+    "multiple_one": "{{count}} morceau sélectionné.",
+    "multiple_other": "{{count}} morceaux sélectionnés.",
+    "multipleHint": "La modification de plusieurs morceaux à la fois arrive très bientôt.",
+    "mainArtist": "Artiste principal",
+    "technical": "Informations techniques",
+    "quality": "Qualité",
+    "duration": "Durée",
+    "size": "Taille",
+    "channels": "Canaux",
+    "cover": "Pochette",
+    "coverCount_one": "{{count}} image",
+    "coverCount_other": "{{count}} images",
+    "file": "Fichier"
+  },
+  "folders": {
+    "title": "Dossiers de la bibliothèque",
+    "hint": "Les dossiers indexés par l'application. Les disques externes sont reconnus même si leur lettre ou leur point de montage change.",
+    "rescan": "Réindexer",
+    "remove": "Retirer de la bibliothèque",
+    "removeTitle": "Retirer ce dossier ?",
+    "removeText": "« {{path}} » ne sera plus suivi par l'application. Aucun fichier n'est supprimé ni déplacé sur le disque.",
+    "removed": "Dossier retiré de la bibliothèque"
+  },
+  "tasks": {
+    "title": "Tâches en cours",
+    "none": "Aucune tâche.",
+    "cancel": "Annuler la tâche",
+    "remaining": "environ {{minutes}} min restantes",
+    "scan": "Indexation de la bibliothèque",
+    "hash": "Calcul des empreintes des fichiers",
+    "state": {
+      "running": "En cours",
+      "done": "Terminé",
+      "cancelled": "Annulé",
+      "error": "Erreur"
+    }
   },
   "player": {
     "nothing": "Aucun morceau en lecture",
@@ -85,6 +197,14 @@
     "themeSystem": "Suivre le système",
     "language": "Langue",
     "languageHint": "Le changement est immédiat, sans redémarrage.",
+    "density": "Densité du tableau",
+    "densityHint": "Compacte montre plus de morceaux à l'écran.",
+    "densityCompact": "Compacte",
+    "densityComfortable": "Confortable",
+    "keyNotation": "Notation des tonalités",
+    "keyNotationHint": "Camelot (8A) ou notation musicale (Am).",
+    "keyCamelot": "Camelot (8A)",
+    "keyMusical": "Musicale (Am)",
     "diagnostic": "Signaler un problème",
     "diagnosticHint": "Copie un rapport (version, système, fin du journal) à coller dans votre message. Rien n'est envoyé automatiquement.",
     "diagnosticCopy": "Copier le rapport de diagnostic",

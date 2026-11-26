@@ -50,3 +50,41 @@ Licences acceptées en plus de la liste du principe 12, toutes permissives et co
 
 ### D-012 · Pas de base lue en dehors du dossier de données
 La base vit dans le dossier de données de l'application (`%APPDATA%\com.dj-library-manager.desktop\` sous Windows, `~/Library/Application Support/com.dj-library-manager.desktop/` sous macOS), jamais sur le disque de musique.
+
+## Phase 1
+
+### D-101 · Écriture WAV et AIFF au niveau des blocs
+lofty ignore les entrées RIFF INFO qui ne sont pas en UTF-8 (fréquent pour des WAV tagués sous Windows) : les réécrire les ferait disparaître, contraire au principe 7. Pour WAV et AIFF, l'application relit et réécrit elle-même les blocs du fichier (`src-tauri/src/tags/chunks.rs`) : chaque bloc est recopié octet pour octet, seuls les blocs `LIST/INFO` et `id3` sont remplacés. Le bloc audio (`data`, `SSND`) n'est jamais modifié. Lecture des textes RIFF INFO : UTF-8 s'il est valide, sinon Windows-1252. Les WAV de plus de 4 Go (RF64) sont refusés à l'écriture.
+
+### D-102 · Hash audio calculé après l'indexation
+Le hash du flux audio oblige à lire le fichier entier : sur un disque USB, 10 000 WAV représentent plusieurs centaines de Go, impossible en 5 minutes. L'indexation ne lit donc que les en-têtes et les tags (rapide) ; les hash sont calculés ensuite, en tâche de fond, un fichier à la fois, avec progression et Annuler. Un fichier modifié (taille ou date) voit son hash recalculé. Le hash porte sur les paquets audio démultiplexés par Symphonia (sans décodage) : tags, pochettes et autres blocs n'y entrent pas.
+
+### D-103 · Tableau virtualisé sans TanStack Table
+Le tableau utilise TanStack Virtual (lignes virtualisées) avec une grille CSS écrite pour l'application, sans TanStack Table : le tri, les filtres et la recherche sont faits par la base SQLite (rapide sur 100 000 morceaux), et la grille doit seulement afficher, redimensionner et réordonner les colonnes. Le tableau ne charge que la liste ordonnée des identifiants, puis les lignes visibles par paquets de 400.
+
+### D-104 · Préférences d'affichage du tableau
+Largeur, ordre et visibilité des colonnes sont gardés dans le stockage local de l'interface : ce sont des préférences d'affichage, sans conséquence sur les fichiers. Les réglages qui comptent (thème, langue, densité, notation des tonalités) restent dans la base.
+
+### D-105 · Identification des disques
+Windows : numéro de série du volume (`GetVolumeInformationW`), qui ne change pas avec la lettre de lecteur. macOS : `VolumeUUID` donné par `diskutil`. Les chemins des morceaux sont enregistrés par rapport à la racine du disque. Les disques sont revérifiés toutes les 4 secondes ; un disque rebranché déclenche une réindexation incrémentale de ses dossiers. Les fichiers « ._ » créés par macOS sur les disques exFAT, les fichiers cachés et le dossier `_Quarantaine` sont ignorés.
+
+### D-106 · Fichiers disparus
+Un fichier absent lors d'une indexation complète est marqué « manquant », jamais effacé de la base (il garde ses informations et ses champs verrouillés). S'il réapparaît, il redevient normal. Si le parcours d'un dossier rencontre une erreur d'accès, rien n'est marqué manquant.
+
+### D-107 · Recherche
+Index plein texte FTS5 (titre, version, artistes, album, genre, nom de fichier), insensible aux accents. Chaque mot tapé est un début de mot, tous doivent être présents. Mesuré : quelques millisecondes sur 100 000 morceaux (test automatique).
+
+### D-108 · Manifeste Windows
+Le composant de boîte de dialogue « Choisir un dossier » exige un manifeste Windows (contrôles communs v6). Il est intégré par l'éditeur de liens à l'application et aux programmes de test (`src-tauri/windows-app-manifest.xml`), sinon les tests refusent de démarrer sous Windows.
+
+### D-109 · Journal
+Les bibliothèques audio (Symphonia, lofty) écrivent une ligne par fichier lu : seules leurs erreurs sont gardées dans le journal.
+
+### D-110 · Variables de développement
+Dans les versions de développement uniquement (jamais dans les installateurs) : `DJLM_DEV_DATA_DIR` utilise une base séparée et `DJLM_DEV_ADD_ROOT` ajoute un dossier au démarrage, pour les essais automatiques sans toucher aux données de l'utilisateur.
+
+### D-111 · Fichiers audio de test
+Les fichiers de test sont fabriqués par le code (`src-tauri/src/testdata.rs`) : WAV, AIFF et FLAC contiennent une onde synthétique ; le MP3 est une suite de trames valides de silence (aucun encodeur MP3 sous licence permise n'est disponible en Rust). Aucun fichier audio n'est stocké dans le dépôt.
+
+### D-112 · Licences de la surveillance des dossiers (à confirmer)
+`notify`, recommandé par le cahier des charges pour surveiller les dossiers, est sous licence **CC0-1.0** (domaine public) et utilise `xxhash-rust`, sous licence **BSL-1.0** (Boost). Ces deux licences ne figurent pas mot pour mot dans la liste du principe 12, mais elles sont permissives : aucune obligation de publier le code, partage et usage commercial permis, rien de comparable à la GPL. Elles sont donc acceptées par le contrôle automatique des licences. Si l'utilisateur préfère s'en tenir strictement à la liste, la solution de repli est une vérification périodique des dossiers (sans surveillance en temps réel), au prix d'une détection des changements moins rapide.

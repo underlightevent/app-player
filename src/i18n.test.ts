@@ -57,7 +57,9 @@ describe("traductions", () => {
       for (const m of code.matchAll(/\bt\(\s*"([a-zA-Z0-9_.]+)"/g)) used.add(m[1]);
     }
     expect(used.size).toBeGreaterThan(10);
-    const unknown = [...used].filter((k) => !frKeys.has(k));
+    // Une clé au pluriel existe sous la forme clé_one / clé_other.
+    const exists = (k: string) => frKeys.has(k) || (frKeys.has(`${k}_one`) && frKeys.has(`${k}_other`));
+    const unknown = [...used].filter((k) => !exists(k));
     expect(unknown).toEqual([]);
   });
 
@@ -69,5 +71,9 @@ describe("traductions", () => {
     for (const code of ["database", "database_too_new", "database_unavailable", "io", "invalid_setting", "internal"])
       expect(frKeys.has(`errors.${code}`), `errors.${code}`).toBe(true);
     for (const lang of ["fr", "en"]) expect(frKeys.has(`languages.${lang}`)).toBe(true);
+    const columns = ["cover", "rating", "mainArtist", "title", "version", "artists", "album", "year", "genre", "bpm", "key", "format", "quality", "duration", "fileName", "status"];
+    for (const c of columns) expect(frKeys.has(`columns.${c}`), `columns.${c}`).toBe(true);
+    for (const s of ["running", "done", "cancelled", "error"]) expect(frKeys.has(`tasks.state.${s}`)).toBe(true);
+    for (const l of ["tasks.scan", "tasks.hash"]) expect(frKeys.has(l), l).toBe(true);
   });
 });

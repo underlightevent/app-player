@@ -1,14 +1,18 @@
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { ClipboardCopy, Monitor, Moon, Sun } from "lucide-react";
 import { diagnosticReport, logMessage } from "../core/api";
 import type { ThemeSetting } from "../core/theme";
 import { LANGUAGES, type Language } from "../i18n";
 
-interface Props {
+export interface SettingsProps {
   theme: ThemeSetting;
   onThemeChange: (t: ThemeSetting) => void;
   language: Language;
   onLanguageChange: (l: Language) => void;
+  density: "compact" | "comfortable";
+  keyNotation: "camelot" | "musical";
+  onSettingChange: (key: string, value: string) => void;
   version: string;
   onToast: (msg: string) => void;
 }
@@ -28,22 +32,34 @@ async function copyText(text: string) {
   }
 }
 
-export function SettingsView({ theme, onThemeChange, language, onLanguageChange, version, onToast }: Props) {
-  const { t } = useTranslation();
+function Segmented<T extends string>({ label, value, options, onChange }: {
+  label: string;
+  value: T;
+  options: { id: T; label: string; icon?: ReactNode }[];
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div className="segmented" role="group" aria-label={label}>
+      {options.map((o) => (
+        <button key={o.id} aria-pressed={value === o.id} onClick={() => onChange(o.id)}>
+          {o.icon}
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
-  const themes: { id: ThemeSetting; label: string; icon: typeof Sun }[] = [
-    { id: "light", label: t("settings.themeLight"), icon: Sun },
-    { id: "dark", label: t("settings.themeDark"), icon: Moon },
-    { id: "system", label: t("settings.themeSystem"), icon: Monitor },
-  ];
+export function SettingsView(p: SettingsProps) {
+  const { t } = useTranslation();
 
   const copyDiagnostic = async () => {
     try {
       await copyText(await diagnosticReport());
-      onToast(t("settings.diagnosticCopied"));
+      p.onToast(t("settings.diagnosticCopied"));
     } catch (e) {
       logMessage("error", `Copie du diagnostic : ${String(e)}`);
-      onToast(t("settings.diagnosticFailed"));
+      p.onToast(t("settings.diagnosticFailed"));
     }
   };
 
@@ -51,33 +67,62 @@ export function SettingsView({ theme, onThemeChange, language, onLanguageChange,
     <div className="settings">
       <h1>{t("settings.title")}</h1>
 
-      <section aria-labelledby="s-appearance">
-        <h2 id="s-appearance">{t("settings.appearance")}</h2>
+      <section>
+        <h2>{t("settings.appearance")}</h2>
         <p className="hint">{t("settings.appearanceHint")}</p>
-        <div className="segmented" role="group" aria-labelledby="s-appearance">
-          {themes.map(({ id, label, icon: Icon }) => (
-            <button key={id} aria-pressed={theme === id} onClick={() => onThemeChange(id)}>
-              <Icon size={16} aria-hidden />
-              {label}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          label={t("settings.appearance")}
+          value={p.theme}
+          onChange={p.onThemeChange}
+          options={[
+            { id: "light", label: t("settings.themeLight"), icon: <Sun size={16} aria-hidden /> },
+            { id: "dark", label: t("settings.themeDark"), icon: <Moon size={16} aria-hidden /> },
+            { id: "system", label: t("settings.themeSystem"), icon: <Monitor size={16} aria-hidden /> },
+          ]}
+        />
       </section>
 
-      <section aria-labelledby="s-language">
-        <h2 id="s-language">{t("settings.language")}</h2>
+      <section>
+        <h2>{t("settings.language")}</h2>
         <p className="hint">{t("settings.languageHint")}</p>
-        <div className="segmented" role="group" aria-labelledby="s-language">
-          {LANGUAGES.map((lang) => (
-            <button key={lang} aria-pressed={language === lang} onClick={() => onLanguageChange(lang)} lang={lang}>
-              {t(`languages.${lang}`)}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          label={t("settings.language")}
+          value={p.language}
+          onChange={p.onLanguageChange}
+          options={LANGUAGES.map((l) => ({ id: l, label: t(`languages.${l}`) }))}
+        />
       </section>
 
-      <section aria-labelledby="s-diag">
-        <h2 id="s-diag">{t("settings.diagnostic")}</h2>
+      <section>
+        <h2>{t("settings.density")}</h2>
+        <p className="hint">{t("settings.densityHint")}</p>
+        <Segmented
+          label={t("settings.density")}
+          value={p.density}
+          onChange={(v) => p.onSettingChange("table_density", v)}
+          options={[
+            { id: "compact", label: t("settings.densityCompact") },
+            { id: "comfortable", label: t("settings.densityComfortable") },
+          ]}
+        />
+      </section>
+
+      <section>
+        <h2>{t("settings.keyNotation")}</h2>
+        <p className="hint">{t("settings.keyNotationHint")}</p>
+        <Segmented
+          label={t("settings.keyNotation")}
+          value={p.keyNotation}
+          onChange={(v) => p.onSettingChange("key_notation", v)}
+          options={[
+            { id: "camelot", label: t("settings.keyCamelot") },
+            { id: "musical", label: t("settings.keyMusical") },
+          ]}
+        />
+      </section>
+
+      <section>
+        <h2>{t("settings.diagnostic")}</h2>
         <p className="hint">{t("settings.diagnosticHint")}</p>
         <button className="btn" onClick={copyDiagnostic}>
           <ClipboardCopy size={16} aria-hidden />
@@ -85,7 +130,7 @@ export function SettingsView({ theme, onThemeChange, language, onLanguageChange,
         </button>
       </section>
 
-      <p className="about tabular">{t("settings.about", { version })}</p>
+      <p className="about tabular">{t("settings.about", { version: p.version })}</p>
     </div>
   );
 }

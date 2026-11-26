@@ -17,6 +17,10 @@ const ALLOWED = new Set([
   "MPL-2.0",
   "0BSD",
   "Unicode-3.0",
+  // notify (surveillance des dossiers, recommandé par le cahier des charges) et sa dépendance
+  // xxhash-rust : licences permissives hors de la liste du principe 12. Voir docs/DECISIONS.md, D-112.
+  "CC0-1.0",
+  "BSL-1.0",
 ]);
 
 // Petit analyseur d'expressions SPDX : AND est prioritaire sur OR, parenthèses gérées.
