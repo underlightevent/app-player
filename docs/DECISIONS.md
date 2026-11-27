@@ -303,3 +303,6 @@ Liste d'environ 70 grands labels dans l'interface (électro, majors, rap frança
 
 ### D-510 · « Veille » renommé « Sorties »
 À la demande de l'utilisateur. L'onglet « Nouvelles sorties » devient « Nouveautés » pour éviter « Sorties › Nouvelles sorties ». Les noms internes (`watch_…`) ne changent pas, pour garder les réglages déjà enregistrés.
+
+### D-511 · Disque interne du Mac présenté depuis « / »
+Sur les Mac récents, les fichiers de l'utilisateur sont sur la partie « données » du disque interne, montée à `/System/Volumes/Data` et visible depuis `/` par les liens du système (firmlinks : /Users, /private…). L'application construisait des chemins `/System/Volumes/Data/Users/…` : les fichiers étaient trouvés, mais ces chemins n'auraient pas correspondu à ceux de Rekordbox (export XML, import, journal) ni à ce que l'utilisateur connaît. Le point de montage présenté pour ce volume est maintenant `/`. Les chemins relatifs enregistrés et l'identifiant du volume (UUID) ne changent pas. Repéré grâce au test de quarantaine sur la machine macOS de GitHub (0.6.1).

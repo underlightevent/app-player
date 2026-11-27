@@ -179,7 +179,12 @@ mod imp {
             Some(u) => format!("mac:{u}"),
             None => format!("mac:name:{name}"),
         };
-        Some(MountedVolume { uid, label: name, mount: mount.to_path_buf() })
+        // Partie « données » du disque interne : ses dossiers (Users, private…) sont visibles
+        // depuis « / » par les liens du système (firmlinks). On présente donc ses chemins depuis
+        // « / » (« /Users/… ») et non « /System/Volumes/Data/Users/… », que Rekordbox et
+        // l'utilisateur ne reconnaîtraient pas. Les chemins relatifs enregistrés ne changent pas.
+        let shown = if mount == Path::new("/System/Volumes/Data") { PathBuf::from("/") } else { mount.to_path_buf() };
+        Some(MountedVolume { uid, label: name, mount: shown })
     }
 
     pub fn volume_of(path: &Path) -> std::io::Result<MountedVolume> {

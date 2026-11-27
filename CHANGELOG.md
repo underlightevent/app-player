@@ -1,5 +1,9 @@
 # Journal des versions
 
+## 0.6.2 — Correction pour le Mac (à valider)
+
+- Sur Mac, les chemins du disque interne s’écrivaient « /System/Volumes/Data/Users/… » au lieu de « /Users/… » (problème pour Rekordbox et à l’affichage). Aucun changement pour Windows.
+
 ## 0.6.1 — Correction de la compilation (à valider)
 
 - Même contenu que la 0.6.0. Un test de la quarantaine comparait les chemins comme du texte et échouait sur les machines de compilation de GitHub (lien /var sous macOS, nom court sous Windows). L'application n'était pas en cause.
