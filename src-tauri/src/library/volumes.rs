@@ -187,24 +187,35 @@ mod imp {
         info(&mp).ok_or_else(|| std::io::Error::other("volume illisible"))
     }
 
+    /// Tous les volumes montés, d'après la liste du système (getmntinfo).
+    /// Sur les Mac récents, le disque interne est en deux parties : « / » (système, en lecture
+    /// seule) et « /System/Volumes/Data » (les fichiers de l'utilisateur). Les deux sont gardés,
+    /// ainsi que les disques externes de /Volumes ; les volumes techniques sont ignorés.
     pub fn mounted() -> Vec<MountedVolume> {
-        let mut out = Vec::new();
-        if let Some(v) = info(Path::new("/")) {
-            out.push(v);
-        }
-        if let Ok(entries) = std::fs::read_dir("/Volumes") {
-            for e in entries.flatten() {
-                let p = e.path();
-                // « Macintosh HD » dans /Volumes est un lien vers « / »
-                if std::fs::symlink_metadata(&p).map(|m| m.file_type().is_symlink()).unwrap_or(false) {
+        let mut points: Vec<PathBuf> = Vec::new();
+        let mut buf: *mut libc::statfs = std::ptr::null_mut();
+        // SAFETY : getmntinfo remplit `buf` avec un tableau géré par le système, valable jusqu'au prochain appel.
+        let n = unsafe { libc::getmntinfo(&mut buf, libc::MNT_NOWAIT) };
+        if n > 0 && !buf.is_null() {
+            // SAFETY : `n` entrées valides à partir de `buf`.
+            let list = unsafe { std::slice::from_raw_parts(buf, n as usize) };
+            for st in list {
+                let name = unsafe { CStr::from_ptr(st.f_mntonname.as_ptr()) };
+                let fstype = unsafe { CStr::from_ptr(st.f_fstypename.as_ptr()) }.to_string_lossy();
+                if matches!(fstype.as_ref(), "devfs" | "autofs" | "nullfs" | "lifs") {
                     continue;
                 }
-                if let Some(v) = info(&p) {
-                    out.push(v);
+                let p = PathBuf::from(std::ffi::OsStr::from_bytes(name.to_bytes()));
+                let keep = p == Path::new("/") || p == Path::new("/System/Volumes/Data") || p.starts_with("/Volumes");
+                if keep && !points.contains(&p) {
+                    points.push(p);
                 }
             }
         }
-        out
+        if points.is_empty() {
+            points.push(PathBuf::from("/"));
+        }
+        points.iter().filter_map(|p| info(p)).collect()
     }
 }
 
