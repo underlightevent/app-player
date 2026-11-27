@@ -226,6 +226,44 @@ const MIGRATIONS: &[&str] = &[
         analyzed_at  INTEGER NOT NULL DEFAULT (unixepoch())
     );
     CREATE INDEX quality_verdict ON quality(verdict);",
+    // 7 — Rekordbox, journal des chemins, playlists et filtres intelligents (phase 4).
+    "CREATE TABLE rekordbox_tracks (
+        track_id INTEGER PRIMARY KEY REFERENCES tracks(id) ON DELETE CASCADE,
+        rb_id    TEXT,
+        location TEXT NOT NULL
+    );
+    CREATE TABLE rekordbox_import (
+        id          INTEGER PRIMARY KEY CHECK (id = 1),
+        file        TEXT NOT NULL,
+        imported_at INTEGER NOT NULL,
+        xml_tracks  INTEGER NOT NULL,
+        matched     INTEGER NOT NULL
+    );
+    CREATE TABLE rekordbox_reload (
+        track_id   INTEGER PRIMARY KEY REFERENCES tracks(id) ON DELETE CASCADE,
+        changed_at INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+    CREATE TABLE path_journal (
+        id           INTEGER PRIMARY KEY,
+        track_id     INTEGER,
+        old_path     TEXT NOT NULL,
+        new_path     TEXT NOT NULL,
+        in_rekordbox INTEGER NOT NULL DEFAULT 0,
+        at           INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+    CREATE TABLE playlists (
+        id         INTEGER PRIMARY KEY,
+        name       TEXT NOT NULL,
+        kind       TEXT NOT NULL DEFAULT 'static',
+        rules      TEXT,
+        created_at INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+    CREATE TABLE playlist_tracks (
+        playlist_id INTEGER NOT NULL REFERENCES playlists(id) ON DELETE CASCADE,
+        track_id    INTEGER NOT NULL REFERENCES tracks(id) ON DELETE CASCADE,
+        position    INTEGER NOT NULL,
+        PRIMARY KEY (playlist_id, track_id)
+    );",
 ];
 
 /// Ouvre une connexion supplémentaire (tâches de fond). La base doit déjà exister et être migrée.

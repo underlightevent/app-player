@@ -25,6 +25,10 @@ pub struct Query {
     pub folder: Option<(i64, String)>,
     /// Compteur du tableau de bord « Santé de la bibliothèque » (no_cover, suspect…).
     pub health: Option<String>,
+    /// Playlist ou filtre intelligent.
+    pub playlist: Option<i64>,
+    /// Morceaux présents dans Rekordbox (badge) ; « reload » : à recharger dans Rekordbox.
+    pub rekordbox: Option<String>,
     pub sort: Vec<SortKey>,
 }
 
@@ -119,6 +123,25 @@ pub fn ids(conn: &Connection, q: &Query) -> Result<Vec<i64>, AppError> {
             }
         }
     }
+    let mut playlist_order: Option<i64> = None;
+    if let Some(pid) = q.playlist {
+        let p = crate::playlists::get(conn, pid)?;
+        if p.kind == "smart" {
+            let (cond, a) = crate::playlists::rules_sql(&p.rules.unwrap_or_default())?;
+            wheres.push(format!("({cond})"));
+            args.extend(a);
+        } else {
+            wheres.push("t.id IN (SELECT track_id FROM playlist_tracks WHERE playlist_id = ?)".into());
+            args.push(pid.into());
+            playlist_order = Some(pid);
+        }
+    }
+    match q.rekordbox.as_deref() {
+        Some("reload") => wheres.push("t.id IN (SELECT track_id FROM rekordbox_reload)".into()),
+        Some("in") => wheres.push("t.id IN (SELECT track_id FROM rekordbox_tracks)".into()),
+        Some("out") => wheres.push("t.id NOT IN (SELECT track_id FROM rekordbox_tracks)".into()),
+        _ => {}
+    }
     if let Some((vol, folder)) = &q.folder {
         wheres.push("t.volume_id = ? AND substr(t.rel_path, 1, length(?)) = ?".into());
         let prefix = if folder.is_empty() { String::new() } else { format!("{folder}/") };
@@ -140,6 +163,10 @@ pub fn ids(conn: &Connection, q: &Query) -> Result<Vec<i64>, AppError> {
         }
     }
     if order.is_empty() {
+        if let Some(pid) = playlist_order {
+            // Playlist : dans l'ordre où les morceaux y ont été ajoutés.
+            order.push(format!("(SELECT position FROM playlist_tracks WHERE playlist_id = {pid} AND track_id = t.id)"));
+        }
         order.push("(t.main_artist IS NULL)".into());
         order.push("t.main_artist COLLATE NOCASE".into());
         order.push("t.title COLLATE NOCASE".into());
@@ -190,6 +217,10 @@ pub struct TrackRow {
     pub cover_width: Option<i64>,
     pub wav_desync: bool,
     pub locked: Vec<String>,
+    /// Présent dans la collection Rekordbox importée.
+    pub in_rekordbox: bool,
+    /// Tags modifiés depuis : à recharger dans Rekordbox.
+    pub reload: bool,
 }
 
 /// Lignes demandées, dans l'ordre des identifiants fournis.
@@ -202,7 +233,9 @@ pub fn rows(conn: &Connection, ids: &[i64], mounts: &HashMap<i64, PathBuf>) -> R
         "SELECT t.id, t.title, t.version, t.main_artist, t.album, t.year, t.genre, t.bpm, t.musical_key, t.rating,
                 t.format, t.codec, t.bitrate, t.sample_rate, t.bit_depth, t.channels, t.duration_ms, t.size,
                 t.file_name, t.rel_path, t.volume_id, v.label, t.status, t.error, t.cover_count, t.cover_width,
-                t.wav_desync
+                t.wav_desync,
+                EXISTS (SELECT 1 FROM rekordbox_tracks rb WHERE rb.track_id = t.id),
+                EXISTS (SELECT 1 FROM rekordbox_reload rr WHERE rr.track_id = t.id)
          FROM tracks t JOIN volumes v ON v.id = t.volume_id WHERE t.id IN ({marks})"
     );
     let mut stmt = conn.prepare(&sql)?;
@@ -243,6 +276,8 @@ pub fn rows(conn: &Connection, ids: &[i64], mounts: &HashMap<i64, PathBuf>) -> R
             cover_width: r.get(25)?,
             wav_desync: r.get(26)?,
             locked: vec![],
+            in_rekordbox: r.get(27)?,
+            reload: r.get(28)?,
         })
     })?;
     for row in iter {

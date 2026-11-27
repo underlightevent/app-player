@@ -171,10 +171,20 @@ impl Library {
         if let Some(parent) = dst.parent() {
             std::fs::create_dir_all(parent)?;
         }
+        // Morceaux concernés, pour le journal des chemins (relocalisation dans Rekordbox).
+        let moved: Vec<(i64, String)> = {
+            let mut st = conn.prepare("SELECT id, rel_path FROM tracks WHERE volume_id = ?1 AND substr(rel_path, 1, length(?2)) = ?2")?;
+            let v = st.query_map(params![volume_id, prefix(from)], |r| Ok((r.get(0)?, r.get(1)?)))?.collect::<Result<Vec<_>, _>>()?;
+            v
+        };
         std::fs::rename(&src, &dst)?;
         if let Err(e) = move_prefix_in_db(conn, volume_id, from, to) {
             let _ = std::fs::rename(&dst, &src); // la base n'a pas suivi : on remet le dossier
             return Err(e);
+        }
+        for (id, rel) in moved {
+            let new_rel = format!("{}{}", prefix(to), &rel[prefix(from).len()..]);
+            crate::rekordbox::journal(conn, id, &volumes::join_rel(&mount, &rel), &volumes::join_rel(&mount, &new_rel));
         }
         log::info!("Dossier déplacé : {} → {}", src.display(), dst.display());
         Ok(())
@@ -216,6 +226,7 @@ impl Library {
                 status: status.into(),
                 suffixed: false,
                 long_path: false,
+                in_rekordbox: crate::rekordbox::in_rekordbox(&conn, id),
             });
         }
         Ok(out)
@@ -243,6 +254,7 @@ impl Library {
             let to = volumes::join_rel(&mount, &to_rel);
             match crate::rename::move_file(&conn, it.id, volume_id, &from, &to, &to_rel) {
                 Ok(()) => {
+                    crate::rekordbox::journal(&conn, it.id, &from, &to);
                     let before = PathState { volume_id, rel_path: from_rel };
                     let after = PathState { volume_id, rel_path: to_rel };
                     history::record(&conn, batch, "move", Some(it.id), &serde_json::to_string(&before).unwrap_or_default(), &serde_json::to_string(&after).unwrap_or_default())?;

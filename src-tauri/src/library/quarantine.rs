@@ -216,8 +216,8 @@ impl Library {
         if moved && !state.quarantined {
             prune_empty_dirs(&mount, &rel);
         }
-        if moved && state.quarantined {
-            log::debug!("Quarantaine : {}", to.display());
+        if moved {
+            crate::rekordbox::journal(conn, id, &from, &to);
         }
         Ok(())
     }

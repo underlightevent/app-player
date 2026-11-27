@@ -6,18 +6,22 @@
 
 mod artwork;
 mod audio;
+mod convert;
 mod db;
 mod diagnostics;
 mod duplicates;
 mod error;
 mod history;
 mod library;
+mod playlists;
 mod quality;
+mod rekordbox;
 mod online;
 mod rename;
 mod settings;
 mod tags;
 mod tasks;
+mod update;
 mod util;
 #[cfg(test)]
 mod testdata;
@@ -840,6 +844,195 @@ async fn relocate_apply(state: State<'_, AppState>, items: Vec<quality::Relocati
     blocking(move || quality::relocate_apply(&lib, &items)).await
 }
 
+// ---------- Rekordbox, playlists, conversion, mises à jour (phase 4) ----------
+
+/// Écrit un fichier exporté à l'endroit choisi par l'utilisateur (la fenêtre « Enregistrer
+/// sous » a déjà demandé confirmation si le fichier existait).
+fn write_export(path: &str, content: &str) -> Result<(), AppError> {
+    let p = std::path::Path::new(path);
+    let tmp = p.with_extension("djlm-tmp");
+    std::fs::write(&tmp, content.as_bytes())?;
+    if let Err(e) = std::fs::rename(&tmp, p) {
+        let _ = std::fs::remove_file(&tmp);
+        return Err(e.into());
+    }
+    log::info!("Fichier exporté : {path}");
+    Ok(())
+}
+
+fn all_track_ids(conn: &rusqlite::Connection) -> Result<Vec<i64>, AppError> {
+    library::query::ids(conn, &Query::default())
+}
+
+#[tauri::command]
+async fn rekordbox_import(state: State<'_, AppState>, path: String) -> Result<rekordbox::ImportReport, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || rekordbox::import(&lib, std::path::Path::new(&path))).await
+}
+
+#[tauri::command]
+async fn rekordbox_status(state: State<'_, AppState>) -> Result<rekordbox::Status, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || rekordbox::status(&db::open_worker(lib.db_path())?)).await
+}
+
+/// Vide la liste « À recharger » (après « Reload Tag » dans Rekordbox).
+#[tauri::command]
+async fn rekordbox_reload_clear(state: State<'_, AppState>, ids: Option<Vec<i64>>) -> Result<(), AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        rekordbox::clear_reload(&db::open_worker(lib.db_path())?, ids.as_deref())?;
+        lib.notify_changed(true);
+        Ok(())
+    })
+    .await
+}
+
+/// Playlist M3U8 des morceaux donnés (sans `ids` : la liste « À recharger »).
+#[tauri::command]
+async fn export_m3u(state: State<'_, AppState>, ids: Option<Vec<i64>>, path: String) -> Result<(usize, usize), AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        let conn = db::open_worker(lib.db_path())?;
+        let ids = match ids {
+            Some(v) => v,
+            None => rekordbox::reload_ids(&conn)?,
+        };
+        let (text, skipped) = rekordbox::m3u(&conn, &lib.mounts(), &ids)?;
+        write_export(&path, &text)?;
+        Ok((ids.len().saturating_sub(skipped), skipped))
+    })
+    .await
+}
+
+#[tauri::command]
+async fn rekordbox_journal_export(state: State<'_, AppState>, path: String, only_rekordbox: bool) -> Result<(), AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || write_export(&path, &rekordbox::journal_csv(&db::open_worker(lib.db_path())?, only_rekordbox)?)).await
+}
+
+/// Export XML vers Rekordbox : morceaux choisis (toute la bibliothèque sans `ids`) et playlists.
+#[tauri::command]
+async fn rekordbox_export_xml(state: State<'_, AppState>, ids: Option<Vec<i64>>, playlist_ids: Vec<i64>, path: String) -> Result<(usize, usize), AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        let conn = db::open_worker(lib.db_path())?;
+        let ids = match ids {
+            Some(v) => v,
+            None => all_track_ids(&conn)?,
+        };
+        let mut pls = Vec::new();
+        for pid in playlist_ids {
+            let p = playlists::get(&conn, pid)?;
+            pls.push(rekordbox::ExportPlaylist { ids: playlists::track_ids(&conn, &p)?, name: p.name });
+        }
+        let vit = library::edit::write_settings(&conn).version_in_title;
+        let (xml, n, skipped) = rekordbox::export_xml(&conn, &lib.mounts(), &ids, &pls, vit)?;
+        write_export(&path, &xml)?;
+        Ok((n, skipped))
+    })
+    .await
+}
+
+#[tauri::command]
+async fn playlists_list(state: State<'_, AppState>) -> Result<Vec<playlists::PlaylistInfo>, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || playlists::list(&db::open_worker(lib.db_path())?)).await
+}
+
+#[tauri::command]
+async fn playlist_create(state: State<'_, AppState>, name: String, rules: Option<playlists::Rules>, ids: Option<Vec<i64>>) -> Result<i64, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        let conn = db::open_worker(lib.db_path())?;
+        let id = playlists::create(&conn, &name, rules.as_ref())?;
+        if let Some(ids) = ids {
+            playlists::add_tracks(&conn, id, &ids)?;
+        }
+        lib.notify_changed(true);
+        Ok(id)
+    })
+    .await
+}
+
+#[tauri::command]
+async fn playlist_update(state: State<'_, AppState>, id: i64, name: Option<String>, rules: Option<playlists::Rules>) -> Result<(), AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        playlists::update(&db::open_worker(lib.db_path())?, id, name.as_deref(), rules.as_ref())?;
+        lib.notify_changed(true);
+        Ok(())
+    })
+    .await
+}
+
+#[tauri::command]
+async fn playlist_delete(state: State<'_, AppState>, id: i64) -> Result<(), AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        playlists::delete(&db::open_worker(lib.db_path())?, id)?;
+        lib.notify_changed(true);
+        Ok(())
+    })
+    .await
+}
+
+#[tauri::command]
+async fn playlist_add(state: State<'_, AppState>, id: i64, ids: Vec<i64>) -> Result<usize, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        let n = playlists::add_tracks(&db::open_worker(lib.db_path())?, id, &ids)?;
+        lib.notify_changed(true);
+        Ok(n)
+    })
+    .await
+}
+
+#[tauri::command]
+async fn playlist_remove(state: State<'_, AppState>, id: i64, ids: Vec<i64>) -> Result<(), AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        playlists::remove_tracks(&db::open_worker(lib.db_path())?, id, &ids)?;
+        lib.notify_changed(true);
+        Ok(())
+    })
+    .await
+}
+
+#[tauri::command]
+async fn playlist_track_ids(state: State<'_, AppState>, id: i64) -> Result<Vec<i64>, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        let conn = db::open_worker(lib.db_path())?;
+        let p = playlists::get(&conn, id)?;
+        playlists::track_ids(&conn, &p)
+    })
+    .await
+}
+
+#[tauri::command]
+async fn convert_preview(state: State<'_, AppState>, ids: Vec<i64>) -> Result<Vec<convert::ConvertItem>, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || convert::plan(&lib, &ids)).await
+}
+
+#[tauri::command]
+async fn convert_apply(state: State<'_, AppState>, ids: Vec<i64>) -> Result<EditReport, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        let task = lib.tasks.start("tasks.convert", None);
+        let r = convert::convert(&lib, &ids, Some(&task));
+        task.finish();
+        r
+    })
+    .await
+}
+
+#[tauri::command]
+async fn update_check() -> Result<update::UpdateInfo, AppError> {
+    blocking(update::check).await
+}
+
 #[tauri::command]
 fn tasks_list(state: State<'_, AppState>) -> Vec<TaskInfo> {
     state.tasks.list()
@@ -1021,6 +1214,22 @@ pub fn run() {
             health_report,
             relocate_preview,
             relocate_apply,
+            rekordbox_import,
+            rekordbox_status,
+            rekordbox_reload_clear,
+            export_m3u,
+            rekordbox_journal_export,
+            rekordbox_export_xml,
+            playlists_list,
+            playlist_create,
+            playlist_update,
+            playlist_delete,
+            playlist_add,
+            playlist_remove,
+            playlist_track_ids,
+            convert_preview,
+            convert_apply,
+            update_check,
             tasks_list,
             task_cancel
         ])

@@ -273,6 +273,8 @@ impl Library {
             Ok(())
         })();
         res.map_err(|e| failure(Some(&loc), id, "internal", e.to_string()))?;
+        // Morceau présent dans Rekordbox : à recharger (« Reload Tag »).
+        let _ = crate::rekordbox::mark_reload(conn, id);
         log::info!("Tags modifiés : {} ({:?})", path.display(), fields);
         Ok(())
     }
@@ -306,6 +308,7 @@ impl Library {
             set_locks(conn, id, &fields, &[], "file")?;
             index::store(conn, loc.volume_id, loc.root_id, &loc.rel_path, written.size as i64, written.mtime, Ok(written.info))?;
             set_locks(conn, id, &fields, &state.locked, if state.locked.is_empty() { "file" } else { "manual" })?;
+            crate::rekordbox::mark_reload(conn, id)?;
             Ok(())
         })()
         .map_err(|e| failure(Some(&loc), id, "internal", e.to_string()))

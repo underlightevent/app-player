@@ -142,7 +142,7 @@ impl From<AppError> for IdError {
     }
 }
 
-struct TrackInfo {
+pub(crate) struct TrackInfo {
     tags: TrackTags,
     locked: Vec<String>,
     file_name: String,
@@ -728,6 +728,10 @@ impl Online {
     /// Après application dans l'Inbox : pochette manquante, renommage selon le réglage.
     fn after_inbox_apply(&self, conn: &Connection, id: i64, s: &OnlineSettings) {
         if s.auto_rename == "never" {
+            return;
+        }
+        // Mode protégé : un morceau présent dans Rekordbox n'est jamais renommé automatiquement.
+        if crate::rekordbox::protected(conn) && crate::rekordbox::in_rekordbox(conn, id) {
             return;
         }
         let tpl = crate::settings::get_all(conn)

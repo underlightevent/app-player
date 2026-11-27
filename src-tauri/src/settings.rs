@@ -38,6 +38,9 @@ const KNOWN: &[(&str, &[&str], &str)] = &[
         "wav,aiff,flac",
     ),
     ("low_bitrate", &["128", "160", "192", "256", "320"], "320"),
+    // Rekordbox et mises à jour (phase 4)
+    ("rekordbox_protected", &["true", "false"], "true"),
+    ("update_check", &["true", "false"], "true"),
 ];
 
 /// Réglages en texte libre (modèles, règles), avec leur valeur par défaut.

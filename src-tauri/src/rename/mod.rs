@@ -41,6 +41,16 @@ pub struct PlanItem {
     pub suffixed: bool,
     /// Chemin complet de plus de 250 caractères.
     pub long_path: bool,
+    /// Le morceau est dans Rekordbox : il y apparaîtra comme manquant (alerte du mode protégé).
+    #[serde(default)]
+    pub in_rekordbox: bool,
+}
+
+/// Signale les morceaux présents dans Rekordbox dans un aperçu de renommage ou de déplacement.
+pub fn mark_rekordbox(conn: &Connection, items: &mut [PlanItem]) {
+    for it in items.iter_mut() {
+        it.in_rekordbox = crate::rekordbox::in_rekordbox(conn, it.id);
+    }
 }
 
 struct Row {
@@ -178,6 +188,7 @@ pub fn plan(lib: &Library, conn: &Connection, ids: &[i64], tpl: &str, on_conflic
             status: "ok".into(),
             suffixed: false,
             long_path: false,
+            in_rekordbox: false,
         };
         let Some(mount) = mounts.get(&r.volume_id) else {
             item.status = "offline".into();
@@ -246,6 +257,7 @@ pub fn plan(lib: &Library, conn: &Connection, ids: &[i64], tpl: &str, on_conflic
         item.new_name = Some(name);
         items.push(item);
     }
+    mark_rekordbox(conn, &mut items);
     Ok(items)
 }
 
@@ -364,6 +376,7 @@ impl Library {
                     let before = PathState { volume_id: m.volume_id, rel_path: original.1.clone() };
                     let after = PathState { volume_id: m.volume_id, rel_path: m.to_rel.clone() };
                     history::record(&conn, batch, "move", Some(m.id), &serde_json::to_string(&before).unwrap_or_default(), &serde_json::to_string(&after).unwrap_or_default())?;
+                    crate::rekordbox::journal(&conn, m.id, &original.0, &m.to_abs);
                     log::info!("Renommé : {} → {}", original.0.display(), m.to_abs.display());
                     report.ok += 1;
                 }
@@ -404,7 +417,9 @@ impl Library {
             file_name: rel.rsplit('/').next().unwrap_or(&rel).to_string(),
             code: "rename_io".into(),
             message: e,
-        })
+        })?;
+        crate::rekordbox::journal(conn, id, &from, &to);
+        Ok(())
     }
 }
 
