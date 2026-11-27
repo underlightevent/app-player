@@ -3,4 +3,5 @@
 pub mod decode;
 pub mod hash;
 pub mod player;
+pub mod source;
 pub mod waveform;

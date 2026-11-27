@@ -13,6 +13,7 @@
 - Guide utilisateur complet, avec captures d'écran.
 - Réglage « Titre écrit dans les fichiers » : titre seul, titre et version, artiste principal et titre, ou artiste principal, titre et version (pour les platines qui n'affichent que le titre), avec « Appliquer aux fichiers existants… » annulable.
 - Correction : des MP3 lisibles partout étaient marqués « illisible » (tag APE de fin de fichier abîmé, ou octets vides entre les tags et le son). Ils sont maintenant lus normalement, et leurs tags peuvent être modifiés sans toucher à la fin du fichier ni au son. Les fichiers illisibles sont relus à chaque indexation.
+- Correction : des MP3 avec un gros tag (grandes pochettes) étaient « illisibles » et muets, ou décodés de travers. Le tag est maintenant sauté avant la lecture du son. Les empreintes des MP3 sont recalculées au premier démarrage ; le contrôle qualité des MP3 est à relancer.
 - Bibliothèque : menu « Trier par » (dont « Note : ★★★★★ d'abord ») ; la colonne Note trie les mieux notés en premier.
 
 ## 0.4.0 — Phase 3 : doublons et qualité (à valider)

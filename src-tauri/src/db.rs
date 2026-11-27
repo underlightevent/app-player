@@ -264,6 +264,14 @@ const MIGRATIONS: &[&str] = &[
         position    INTEGER NOT NULL,
         PRIMARY KEY (playlist_id, track_id)
     );",
+    // 8 — MP3 : le tag ID3v2 est désormais sauté avant le décodage (docs/DECISIONS.md, D-413).
+    // Quelques MP3 étaient décodés de travers (pochette prise pour du son) : leurs empreintes,
+    // formes d'onde et analyses de qualité sont recalculées. Aucune donnée de l'utilisateur
+    // n'est perdue (ce sont des calculs refaits automatiquement ou à la demande).
+    "UPDATE tracks SET audio_hash = NULL WHERE format = 'mp3';
+    DELETE FROM fingerprints WHERE track_id IN (SELECT id FROM tracks WHERE format = 'mp3');
+    DELETE FROM waveforms WHERE track_id IN (SELECT id FROM tracks WHERE format = 'mp3');
+    DELETE FROM quality WHERE track_id IN (SELECT id FROM tracks WHERE format = 'mp3');",
 ];
 
 /// Ouvre une connexion supplémentaire (tâches de fond). La base doit déjà exister et être migrée.

@@ -376,6 +376,13 @@ mod diag {
                     continue;
                 }
                 total += 1;
+                if std::env::var("DJLM_DIAG_SON").is_ok() {
+                    if let Err(e) = crate::audio::decode::Decoder::open(&p) {
+                        bad += 1;
+                        println!("DIAG|{}|son: {e}", p.display());
+                    }
+                    continue;
+                }
                 if let Err(err) = super::read_file(&p, &[]) {
                     bad += 1;
                     let play = match crate::audio::decode::Decoder::open(&p) {

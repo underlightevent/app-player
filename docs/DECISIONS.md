@@ -249,3 +249,12 @@ Lecture : si lofty échoue, on réessaie avec le type donné par l'extension ; p
 Écriture : si la lecture stricte échoue, l'ID3v2 est relu à part (toujours en mode strict, donc refus si lui-même est douteux) et seul l'ID3v2 est réécrit ; la fin du fichier (APE abîmé, ID3v1) reste octet pour octet identique et le son est vérifié comme d'habitude. Le tag APE abîmé n'est pas supprimé (il ne contient rien, mais on ne retire jamais un tag de nous-mêmes).
 Indexation : un fichier « illisible » est relu à chaque indexation, même s'il n'a pas changé, pour profiter des corrections ; s'il est dans un dossier d'arrivée, il entre dans l'Inbox dès qu'il devient lisible.
 Un test reproduit le cas réel. Un diagnostic en lecture seule d'un dossier reste disponible pour les développeurs (`DJLM_DIAG_DIR=… cargo test diag_dossier -- --ignored --nocapture`).
+
+### D-413 · MP3 au gros tag ID3 refusés par le moteur de son
+Constat sur `E:\MUSICS\ALL` (lecture seule) : 67 MP3 sur 3 273 étaient mal ouverts par Symphonia, le moteur de décodage :
+- 48 avec un tag ID3v2 de plus de 1 Mo (grandes pochettes, données de logiciels DJ) : Symphonia ne cherche le début du son que dans le premier Mo et refuse le fichier (« no suitable format reader found ») ; marqués « illisible » et muets ;
+- 19 dont la pochette contient des octets qui ressemblent à un en-tête AAC : Symphonia prend la pochette pour le son (« unsupported audio codec » à l'écoute, empreinte du son calculée sur la pochette) ;
+- 1 avec deux tags ID3v2 à la suite, le premier annonçant une taille un peu trop courte.
+
+Correction (`audio/source.rs`) : avant de passer le fichier à Symphonia, l'application lit l'en-tête ID3v2, saute le ou les tags (un second tag est cherché dans les 4 Kio qui suivent) et présente à Symphonia le fichier à partir du premier octet de son. Lecture seule. Vérifié sur la bibliothèque de l'utilisateur : 3 273 fichiers sur 3 273 s'ouvrent ; sur un échantillon de 321 fichiers déjà lisibles, l'empreinte du son est identique dans 320 cas (le dernier était l'un des fichiers décodés de travers).
+Migration 8 : pour les MP3, l'empreinte du son, l'empreinte acoustique, la forme d'onde et l'analyse de qualité sont effacées pour être recalculées (automatiquement pour l'empreinte du son ; à la demande pour le reste). Coût : un nouveau calcul des empreintes des MP3 en tâche de fond au premier démarrage, et le contrôle qualité des MP3 à relancer.

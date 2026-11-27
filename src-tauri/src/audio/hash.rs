@@ -4,13 +4,10 @@
 //! hachés. Les tags, pochettes et autres blocs n'y entrent pas, donc le hash
 //! reste le même après une modification de tags ou un renommage.
 
-use std::fs::File;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use symphonia::core::formats::probe::Hint;
 use symphonia::core::formats::{FormatOptions, TrackType};
-use symphonia::core::io::MediaSourceStream;
 use symphonia::core::meta::MetadataOptions;
 
 #[derive(Debug, thiserror::Error)]
@@ -25,12 +22,7 @@ pub enum HashError {
 
 /// Hash BLAKE3 (hexadécimal) des paquets audio de la piste principale.
 pub fn audio_stream_hash(path: &Path, cancel: Option<&AtomicBool>) -> Result<String, HashError> {
-    let file = File::open(path)?;
-    let mss = MediaSourceStream::new(Box::new(file), Default::default());
-    let mut hint = Hint::new();
-    if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
-        hint.with_extension(ext);
-    }
+    let (mss, hint) = super::source::open(path)?;
     let mut format = symphonia::default::get_probe()
         .probe(&hint, mss, FormatOptions::default(), MetadataOptions::default())
         .map_err(|e| HashError::Decode(e.to_string()))?;

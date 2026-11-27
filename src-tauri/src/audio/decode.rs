@@ -1,14 +1,11 @@
 //! Décodage d'un fichier audio en échantillons flottants entrelacés (Symphonia).
 //! Sert au lecteur et au calcul de la forme d'onde.
 
-use std::fs::File;
 use std::path::Path;
 
 use symphonia::core::codecs::audio::{AudioDecoder, AudioDecoderOptions};
 use symphonia::core::codecs::CodecParameters;
-use symphonia::core::formats::probe::Hint;
 use symphonia::core::formats::{FormatOptions, FormatReader, SeekMode, SeekTo, TrackType};
-use symphonia::core::io::MediaSourceStream;
 use symphonia::core::meta::MetadataOptions;
 use symphonia::core::units::Time;
 
@@ -27,12 +24,7 @@ pub struct Decoder {
 impl Decoder {
     pub fn open(path: &Path) -> Result<Decoder, String> {
         // Ouverture standard : sous Windows, le fichier reste remplaçable pendant la lecture.
-        let file = File::open(path).map_err(|e| e.to_string())?;
-        let mss = MediaSourceStream::new(Box::new(file), Default::default());
-        let mut hint = Hint::new();
-        if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
-            hint.with_extension(ext);
-        }
+        let (mss, hint) = super::source::open(path).map_err(|e| e.to_string())?;
         let format = symphonia::default::get_probe()
             .probe(&hint, mss, FormatOptions::default(), MetadataOptions::default())
             .map_err(|e| e.to_string())?;
