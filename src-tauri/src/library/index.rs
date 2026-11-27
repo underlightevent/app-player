@@ -123,6 +123,8 @@ struct Existing {
     size: i64,
     mtime: i64,
     status: String,
+    /// À relire même s'il n'a pas changé (nouvelle façon de lire les tags).
+    reread: bool,
 }
 
 /// Indexe une racine : seuls les fichiers nouveaux ou modifiés (taille ou date) sont relus.
@@ -148,11 +150,14 @@ pub fn scan_root(
     {
         let prefix = if root.rel_path.is_empty() { String::new() } else { format!("{}/", root.rel_path) };
         let mut stmt = conn.prepare(
-            "SELECT id, rel_path, size, mtime, status FROM tracks
+            "SELECT id, rel_path, size, mtime, status, reread FROM tracks
              WHERE volume_id = ?1 AND (root_id = ?2 OR substr(rel_path, 1, length(?3)) = ?3)",
         )?;
         let rows = stmt.query_map(params![root.volume_id, root.id, prefix], |r| {
-            Ok((r.get::<_, String>(1)?, Existing { id: r.get(0)?, size: r.get(2)?, mtime: r.get(3)?, status: r.get(4)? }))
+            Ok((
+                r.get::<_, String>(1)?,
+                Existing { id: r.get(0)?, size: r.get(2)?, mtime: r.get(3)?, status: r.get(4)?, reread: r.get::<_, i64>(5)? != 0 },
+            ))
         })?;
         for row in rows {
             let (rel, e) = row?;
@@ -166,7 +171,7 @@ pub fn scan_root(
         match existing.get(&f.rel) {
             // Un fichier illisible est relu à chaque scan : une nouvelle version de l'application
             // sait peut-être le lire.
-            Some(e) if e.size == f.size && e.mtime == f.mtime && e.status != "missing" && e.status != "unreadable" => {
+            Some(e) if e.size == f.size && e.mtime == f.mtime && e.status != "missing" && e.status != "unreadable" && !e.reread => {
                 seen_ids.push(e.id)
             }
             Some(e) => {
@@ -295,7 +300,7 @@ pub fn store(
         "UPDATE tracks SET
             format = ?2, codec = ?3, bitrate = ?4, sample_rate = ?5, bit_depth = ?6, channels = ?7,
             duration_ms = ?8, cover_count = ?9, cover_width = ?10, cover_height = ?11, wav_desync = ?12,
-            status = 'ok', error = NULL, indexed_at = unixepoch(),
+            status = 'ok', error = NULL, indexed_at = unixepoch(), reread = 0,
             audio_hash = CASE WHEN ?13 THEN NULL ELSE audio_hash END
          WHERE id = ?1",
         params![

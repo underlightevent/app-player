@@ -20,3 +20,4 @@ Idées notées en chemin, à discuter avant de les réaliser.
 - Phase 4 : glisser des morceaux sur une playlist ; réordonner les morceaux d'une playlist.
 - Phase 4 : filtres intelligents sur la date d'ajout et sur le résultat du contrôle qualité.
 - Phase 4 : export XML qui recrée les filtres intelligents comme « playlists intelligentes » de Rekordbox (format partiellement documenté).
+- Réparer les champs de date ID3 abîmés (TDRC, TDEN… mal formés, environ 0,5 % des fichiers de l'utilisateur) : aujourd'hui l'écriture des tags de ces fichiers est refusée par sécurité. Idée : action « Réparer » avec aperçu, qui remplace seulement ces dates illisibles.

@@ -80,30 +80,35 @@ pub fn compose_title(title: &str, version: Option<&str>, version_in_title: bool)
 /// « Artiste - Titre » ou « Artiste - Titre (Version) ». Les platines n'affichent souvent
 /// que ce champ dans les playlists.
 pub fn full_title(title: &str, version: Option<&str>, main_artist: Option<&str>, version_in_title: bool, artist_in_title: bool) -> String {
-    let base = compose_title(title, version, version_in_title);
     match main_artist.map(str::trim).filter(|a| !a.is_empty()) {
-        Some(a) if artist_in_title => format!("{a} - {base}"),
-        _ => base,
+        // Le titre commence peut-être déjà par « Artiste - » (tags d'origine) : jamais deux fois.
+        Some(a) if artist_in_title => format!("{a} - {}", compose_title(&strip_artist_prefix(title.trim(), a), version, version_in_title)),
+        _ => compose_title(title, version, version_in_title),
     }
 }
 
-/// Retire « Artiste principal - » au début d'un titre lu dans un fichier
-/// (écrit par le réglage « artiste dans le titre »).
+/// Retire « Artiste principal - » au début d'un titre lu dans un fichier (écrit par le
+/// réglage « artiste dans le titre » ou déjà présent dans les tags d'origine), autant de
+/// fois qu'il apparaît (« 113 - 113 - Au Summum » donne « Au Summum »).
 pub fn strip_artist_prefix(title: &str, main_artist: &str) -> String {
     let a = main_artist.trim();
+    let mut t = title.trim().to_string();
     if a.is_empty() {
-        return title.to_string();
+        return t;
     }
-    for sep in [" - ", " – ", " — "] {
-        let prefix = format!("{a}{sep}");
-        if let Some(head) = title.get(..prefix.len()) {
-            let rest = title[prefix.len()..].trim();
-            if head.to_lowercase() == prefix.to_lowercase() && !rest.is_empty() {
-                return rest.to_string();
+    'outer: loop {
+        for sep in [" - ", " – ", " — "] {
+            let prefix = format!("{a}{sep}");
+            if let Some(head) = t.get(..prefix.len()) {
+                let rest = t[prefix.len()..].trim();
+                if head.to_lowercase() == prefix.to_lowercase() && !rest.is_empty() {
+                    t = rest.to_string();
+                    continue 'outer;
+                }
             }
         }
+        return t;
     }
-    title.to_string()
 }
 
 /// Remixeur déduit de la version : « DJ X Remix » donne « DJ X ».
@@ -331,8 +336,12 @@ mod tests {
         assert_eq!(strip_artist_prefix("dj x - Été", "DJ X"), "Été");
         assert_eq!(strip_artist_prefix("DJ X – Été", "DJ X"), "Été");
         assert_eq!(strip_artist_prefix("DJ Xavier - Été", "DJ X"), "DJ Xavier - Été");
-        assert_eq!(strip_artist_prefix("DJ X - ", "DJ X"), "DJ X - ");
+        assert_eq!(strip_artist_prefix("DJ X - ", "DJ X"), "DJ X -");
         assert_eq!(strip_artist_prefix("Ét", "Été"), "Ét");
+        assert_eq!(strip_artist_prefix("113 - 113 - Au Summum", "113"), "Au Summum");
+        // Titre d'origine « Artiste - Titre » : l'artiste n'est jamais ajouté deux fois.
+        assert_eq!(full_title("113 - Au Summum", Some("Extended"), Some("113"), true, true), "113 - Au Summum (Extended)");
+        assert_eq!(full_title("113 - 113 - Au Summum", None, Some("113"), true, true), "113 - Au Summum");
     }
 
     #[test]

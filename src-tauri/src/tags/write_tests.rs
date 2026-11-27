@@ -374,3 +374,58 @@ fn reglages_titre_seul_et_separateur() {
     let info = read_file(&p, &[]).unwrap();
     assert_eq!(info.tags.version.as_deref(), Some("DJ Lumière Remix")); // relue depuis TIT3
 }
+
+/// Diagnostic sur des COPIES des fichiers d'un vrai dossier (les originaux sont seulement lus) :
+/// change le titre de chaque copie et liste les échecs.
+/// `DJLM_DIAG_DIR=E:\... DJLM_DIAG_STEP=20 cargo test diag_ecriture -- --ignored --nocapture`
+#[test]
+#[ignore]
+fn diag_ecriture() {
+    let Ok(dir) = std::env::var("DJLM_DIAG_DIR") else { return };
+    let step: usize = std::env::var("DJLM_DIAG_STEP").ok().and_then(|s| s.parse().ok()).unwrap_or(1);
+    let tmp = tempfile::tempdir().unwrap();
+    let (mut ok, mut bad) = (0, 0);
+    for (i, e) in std::fs::read_dir(dir).unwrap().flatten().enumerate() {
+        let p = e.path();
+        if i % step != 0 || !crate::tags::is_audio_path(&p) {
+            continue;
+        }
+        let copy = tmp.path().join(format!("copie.{}", p.extension().unwrap().to_string_lossy()));
+        std::fs::copy(&p, &copy).unwrap();
+        let res = read_file(&copy, &[]).map_err(|e| format!("lecture: {e}")).and_then(|info| {
+            let new_title = format!("{} X", info.tags.title.clone().unwrap_or_default());
+            let c = Changes { title: Some(Some(new_title)), ..Default::default() };
+            write_tags(&copy, &info.tags, &c, &WriteSettings::default(), &[]).map(|_| ()).map_err(|e| format!("{e:?}"))
+        });
+        match res {
+            Ok(()) => ok += 1,
+            Err(e) => {
+                bad += 1;
+                println!("ECHEC|{}|{}", p.file_name().unwrap().to_string_lossy(), e);
+            }
+        }
+        let _ = std::fs::remove_file(&copy);
+    }
+    println!("ECRITURE ok={ok} echecs={bad}");
+}
+
+/// Cas réel : titre saisi « Artiste - Titre » ou « Titre (Extended) » sans version.
+/// La relecture sépare l'artiste et la version : l'écriture ne doit pas être refusée.
+#[test]
+fn titre_avec_artiste_ou_version_saisi_dans_le_titre() {
+    let dir = tempfile::tempdir().unwrap();
+    for (title, expect_title, expect_version) in [
+        ("113 - Au Summum", "Au Summum", None),
+        ("113 - 113 - Au Summum", "Au Summum", None),
+        ("La Boulette (Extended)", "La Boulette", Some("Extended")),
+    ] {
+        let path = testdata::write(dir.path(), "t.mp3", &testdata::mp3_bytes());
+        let info = read_file(&path, &[]).unwrap();
+        let c = Changes { title: Some(Some(title.into())), artists: Some(vec!["113".into()]), ..Default::default() };
+        write_tags(&path, &info.tags, &c, &WriteSettings::default(), &[]).unwrap_or_else(|e| panic!("{title}: {e:?}"));
+        let after = read_file(&path, &[]).unwrap();
+        assert_eq!(after.raw_title.as_deref(), Some(title), "texte écrit tel quel");
+        assert_eq!(after.tags.title.as_deref(), Some(expect_title));
+        assert_eq!(after.tags.version.as_deref(), expect_version);
+    }
+}

@@ -592,6 +592,27 @@ fn apply_info(items: &mut Vec<InfoItem>, t: &TrackTags, c: &Changes, s: &WriteSe
 }
 
 /// lofty relit le type de fichier depuis le début avant d'écrire.
+/// Remplace le premier tag ID3v2 du fichier (ou en ajoute un) par `tag`, sans toucher au reste.
+fn replace_leading_id3v2(f: &mut File, tag: &Id3v2Tag, opts: WriteOptions) -> Result<(), WriteError> {
+    use std::io::{Read, Seek, SeekFrom, Write};
+    let mut data = Vec::new();
+    rewind(f)?;
+    f.read_to_end(&mut data)?;
+    let old_end = if data.len() >= 10 && &data[..3] == b"ID3" && data[6..10].iter().all(|b| b & 0x80 == 0) {
+        let size = data[6..10].iter().fold(0usize, |a, b| (a << 7) | *b as usize);
+        (10 + size + if data[5] & 0x10 != 0 { 10 } else { 0 }).min(data.len())
+    } else {
+        0
+    };
+    let mut out = Vec::with_capacity(data.len() + 4096);
+    tag.dump_to(&mut out, opts).map_err(lofty_write_err)?;
+    out.extend_from_slice(&data[old_end..]);
+    f.seek(SeekFrom::Start(0))?;
+    f.set_len(0)?;
+    f.write_all(&out)?;
+    Ok(())
+}
+
 fn rewind(f: &mut File) -> std::io::Result<()> {
     use std::io::{Seek, SeekFrom};
     f.seek(SeekFrom::Start(0)).map(|_| ())
@@ -667,7 +688,13 @@ fn write_into_temp_inner(path: &Path, tmp: &Path, t: &TrackTags, c: &Changes, s:
             let mut opts = WriteOptions::default();
             let opts = opts.use_id3v23(true);
             rewind(&mut f)?;
-            file.save_to(&mut f, opts).map_err(lofty_write_err)?;
+            if let Err(e) = file.save_to(&mut f, opts) {
+                // lofty redevine le type du fichier pour enregistrer, et échoue sur certains MP3
+                // (octets vides après l'ID3v2). Le tag ID3v2 étant au début du fichier, on le
+                // remplace nous-mêmes ; le son est ensuite vérifié comme toujours.
+                let tag = file.id3v2().cloned().unwrap_or_default();
+                replace_leading_id3v2(&mut f, &tag, opts).map_err(|_| lofty_write_err(e))?;
+            }
             f.sync_all()?;
         }
         "flac" => {
@@ -770,18 +797,16 @@ fn write_into_temp_inner(path: &Path, tmp: &Path, t: &TrackTags, c: &Changes, s:
 fn verify(read: &FileInfo, want: &TrackTags, c: &Changes, s: &WriteSettings) -> Result<(), String> {
     let r = &read.tags;
     let eq = |a: &Option<String>, b: &Option<String>| a.as_deref().map(str::trim) == b.as_deref().map(str::trim);
-    if c.title.is_some() || c.version.is_some() {
-        if !eq(&r.title, &want.title) {
-            return Err(format!("titre relu {:?} au lieu de {:?}", r.title, want.title));
-        }
-        if !eq(&r.version, &want.version) {
-            return Err(format!("version relue {:?} au lieu de {:?}", r.version, want.version));
+    // Titre : on compare le texte exact relu avec celui qu'on voulait écrire (la relecture
+    // sépare ensuite version et artiste, ce qui ne doit pas passer pour une erreur).
+    if let Some(expected) = title_text(want, c, s, false) {
+        let got = read.raw_title.as_deref().map(str::trim).filter(|t| !t.is_empty());
+        if got != expected.as_deref().map(str::trim).filter(|t| !t.is_empty()) {
+            return Err(format!("titre relu {:?} au lieu de {:?}", read.raw_title, expected));
         }
     }
-    if let Some(raw) = &c.raw_title {
-        if read.raw_title.as_deref().map(str::trim) != Some(raw.trim()) {
-            return Err(format!("titre relu {:?} au lieu de {:?}", read.raw_title, raw));
-        }
+    if c.version.is_some() && want.version.is_some() && !eq(&r.version, &want.version) {
+        return Err(format!("version relue {:?} au lieu de {:?}", r.version, want.version));
     }
     if c.artists.is_some() && r.artists != want.artists {
         return Err(format!("artistes relus {:?} au lieu de {:?}", r.artists, want.artists));

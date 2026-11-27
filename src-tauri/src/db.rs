@@ -272,6 +272,11 @@ const MIGRATIONS: &[&str] = &[
     DELETE FROM fingerprints WHERE track_id IN (SELECT id FROM tracks WHERE format = 'mp3');
     DELETE FROM waveforms WHERE track_id IN (SELECT id FROM tracks WHERE format = 'mp3');
     DELETE FROM quality WHERE track_id IN (SELECT id FROM tracks WHERE format = 'mp3');",
+    // 9 — Relecture de tous les fichiers au prochain scan, même inchangés : les titres
+    // « Artiste - Titre » sont désormais séparés à la lecture (docs/DECISIONS.md, D-414).
+    // Les champs verrouillés ne sont jamais remplacés par une relecture.
+    "ALTER TABLE tracks ADD COLUMN reread INTEGER NOT NULL DEFAULT 0;
+    UPDATE tracks SET reread = 1;",
 ];
 
 /// Ouvre une connexion supplémentaire (tâches de fond). La base doit déjà exister et être migrée.
