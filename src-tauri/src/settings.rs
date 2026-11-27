@@ -46,6 +46,13 @@ const KNOWN: &[(&str, &[&str], &str)] = &[
     ("watch_apple", &["true", "false"], "false"),
     ("watch_deezer", &["true", "false"], "false"),
     ("watch_musicbrainz", &["true", "false"], "false"),
+    // Extraits de 30 s (au clic sur ▶ seulement) et site d'ouverture des titres.
+    ("watch_preview", &["deezer", "apple", "off"], "deezer"),
+    (
+        "watch_open_with",
+        &["source", "apple", "deezer", "spotify", "youtube", "youtube_music", "soundcloud", "beatport"],
+        "source",
+    ),
 ];
 
 /// Réglages en texte libre (modèles, règles), avec leur valeur par défaut.

@@ -1147,7 +1147,34 @@
       "connectingHint": "Finish signing in on the Spotify page opened in your browser (3 minutes at most).",
       "linkedAs": "Linked to Spotify account “{{user}}”.",
       "disconnect": "Disconnect",
-      "others": "Other platforms: Tidal is being studied; Deezer no longer accepts new apps, Apple Music requires a paid developer membership, Beatport and Shazam offer no public access."
+      "others": "Other platforms: Tidal is being studied; Deezer no longer accepts new apps, Apple Music requires a paid developer membership, Beatport and Shazam offer no public access.",
+      "previewTitle": "Previews",
+      "previewHint": "The ▶ button plays a 30-second preview in the application. The preview is requested from the service only when you click, then played straight from its servers: nothing is downloaded or kept.",
+      "previewLabel": "Previews",
+      "previewOff": "Disabled",
+      "openTitle": "Open titles on",
+      "openHint": "Site opened in your browser by each title's ↗ button (Charts, New releases, Wishlist). If the title already comes from that site, its page opens directly; otherwise it is an “artist title” search.",
+      "openLabel": "Site"
+    },
+    "sites": {
+      "source": "Source page (Apple Music, Deezer or MusicBrainz)",
+      "apple": "Apple Music",
+      "deezer": "Deezer",
+      "spotify": "Spotify",
+      "youtube": "YouTube",
+      "youtube_music": "YouTube Music",
+      "soundcloud": "SoundCloud",
+      "beatport": "Beatport",
+      "musicbrainz": "MusicBrainz"
+    },
+    "preview": {
+      "play": "Play a preview",
+      "stop": "Stop the preview",
+      "position": "Position in the preview",
+      "from": "30-second preview · {{service}}",
+      "searching": "Looking for a preview…",
+      "none": "No preview found for this title.",
+      "failed": "The preview could not be played (connection or format)."
     }
   }
 }

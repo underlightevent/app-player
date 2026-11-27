@@ -1147,7 +1147,34 @@
       "connectingHint": "Terminez la connexion dans la page Spotify ouverte dans votre navigateur (3 minutes au plus).",
       "linkedAs": "Lié au compte Spotify « {{user}} ».",
       "disconnect": "Déconnecter",
-      "others": "Autres plateformes : Tidal est à l'étude ; Deezer n'accepte plus de nouvelles applications, Apple Music exige un abonnement développeur payant, Beatport et Shazam n'offrent pas d'accès public."
+      "others": "Autres plateformes : Tidal est à l'étude ; Deezer n'accepte plus de nouvelles applications, Apple Music exige un abonnement développeur payant, Beatport et Shazam n'offrent pas d'accès public.",
+      "previewTitle": "Écoute des extraits",
+      "previewHint": "Le bouton ▶ joue un extrait de 30 secondes dans l'application. L'extrait est demandé au service seulement quand vous cliquez, puis lu directement depuis ses serveurs : rien n'est téléchargé ni gardé.",
+      "previewLabel": "Extraits",
+      "previewOff": "Désactivés",
+      "openTitle": "Ouvrir les titres sur",
+      "openHint": "Site ouvert dans votre navigateur par le bouton ↗ de chaque titre (Classements, Nouvelles sorties, Liste d'envies). Si le titre vient déjà de ce site, sa page s'ouvre directement ; sinon, c'est une recherche « artiste titre ».",
+      "openLabel": "Site"
+    },
+    "sites": {
+      "source": "Page de la source (Apple Music, Deezer ou MusicBrainz)",
+      "apple": "Apple Music",
+      "deezer": "Deezer",
+      "spotify": "Spotify",
+      "youtube": "YouTube",
+      "youtube_music": "YouTube Music",
+      "soundcloud": "SoundCloud",
+      "beatport": "Beatport",
+      "musicbrainz": "MusicBrainz"
+    },
+    "preview": {
+      "play": "Écouter un extrait",
+      "stop": "Arrêter l'extrait",
+      "position": "Position dans l'extrait",
+      "from": "Extrait de 30 secondes · {{service}}",
+      "searching": "Recherche de l'extrait…",
+      "none": "Aucun extrait trouvé pour ce titre.",
+      "failed": "L'extrait n'a pas pu être lu (connexion ou format)."
     }
   }
 }

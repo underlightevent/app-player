@@ -2,6 +2,7 @@
 //! comptes de streaming liés. L'application ne télécharge jamais de musique : elle donne
 //! des liens vers les boutiques et peut ajouter des titres à une playlist d'un compte lié.
 
+pub mod preview;
 pub mod sources;
 pub mod spotify;
 
@@ -29,6 +30,8 @@ pub struct Item {
     /// « apple », « deezer », « musicbrainz »
     pub source: String,
     pub source_url: Option<String>,
+    /// Extrait de 30 s déjà connu (classements Deezer ; l'adresse expire, jamais gardée).
+    pub preview_url: Option<String>,
     /// « track » ou « album »
     pub kind: String,
     /// Calculés à l'affichage : déjà dans la bibliothèque, déjà dans la liste d'envies.
@@ -312,6 +315,9 @@ pub fn allowed_url(url: &str) -> bool {
         "https://musicbrainz.org/",
         "https://open.spotify.com/",
         "https://developer.spotify.com/",
+        "https://www.youtube.com/",
+        "https://music.youtube.com/",
+        "https://soundcloud.com/",
     ];
     HOSTS.iter().any(|h| url.starts_with(h))
 }

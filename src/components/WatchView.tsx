@@ -1,12 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, ExternalLink, EyeOff, FileDown, Heart, Info, ListPlus, Music2, RefreshCw, Search, Trash2, WifiOff } from "lucide-react";
+import { Check, ExternalLink, EyeOff, FileDown, Heart, Info, ListPlus, LoaderCircle, Music2, Pause, Play, RefreshCw, Search, Trash2, WifiOff, X } from "lucide-react";
 import { isCoreError } from "../core/api";
 import { onEvent } from "../core/library";
+import { playerCommand } from "../core/player";
 import { pickSave } from "../core/rekordbox";
 import {
   COUNTRIES,
+  openTarget,
   shopLinks,
+  watchPreview,
   spotifyStatus,
   watchChart,
   watchGenres,
@@ -197,6 +200,85 @@ export function WatchView({ values, onSettingChange, onToast, onOpenSettings, on
 
   const open = (url: string) => void watchOpenUrl(url).catch((e) => onToast(errorText(e), undefined, "error"));
 
+  // ---------- Écoute des extraits (30 s, lus depuis le service, rien n'est gardé) ----------
+  type PreviewState = { key: string; state: "loading" | "playing" | "paused"; title: string; artists: string[]; service: string; pos: number; dur: number };
+  const audio = useRef<HTMLAudioElement | null>(null);
+  const [preview, setPreview] = useState<PreviewState | null>(null);
+  const previewOff = values.watch_preview === "off";
+  useEffect(() => {
+    const a = new Audio();
+    a.preload = "none";
+    const update = () => setPreview((p) => (p ? { ...p, pos: a.currentTime, dur: Number.isFinite(a.duration) ? a.duration : 30 } : p));
+    a.addEventListener("timeupdate", update);
+    a.addEventListener("playing", () => setPreview((p) => (p ? { ...p, state: "playing" } : p)));
+    a.addEventListener("pause", () => setPreview((p) => (p && p.state !== "loading" ? { ...p, state: "paused" } : p)));
+    a.addEventListener("ended", () => setPreview((p) => (p ? { ...p, state: "paused", pos: 0 } : p)));
+    audio.current = a;
+    return () => {
+      a.pause();
+      a.removeAttribute("src");
+    };
+  }, []);
+
+  const stopPreview = () => {
+    audio.current?.pause();
+    setPreview(null);
+  };
+
+  const togglePreview = async (key: string, item: WatchItem) => {
+    const a = audio.current;
+    if (!a) return;
+    if (preview?.key === key && preview.state !== "loading") {
+      if (a.paused) void a.play();
+      else a.pause();
+      return;
+    }
+    a.pause();
+    const base = { key, title: item.title, artists: item.artists, pos: 0, dur: 30 };
+    setPreview({ ...base, state: "loading", service: "" });
+    try {
+      const p = await watchPreview(item);
+      if (!p) {
+        setPreview(null);
+        onToast(t("watch.preview.none"));
+        return;
+      }
+      playerCommand("pause"); // le lecteur de la bibliothèque se met en pause
+      a.src = p.url;
+      setPreview({ ...base, state: "loading", service: p.service });
+      await a.play();
+    } catch (e) {
+      setPreview(null);
+      onToast(e instanceof DOMException ? t("watch.preview.failed") : errorText(e), undefined, "error");
+    }
+  };
+
+  const openWith = values.watch_open_with || "source";
+  const siteLabel = (s: string) => t(`watch.sites.${s}`, { defaultValue: s });
+  const rowButtons = (key: string, item: WatchItem) => {
+    const target = openTarget(item, openWith);
+    const mine = preview?.key === key ? preview : null;
+    return (
+      <>
+        {!previewOff && (
+          <button className={`icon-btn${mine ? " active" : ""}`} title={t("watch.preview.play")} aria-label={t("watch.preview.play")} onClick={() => void togglePreview(key, item)}>
+            {mine?.state === "loading" ? <LoaderCircle size={16} className="spin" aria-hidden /> : mine?.state === "playing" ? <Pause size={16} aria-hidden /> : <Play size={16} aria-hidden />}
+          </button>
+        )}
+        {target && (
+          <button
+            className="icon-btn"
+            title={t("watch.openSource", { source: siteLabel(target.site) })}
+            aria-label={t("watch.openSource", { source: siteLabel(target.site) })}
+            onClick={() => open(target.url)}
+          >
+            <ExternalLink size={16} aria-hidden />
+          </button>
+        )}
+      </>
+    );
+  };
+
   const shown = (wish ?? []).filter((w) => filter === "all" || w.status === filter);
   const counts = {
     all: wish?.length ?? 0,
@@ -260,11 +342,7 @@ export function WatchView({ values, onSettingChange, onToast, onOpenSettings, on
                   <ListPlus size={14} aria-hidden /> {t("watch.add")}
                 </button>
               )}
-              {it.sourceUrl && (
-                <button className="icon-btn" title={t("watch.openSource", { source: sourceLabel(it.source) })} aria-label={t("watch.openSource", { source: sourceLabel(it.source) })} onClick={() => open(it.sourceUrl!)}>
-                  <ExternalLink size={16} aria-hidden />
-                </button>
-              )}
+              {rowButtons(`r-${i}-${it.title}`, it)}
             </td>
           </tr>
         ))}
@@ -282,6 +360,43 @@ export function WatchView({ values, onSettingChange, onToast, onOpenSettings, on
           </button>
         ))}
       </div>
+
+      {preview && (
+        <div className="watch-preview" role="status">
+          <button
+            className="icon-btn"
+            aria-label={t("watch.preview.play")}
+            onClick={() => {
+              const a = audio.current;
+              if (a && preview.state !== "loading") void (a.paused ? a.play() : a.pause());
+            }}
+          >
+            {preview.state === "loading" ? <LoaderCircle size={18} className="spin" aria-hidden /> : preview.state === "playing" ? <Pause size={18} aria-hidden /> : <Play size={18} aria-hidden />}
+          </button>
+          <div className="watch-preview-text">
+            <strong>{preview.title}</strong> <span className="muted">{preview.artists.join(", ")}</span>
+            <div className="muted small">{preview.service ? t("watch.preview.from", { service: siteLabel(preview.service) }) : t("watch.preview.searching")}</div>
+          </div>
+          <input
+            type="range"
+            className="watch-preview-seek"
+            min={0}
+            max={preview.dur || 30}
+            step={0.1}
+            value={preview.pos}
+            aria-label={t("watch.preview.position")}
+            onChange={(e) => {
+              if (audio.current) audio.current.currentTime = Number(e.target.value);
+            }}
+          />
+          <span className="tabular small muted">
+            {Math.floor(preview.pos)} / {Math.round(preview.dur || 30)} s
+          </span>
+          <button className="icon-btn" aria-label={t("watch.preview.stop")} title={t("watch.preview.stop")} onClick={stopPreview}>
+            <X size={16} aria-hidden />
+          </button>
+        </div>
+      )}
 
       {last.tab !== "wishlist" && !anyEnabled && (
         <div className="empty small-empty">
@@ -515,11 +630,7 @@ export function WatchView({ values, onSettingChange, onToast, onOpenSettings, on
                       ))}
                     </td>
                     <td className="watch-actions">
-                      {w.sourceUrl && (
-                        <button className="icon-btn" title={t("watch.openSource", { source: sourceLabel(w.source) })} aria-label={t("watch.openSource", { source: sourceLabel(w.source) })} onClick={() => open(w.sourceUrl!)}>
-                          <ExternalLink size={16} aria-hidden />
-                        </button>
-                      )}
+                      {rowButtons(`w-${w.id}`, w)}
                       <button className="icon-btn" title={t("watch.remove")} aria-label={t("watch.remove")} onClick={() => void remove([w.id])}>
                         <Trash2 size={16} aria-hidden />
                       </button>

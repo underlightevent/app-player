@@ -69,4 +69,6 @@ Toutes désactivées par défaut (Réglages › Veille musicale). Seuls le pays,
 | MusicBrainz | nouvelles sorties par label ou par pays | sans clé : `/ws/2/release?query=date:[…] AND label:"…"` ou `country:XX` | 24 h | 1 requête/s, même en-tête User-Agent que la recherche en ligne ; base bénévole, moins complète pour les petits labels |
 | Spotify (compte lié, optionnel) | ajouter des titres à une playlist du compte | OAuth 2 PKCE avec l'identifiant client de l'utilisateur ; `/search`, `/me/playlists`, `/playlists/<id>/items` | aucun | mode développement : propriétaire Premium, 5 comptes au plus (règles du 11/02/2026) ; seuls les titres choisis sont envoyés |
 
+Extraits de 30 secondes (bouton ▶) : Deezer `/search?q=…` (champ `preview`) ou Apple `itunes.apple.com/search?entity=song` (champ `previewUrl`), demandés au clic seulement, sans cache ; le son est lu depuis les serveurs du service, jamais enregistré.
+
 Non pris en charge (vérifié le 27/11/2026) : Deezer pour les playlists (création d'applications fermée), Apple Music (MusicKit exige l'abonnement développeur payant), Beatport et Shazam (pas d'accès public), Tidal (API récente à étudier).

@@ -544,6 +544,8 @@ Ajoutée à la demande de l'utilisateur le 27/11/2026. Un écran « Veille » co
 - **Nouvelles sorties par label et par pays** : recherche MusicBrainz (sorties d'un label ou d'un pays sur une période : 7, 30 ou 90 jours).
 - Les réponses sont gardées en cache 12 heures (classements Apple Music) ou 24 heures (sorties MusicBrainz) ; jamais pour Deezer, dont les conditions interdisent la copie locale. Seuls le pays, le genre ou le nom du label sont envoyés ; rien sur la bibliothèque ni sur l'utilisateur.
 
+**Écoute et ouverture** (ajoutées à la demande de l'utilisateur) : bouton ▶ qui joue un extrait de 30 secondes (Deezer ou Apple Music, réglable, rien n'est gardé) ; bouton ↗ qui ouvre le titre sur le site choisi dans les réglages (source, Apple Music, Deezer, Spotify, YouTube, YouTube Music, SoundCloud, Beatport).
+
 **Liste d'envies** :
 - « Ajouter » depuis un classement ou une sortie : titre, artistes, version, label, date de sortie, pochette, source et lien.
 - États : à trouver, trouvé (dans la bibliothèque), ignoré. Un morceau de la liste qui arrive dans la bibliothèque (Inbox ou scan) est reconnu par artiste et titre et passe à « trouvé » tout seul.

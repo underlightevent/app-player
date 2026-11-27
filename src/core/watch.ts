@@ -13,6 +13,7 @@ export interface WatchItem {
   coverUrl: string | null;
   source: "apple" | "deezer" | "musicbrainz" | string;
   sourceUrl: string | null;
+  previewUrl?: string | null;
   kind: "track" | "album" | string;
   inLibrary: boolean;
   inWishlist: boolean;
@@ -182,4 +183,43 @@ export async function spotifyFind(ids: number[]): Promise<SpotifyMatch[]> {
 
 export async function spotifyAdd(playlistId: string, uris: string[]): Promise<number> {
   return invoke<number>("spotify_add", { playlistId, uris });
+}
+
+// ---------- Extraits de 30 s et site d'ouverture (réglages) ----------
+
+export interface Preview {
+  url: string;
+  title: string;
+  artists: string[];
+  service: "deezer" | "apple";
+}
+
+/** Adresse de l'extrait d'un titre (demandée au clic sur ▶ ; rien n'est gardé). */
+export async function watchPreview(item: WatchItem): Promise<Preview | null> {
+  if (!inTauri) return null;
+  return invoke<Preview | null>("watch_preview", { item });
+}
+
+/** Sites proposés pour ouvrir un titre (réglage « watch_open_with »). */
+export const OPEN_PLATFORMS = ["source", "apple", "deezer", "spotify", "youtube", "youtube_music", "soundcloud", "beatport"] as const;
+
+/** Adresse où ouvrir un titre : sa page sur la source, ou une recherche sur le site choisi. */
+export function openTarget(
+  item: Pick<WatchItem, "title" | "artists" | "source" | "sourceUrl">,
+  platform: string,
+): { url: string; site: string } | null {
+  const same = platform === "source" || platform === item.source;
+  if (same && item.sourceUrl) return { url: item.sourceUrl, site: item.source };
+  if (platform === "source") return null;
+  const q = encodeURIComponent(`${item.artists[0] ?? ""} ${item.title}`.trim());
+  const urls: Record<string, string> = {
+    apple: `https://music.apple.com/fr/search?term=${q}`,
+    deezer: `https://www.deezer.com/search/${q}`,
+    spotify: `https://open.spotify.com/search/${q}`,
+    youtube: `https://www.youtube.com/results?search_query=${q}`,
+    youtube_music: `https://music.youtube.com/search?q=${q}`,
+    soundcloud: `https://soundcloud.com/search?q=${q}`,
+    beatport: `https://www.beatport.com/search?q=${q}`,
+  };
+  return urls[platform] ? { url: urls[platform], site: platform } : null;
 }

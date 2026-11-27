@@ -1136,6 +1136,22 @@ async fn watch_releases(state: State<'_, AppState>, label: Option<String>, count
     .await
 }
 
+/// Adresse d'un extrait de 30 s pour écouter un titre (au clic sur ▶ seulement).
+#[tauri::command]
+async fn watch_preview(state: State<'_, AppState>, item: watch::Item) -> Result<Option<watch::preview::Preview>, AppError> {
+    let lib = state.library()?.clone();
+    let online = state.online()?.clone();
+    blocking(move || {
+        let conn = db::open_worker(lib.db_path())?;
+        let service = settings::get(&conn, "watch_preview")?.unwrap_or_else(|| "deezer".into());
+        if service == "off" {
+            return Err(AppError::InvalidSetting("extraits désactivés".into()));
+        }
+        Ok(watch::preview::find(&online.http, &item, &service)?)
+    })
+    .await
+}
+
 #[tauri::command]
 async fn wishlist_list(state: State<'_, AppState>) -> Result<Vec<watch::WishItem>, AppError> {
     let lib = state.library()?.clone();
@@ -1468,6 +1484,7 @@ pub fn run() {
             watch_chart,
             watch_genres,
             watch_releases,
+            watch_preview,
             wishlist_list,
             wishlist_count,
             wishlist_add,

@@ -274,6 +274,10 @@ L'écran **Veille** consulte des classements et des nouvelles sorties sur intern
 - **Nouvelles sorties** : par **label** (tapez son nom, par exemple « Spinnin' Records ») ou par **pays**, sur 7, 30 ou 90 jours, puis **Rechercher**. MusicBrainz est une base libre tenue par des bénévoles : très complète pour les grands labels, parfois en retard pour les petits.
 - **Liste d'envies** : filtres **À trouver**, **Trouvé**, **Ignoré**. Quand un fichier du même artiste et du même titre arrive dans votre bibliothèque (Inbox ou indexation), le titre passe à **Trouvé** tout seul (une autre version compte aussi). Les liens **Beatport**, **Bandcamp**, **Juno**, **Traxsource** ouvrent la recherche dans votre navigateur. **Exporter (CSV)…** donne un tableau pour Excel. Cochez des titres pour les ignorer ou les retirer (**Annuler** juste après si besoin).
 
+**Écouter un extrait** : le bouton ▶ de chaque titre joue 30 secondes de Deezer ou d'Apple Music, au choix dans **Réglages › Veille musicale › Écoute des extraits** (ou désactivés). Une barre en haut de l'écran permet de mettre en pause, d'avancer dans l'extrait et de l'arrêter. Le lecteur de votre bibliothèque se met en pause pendant l'extrait. Rien n'est téléchargé : le son vient directement du service.
+
+**Ouvrir un titre sur le site de votre choix** : le bouton ↗ ouvre le titre dans votre navigateur. Choisissez le site dans **Réglages › Veille musicale › Ouvrir les titres sur** : page de la source, Apple Music, Deezer, Spotify, YouTube, YouTube Music, SoundCloud ou Beatport.
+
 ### Lier un compte Spotify (optionnel)
 Un compte lié permet d'ajouter les titres de la liste d'envies à une playlist Spotify. Spotify exige que vous créiez une petite « application » gratuite à votre nom (votre compte doit être Premium).
 1. Allez sur **developer.spotify.com** (lien dans les réglages), connectez-vous et cliquez **Create app** ; nom et description au choix, cochez **Web API**.

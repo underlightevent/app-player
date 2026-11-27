@@ -101,6 +101,7 @@ pub fn parse_deezer(v: &Value, what: &str) -> Vec<Item> {
             it.cover_url = s(album, "cover_medium").or_else(|| s(r, "cover_medium"));
             it.source_url = s(r, "link");
             it.release_date = s(r, "release_date");
+            it.preview_url = s(r, "preview");
             Some(it)
         })
         .collect()

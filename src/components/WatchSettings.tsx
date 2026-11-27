@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ClipboardCopy, ExternalLink, Link2, Unlink } from "lucide-react";
 import { isCoreError } from "../core/api";
-import { spotifyConnect, spotifyDisconnect, spotifyStatus, watchOpenUrl, type SpotifyStatus } from "../core/watch";
+import { OPEN_PLATFORMS, spotifyConnect, spotifyDisconnect, spotifyStatus, watchOpenUrl, type SpotifyStatus } from "../core/watch";
 
 interface Props {
   values: Record<string, string>;
@@ -84,6 +84,28 @@ export function WatchSettings({ values, onSettingChange, onToast }: Props) {
           </label>
         ))}
       </div>
+
+      <h3 className="form-label">{t("watch.settings.previewTitle")}</h3>
+      <p className="hint">{t("watch.settings.previewHint")}</p>
+      <label className="chip-select">
+        {t("watch.settings.previewLabel")}
+        <select value={values.watch_preview || "deezer"} onChange={(e) => onSettingChange("watch_preview", e.target.value)}>
+          <option value="deezer">Deezer</option>
+          <option value="apple">Apple Music</option>
+          <option value="off">{t("watch.settings.previewOff")}</option>
+        </select>
+      </label>
+
+      <h3 className="form-label">{t("watch.settings.openTitle")}</h3>
+      <p className="hint">{t("watch.settings.openHint")}</p>
+      <label className="chip-select">
+        {t("watch.settings.openLabel")}
+        <select value={values.watch_open_with || "source"} onChange={(e) => onSettingChange("watch_open_with", e.target.value)}>
+          {OPEN_PLATFORMS.map((p) => (
+            <option key={p} value={p}>{t(`watch.sites.${p}`)}</option>
+          ))}
+        </select>
+      </label>
 
       <h3 className="form-label">{t("watch.settings.spotify")}</h3>
       <p className="hint">{t("watch.settings.spotifyHint")}</p>

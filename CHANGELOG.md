@@ -5,6 +5,8 @@
 - Écran Veille : classements par pays (Apple Music) et par genre (Deezer), nouvelles sorties d'un label ou d'un pays (MusicBrainz). Sources désactivées par défaut.
 - Liste d'envies : ajout depuis les classements et les sorties, « trouvé » automatique quand le morceau arrive dans la bibliothèque, liens de recherche vers Beatport, Bandcamp, Juno et Traxsource, export CSV.
 - Compte Spotify lié (optionnel) : ajout des titres de la liste d'envies à une playlist Spotify, avec aperçu des correspondances.
+- Écoute d'extraits de 30 secondes (Deezer ou Apple Music) dans l'écran Veille.
+- Réglage du site d'ouverture des titres : source, Apple Music, Deezer, Spotify, YouTube, YouTube Music, SoundCloud ou Beatport.
 
 ## 0.5.0 — Phase 4 : Rekordbox et finitions (à valider, avec la phase 3)
 
