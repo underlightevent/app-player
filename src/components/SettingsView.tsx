@@ -7,6 +7,7 @@ import { LANGUAGES, type Language } from "../i18n";
 import { OnlineSettings } from "./OnlineSettings";
 import { RekordboxSettings } from "./RekordboxSettings";
 import { WatchSettings } from "./WatchSettings";
+import { ToolsSettings } from "./ToolsSettings";
 import { TitleFormatSettings } from "./TitleFormatSettings";
 
 export interface SettingsProps {
@@ -197,6 +198,8 @@ export function SettingsView(p: SettingsProps) {
       <RekordboxSettings values={p.values} onSettingChange={p.onSettingChange} onToast={p.onToast} onOpenList={p.onOpenRekordboxList} selection={p.selection} />
 
       <WatchSettings values={p.values} onSettingChange={p.onSettingChange} onToast={p.onToast} />
+
+      <ToolsSettings values={p.values} onSettingChange={p.onSettingChange} onToast={p.onToast} />
 
       <section>
         <h2>{t("settings.database")}</h2>

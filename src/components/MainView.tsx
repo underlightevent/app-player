@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { CopyX, HeartPulse, Inbox, ListChecks, ListMusic, Radar, ShieldAlert, type LucideIcon } from "lucide-react";
+import { BarChart3, CopyX, HeartPulse, Inbox, ListChecks, ListMusic, ListOrdered, Radar, ShieldAlert, type LucideIcon } from "lucide-react";
 import type { ViewId } from "./Sidebar";
 import { SettingsView, type SettingsProps } from "./SettingsView";
 
@@ -11,6 +11,8 @@ const EMPTY: Record<Exclude<ViewId, "library" | "settings" | "folders">, { icon:
   quarantine: { icon: ShieldAlert, phase: 3 },
   playlists: { icon: ListMusic, phase: 4 },
   watch: { icon: Radar, phase: 5 },
+  sets: { icon: ListOrdered, phase: 6 },
+  stats: { icon: BarChart3, phase: 6 },
 };
 
 /** Écrans pas encore disponibles, et Réglages. */

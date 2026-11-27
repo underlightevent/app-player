@@ -334,6 +334,8 @@ pub fn spectrogram_png(path: &Path) -> Result<Vec<u8>, String> {
 pub const HEALTH_KEYS: &[&str] = &[
     "no_cover", "small_cover", "no_year", "no_genre", "no_rating", "review", "unidentified", "duplicates", "suspect",
     "low_bitrate", "bad_names", "long_paths", "bad_chars", "wav_desync", "missing", "unreadable", "corrupt",
+    // Phase 6
+    "too_loud", "too_quiet", "no_bpm", "no_key", "never_played",
 ];
 
 /// Largeur minimale d'une pochette correcte.
@@ -354,6 +356,11 @@ pub fn health_sql(key: &str, low_bitrate: i64) -> Option<String> {
         "duplicates" => format!("{ok} AND t.id IN (SELECT track_id FROM duplicate_members)"),
         "suspect" => format!("{ok} AND t.id IN (SELECT q.track_id FROM quality q WHERE q.verdict = 'suspect')"),
         "corrupt" => format!("{ok} AND t.id IN (SELECT q.track_id FROM quality q WHERE q.verdict = 'corrupt')"),
+        "too_loud" => format!("{ok} AND t.id IN (SELECT track_id FROM loudness WHERE lufs > {})", crate::djtools::loudness::TOO_LOUD),
+        "too_quiet" => format!("{ok} AND t.id IN (SELECT track_id FROM loudness WHERE lufs < {})", crate::djtools::loudness::TOO_QUIET),
+        "no_bpm" => format!("{ok} AND coalesce(t.bpm, 0) = 0"),
+        "no_key" => format!("{ok} AND coalesce(t.musical_key, '') = ''"),
+        "never_played" => format!("{ok} AND t.id NOT IN (SELECT track_id FROM plays)"),
         "low_bitrate" => {
             // Un M4A peut être sans perte (ALAC) : seul l'AAC compte.
             format!(

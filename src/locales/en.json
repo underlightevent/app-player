@@ -25,7 +25,10 @@
     "sectionTools": "Tools",
     "toHandle_one": "{{count}} item to handle",
     "toHandle_other": "{{count}} items to handle",
-    "watch": "Releases"
+    "watch": "Releases",
+    "sets": "Sets",
+    "stats": "Statistics",
+    "dropHint": "Drop tracks dragged from the table here"
   },
   "topbar": {
     "searchPlaceholder": "Search the library",
@@ -115,7 +118,13 @@
       "artist": "Main artist",
       "title": "Title",
       "custom": "Table columns"
-    }
+    },
+    "tag": "Tag",
+    "anyTag": "All",
+    "played": "Played",
+    "playedAny": "Any",
+    "playedNever": "Never played",
+    "playedRecent": "Last 30 days"
   },
   "table": {
     "label": "Tracks",
@@ -141,7 +150,14 @@
     "quality": "Quality",
     "duration": "Duration",
     "fileName": "File name",
-    "status": "Status"
+    "status": "Status",
+    "thumb": "Thumbnail",
+    "userTags": "Tags",
+    "plays": "Plays",
+    "lastPlayed": "Last played",
+    "energy": "Energy",
+    "lufs": "Loudness (LUFS)",
+    "lufsHint": "Perceived loudness (EBU R128). Orange: very loud (above −5) or quiet (below −14)."
   },
   "fields": {
     "title": "Title",
@@ -243,7 +259,11 @@
     "quality": "Quality check",
     "relocate": "Looking for missing files",
     "convert": "WAV to AIFF conversion",
-    "titleFormat": "Rewriting titles in files"
+    "titleFormat": "Rewriting titles in files",
+    "backup": "Library backup",
+    "usbCopy": "Copy to USB key",
+    "loudness": "Loudness measurement (LUFS)",
+    "analysis": "BPM, key and energy analysis"
   },
   "player": {
     "nothing": "Nothing playing",
@@ -339,7 +359,9 @@
     "duplicates": "handling duplicates",
     "syncWav": "resyncing WAV files",
     "wavToAiff": "the AIFF conversion",
-    "titleFormat": "the new title format"
+    "titleFormat": "the new title format",
+    "repairDates": "the date repair",
+    "analysis": "writing the analyzed BPMs and keys"
   },
   "edit": {
     "saved_one": "Track updated",
@@ -398,7 +420,12 @@
     "addToPlaylist": "Add to a playlist…",
     "removeFromPlaylist": "Remove from “{{name}}”",
     "exportM3u": "Export selection as M3U…",
-    "convertAiff": "Convert WAV files to AIFF…"
+    "convertAiff": "Convert WAV files to AIFF…",
+    "tags": "Tags…",
+    "usbCopy": "Copy to a USB key…",
+    "analyze": "Analyze BPM, key and energy",
+    "loudness": "Measure loudness (LUFS)",
+    "repairDates": "Repair broken dates…"
   },
   "rename": {
     "title_one": "Rename {{count}} file",
@@ -808,7 +835,12 @@
       "wav_desync": "Out-of-sync WAV files",
       "missing": "Missing files",
       "unreadable": "Unreadable files",
-      "corrupt": "Damaged or truncated files"
+      "corrupt": "Damaged or truncated files",
+      "too_loud": "Very loud (above −5 LUFS)",
+      "too_quiet": "Quiet (below −14 LUFS)",
+      "no_bpm": "No BPM",
+      "no_key": "No key",
+      "never_played": "Never played (from the imported history)"
     },
     "fix": {
       "online": "Search online",
@@ -817,7 +849,8 @@
       "relocate": "Find in a folder…",
       "review": "Open “To review”",
       "duplicates": "Open “Duplicates”",
-      "analyze": "Analyse"
+      "analyze": "Analyse",
+      "bpmKey": "Analyze"
     },
     "onlineQueued_one": "{{count}} track added to the online search. Uncertain cases will go to “To review”.",
     "onlineQueued_other": "{{count}} tracks added to the online search. Uncertain cases will go to “To review”.",
@@ -891,7 +924,11 @@
       "rating": "Rating",
       "duration": "Duration (seconds)",
       "rekordbox": "In Rekordbox",
-      "hasCover": "Has a cover"
+      "hasCover": "Has a cover",
+      "userTag": "Tag",
+      "plays": "Play count",
+      "energy": "Energy (1 to 10)",
+      "lufs": "Loudness (LUFS)"
     },
     "ops": {
       "contains": "contains",
@@ -1191,5 +1228,174 @@
       "addPlaceholder": "Add a label (exact name)",
       "remove": "Remove “{{label}}”"
     }
+  },
+  "sets": {
+    "prefix": "Set:",
+    "intro": "A set is an ordered list. For each transition: key compatibility (Camelot wheel) and BPM gap. Click a track to see suggestions that mix well after it. Drag the ⋮⋮ handle to reorder.",
+    "newPlaceholder": "New set name",
+    "create": "Create",
+    "createWith_one": "The selected track will be added",
+    "createWith_other": "The {{count}} selected tracks will be added",
+    "none": "No set yet.",
+    "empty": "Create a set on the left. Tip: select tracks in the library first, they will be added.",
+    "emptySet": "This set is empty. Select tracks in the library then “Add selection”, or drag them onto “Sets” in the sidebar.",
+    "summary_one": "{{count}} track · {{duration}}",
+    "summary_other": "{{count}} tracks · {{duration}}",
+    "rename": "Rename set",
+    "delete": "Delete set",
+    "confirmDelete": "Delete the set “{{name}}”? Tracks and files are not touched.",
+    "addSelection_one": "Add selection ({{count}})",
+    "addSelection_other": "Add selection ({{count}})",
+    "added_one": "{{count}} track added to the set.",
+    "added_other": "{{count}} tracks added to the set.",
+    "xmlExported_one": "{{count}} track exported to the XML file.",
+    "xmlExported_other": "{{count}} tracks exported to the XML file.",
+    "transition": "Transition",
+    "up": "Move up",
+    "down": "Move down",
+    "remove": "Remove from set",
+    "dragHint": "Drag to reorder",
+    "suggestionsFor": "Suggestions after “{{title}}”",
+    "bpmRange": "BPM gap",
+    "noSuggestion": "No compatible track found (a BPM and a key are needed).",
+    "addOne": "Add",
+    "compat": {
+      "same": "Same key",
+      "adjacent": "Neighbour key (±1 on the Camelot wheel)",
+      "relative": "Relative major / minor (A ↔ B)",
+      "energy": "+2: energy boost",
+      "clash": "Keys that may clash",
+      "unknown": "Unknown key"
+    }
+  },
+  "stats": {
+    "tracks": "tracks",
+    "size": "on disk",
+    "duration": "of music",
+    "empty": "The library is empty.",
+    "genres": "Genres",
+    "years": "Decades",
+    "formats": "Formats",
+    "quality": "Quality",
+    "keys": "Keys (Camelot)",
+    "bpm": "BPM",
+    "disks": "Disks",
+    "added": "Added per month",
+    "mostPlayed": "Most played",
+    "noHistory": "Import the Rekordbox history (Settings › DJ tools) to see the most played tracks.",
+    "q": {
+      "192": "192 kbps",
+      "256": "256 kbps",
+      "320": "320 kbps",
+      "lossless": "Lossless",
+      "low": "Below 192 kbps"
+    }
+  },
+  "tags": {
+    "title_one": "Tags of the track",
+    "title_other": "Tags of {{count}} tracks",
+    "hint": "Click a tag to add or remove it. Tags stay in the application (they are not written into files) and work as a filter and as a smart filter rule.",
+    "none": "No tag yet. Create one below (for example “Wedding”, “Cocktail”, “Dancefloor”, “Clean version”).",
+    "count_one": "{{count}} track",
+    "count_other": "{{count}} tracks",
+    "delete": "Delete tag",
+    "confirmDelete": "Delete the tag “{{name}}” ({{count}} tracks)? Tracks are not touched.",
+    "newPlaceholder": "New tag",
+    "color": "Color",
+    "create": "Create and apply"
+  },
+  "usb": {
+    "action": "USB key…",
+    "title_one": "Copy {{count}} track to a USB key",
+    "title_other": "Copy {{count}} tracks to a USB key",
+    "hint": "Files are copied (never moved), and every copy is verified. A file already there and identical is not copied again.",
+    "pick": "Choose the key or folder…",
+    "noDest": "No folder chosen",
+    "layout": "Layout",
+    "layouts": {
+      "playlist": "A folder named after the playlist",
+      "flat": "All files at the root",
+      "folders": "Original folder tree"
+    },
+    "name": "Name (folder and playlist)",
+    "m3u": "Create an M3U8 playlist on the key",
+    "copy": "Copy",
+    "copying": "Copying…",
+    "defaultName": "Selection",
+    "done_one": "{{count}} file copied and verified.",
+    "done_other": "{{count}} files copied and verified.",
+    "report": "{{copied}} copied, {{skipped}} already up to date ({{size}}).",
+    "offline_one": "{{count}} track on an unplugged disk was not copied.",
+    "offline_other": "{{count}} tracks on an unplugged disk were not copied."
+  },
+  "tools": {
+    "title": "DJ tools",
+    "hint": "Play history, backup, perceived loudness, analysis and repair. None of these tools changes the audio of your files."
+  },
+  "plays": {
+    "title": "Play history",
+    "hint": "In Rekordbox, export the collection as XML (File › Export Collection in xml format): playlists in the “HISTORY” folder are read. You can also export a history playlist as M3U8 or TXT (right-click › Export). Each night counts once per track; re-importing does not double plays.",
+    "import": "Import a history…",
+    "imported": "History imported: {{sessions}} night(s), {{plays}} new play(s), {{unmatched}} track(s) not found in the library.",
+    "clear": "Clear history",
+    "confirmClear": "Clear the whole imported play history? Tracks and files are not touched.",
+    "cleared": "Play history cleared."
+  },
+  "backup": {
+    "title": "Library backup",
+    "hint": "Copies all your tracks to a backup disk, grouped by original disk. Only new or changed files are copied; every copy is verified; nothing is ever deleted in the backup (an older version is kept next to it, “(ancienne date)”).",
+    "pick": "Choose backup folder…",
+    "noDest": "No folder chosen",
+    "run": "Back up now",
+    "running": "Backing up…",
+    "last": "Last backup: {{date}}",
+    "never": "never",
+    "remind": "Reminder",
+    "remindOff": "No reminder",
+    "remindDays_one": "After {{count}} day",
+    "remindDays_other": "After {{count}} days",
+    "report": "{{copied}} file(s) copied, {{skipped}} already up to date ({{size}} copied).",
+    "done": "Backup finished: {{copied}} copied, {{skipped}} already up to date.",
+    "doneWithFailures_one": "Backup finished, but {{count}} file could not be copied.",
+    "doneWithFailures_other": "Backup finished, but {{count}} files could not be copied.",
+    "reminder": "Your last backup is older than the chosen reminder.",
+    "openSettings": "Open settings"
+  },
+  "loudness": {
+    "title": "Perceived loudness (LUFS)",
+    "hint": "Measures the perceived loudness of each track (EBU R128 standard): “Loudness (LUFS)” column and “very loud” / “quiet” counters in Library health. Audio is never modified.",
+    "run": "Measure tracks not measured yet",
+    "started": "Loudness measurement started in the background.",
+    "already": "Loudness measurement is already running."
+  },
+  "analysis": {
+    "title": "BPM, key and energy analysis",
+    "hint": "For tracks without BPM or key. Results are shown before being written; an existing value is never replaced (Rekordbox remains the reference). Reliability measured on your library: BPM right 33 times out of 34, key exact about 6 times out of 10 and mix-compatible 3 times out of 4. Energy (1 to 10) is an estimate.",
+    "run": "Analyze tracks without BPM or key",
+    "review": "See results and write them…",
+    "started": "Analysis started in the background.",
+    "startedSelection": "Analysis of the selection started. Results will be reviewed in Settings › DJ tools.",
+    "startedHealth": "Analysis started. Results will be reviewed in Settings › DJ tools.",
+    "already": "Analysis is already running.",
+    "openReview": "Open settings",
+    "reviewTitle": "Analysis results",
+    "reviewHint": "Only missing values will be written (greyed values already exist and do not change). Locked fields are never touched. Ctrl+Z undoes.",
+    "nothing": "No result to write. Run the analysis first.",
+    "apply_one": "Write for {{count}} track",
+    "apply_other": "Write for {{count}} tracks",
+    "applied_one": "BPM and key written for {{count}} track.",
+    "applied_other": "BPMs and keys written for {{count}} tracks."
+  },
+  "dates": {
+    "title": "Broken dates",
+    "settingsHint": "Some files have a malformed date in their tags: for safety, the application then refuses to edit their tags. The repair only removes these unreadable dates (the file keeps the same size, audio and other tags do not move). Ctrl+Z restores the original bytes.",
+    "check": "Look for broken dates…",
+    "hint": "The unreadable dates below will be removed. Audio and other tags do not move. Ctrl+Z restores the exact original bytes.",
+    "searching": "Searching…",
+    "nothing": "No broken date found.",
+    "apply_one": "Repair {{count}} file",
+    "apply_other": "Repair {{count}} files",
+    "repaired_one": "{{count}} file repaired.",
+    "repaired_other": "{{count}} files repaired."
   }
 }

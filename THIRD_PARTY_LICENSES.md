@@ -36,6 +36,7 @@ Uniquement des licences permissives (principe 12 du cahier des charges). La list
 | quick-xml | lecture et écriture du XML Rekordbox | MIT |
 | sha2 | connexion Spotify (défi PKCE) | MIT ou Apache-2.0 |
 | getrandom | connexion Spotify (valeurs aléatoires sûres) | MIT ou Apache-2.0 |
+| ebur128 | mesure du volume perçu (EBU R128) | MIT |
 | tempfile (tests uniquement) | dossiers temporaires | MIT ou Apache-2.0 |
 
 ## Interface (JavaScript)

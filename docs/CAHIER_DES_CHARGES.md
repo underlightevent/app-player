@@ -564,6 +564,29 @@ Critères de validation :
 - [ ] Sans connexion, l'écran Veille l'indique et la liste d'envies reste utilisable.
 - [ ] Avec un compte Spotify lié, un titre de la liste d'envies est ajouté à une playlist Spotify choisie ; « Déconnecter » efface le jeton.
 
+### Phase 6 — Outils complets du DJ
+
+Demandée par l'utilisateur le 27/11/2026 (« une seule grosse phase, même si non utilisé, pratique au besoin »). Mêmes principes que le reste : le son n'est jamais modifié (sauf la conversion WAV → AIFF déjà prévue), aperçu avant toute action en lot, annulation, rien d'automatique sans réglage.
+
+1. **Préparation de sets** : écran « Sets ». Un set est une liste ordonnée de morceaux (monter, descendre, retirer, ajouter depuis la sélection). Pour chaque enchaînement : compatibilité de tonalité (roue Camelot : même tonalité, ±1, passage A/B) et écart de BPM (en %). **Suggestions du morceau suivant** dans la bibliothèque : tonalité compatible, BPM à ±6 %, même genre en priorité, morceaux pas encore dans le set. Durée totale. Export M3U8 et vers Rekordbox (XML) comme une playlist.
+2. **Étiquettes personnelles** (ambiance, événement : « mariage », « cocktail », « dancefloor », « version clean », « explicite »…) : création, couleur, ajout et retrait en lot depuis la sélection, affichage dans le panneau de détail, filtre de la bibliothèque et règle des filtres intelligents. Gardées dans la base de l'application (pas écrites dans les fichiers).
+3. **Historique de jeu** : import des playlists d'historique de Rekordbox (dans le XML exporté, ou une playlist d'historique exportée en M3U8 / TXT). Pour chaque morceau : nombre de passages et date du dernier passage (colonnes, filtres « jamais joué », « joué ces 30 derniers jours »). Le lecteur de l'application ne compte pas comme un passage.
+4. **Sauvegarde de la bibliothèque** : copie vers un dossier de secours (disque externe), en ne copiant que ce qui a changé ; chaque copie est vérifiée (empreinte du fichier) ; rien n'est jamais effacé dans la sauvegarde ; tâche de fond annulable ; rappel au démarrage si la dernière sauvegarde a plus de N jours (réglage, désactivé par défaut).
+5. **Copie vers une clé USB** : la sélection ou une playlist / un set vers un dossier choisi, copie vérifiée, rangement au choix (à plat, par playlist, ou arborescence d'origine), playlist M3U8 à chemins relatifs sur la clé. Les fichiers de la bibliothèque ne sont jamais déplacés.
+6. **Volume perçu (LUFS)** : mesure EBU R128 (volume intégré et crête vraie) de chaque morceau, colonne « LUFS », compteurs « trop fort » / « trop faible » dans Santé de la bibliothèque. Mesure seulement : le son n'est pas modifié.
+7. **Analyse BPM, tonalité et énergie** (ajoutée au périmètre à la demande de l'utilisateur) : pour les morceaux sans BPM ou sans tonalité, analyse sur l'ordinateur, aperçu des résultats, écriture dans les tags en modification automatique (champs verrouillés jamais remplacés, annulable). Énergie de 1 à 10 gardée dans la base. Les résultats de Rekordbox restent la référence : l'analyse ne remplace jamais une valeur existante.
+8. **Statistiques** : écran avec la répartition par genre, année, format et qualité, la place occupée (par disque), les morceaux ajoutés par mois, les plus joués.
+9. **Améliorations** : réparation des dates ID3 abîmées (aperçu, annulable) ; vignettes des pochettes dans le tableau (colonne optionnelle) ; ajout de morceaux à une playlist par glisser-déposer et réordonnancement des playlists ; installation automatique des mises à jour (préparée, active quand la clé de signature des mises à jour sera créée, voir docs/SIGNATURE.md) ; compte Tidal lié si son accès le permet (sinon noté avec la raison).
+
+Critères de validation :
+- [ ] Un set de 10 morceaux montre les enchaînements compatibles et propose des suivants ; il s'exporte et s'ouvre dans Rekordbox.
+- [ ] Une étiquette posée sur 20 morceaux sert de filtre et de règle de filtre intelligent.
+- [ ] Après import de l'historique Rekordbox, les morceaux joués ont leur nombre de passages ; « jamais joué » donne la bonne liste.
+- [ ] Une sauvegarde complète puis une seconde ne recopie que les fichiers modifiés ; les copies sont identiques aux originaux.
+- [ ] Une playlist copiée sur une clé USB se lit dans un lecteur avec son M3U8.
+- [ ] Le volume LUFS d'un morceau est proche de celui mesuré par un autre logiciel (±1 LU).
+- [ ] L'analyse BPM / tonalité d'un morceau sans valeur donne un résultat cohérent avec Rekordbox dans la plupart des cas, et ne touche pas un morceau qui en a déjà.
+
 ## Tests, qualité et documentation
 
 **Tests automatiques**, lancés par la CI à chaque modification :
@@ -596,7 +619,7 @@ Critères de validation :
 
 **Hors périmètre.** Ne pas développer sans demande explicite :
 
-- analyse du BPM, de la tonalité, des grilles de temps ou des cue points (Rekordbox s'en charge) ;
+- grilles de temps et cue points (Rekordbox s'en charge) ; l'analyse du BPM et de la tonalité est ajoutée en phase 6, seulement pour les morceaux qui n'en ont pas ;
 - lecture ou écriture de la base interne de Rekordbox ;
 - mixage, effets, pré-écoute sur une sortie casque séparée ;
 - streaming (Beatport, Tidal…) et téléchargement de musique (la phase 5 donne seulement des liens vers les boutiques et ajoute des titres aux playlists d'un compte lié) ;

@@ -297,6 +297,43 @@ const MIGRATIONS: &[&str] = &[
         deleted      INTEGER NOT NULL DEFAULT 0
     );
     CREATE INDEX wishlist_key ON wishlist(match_key);",
+    // 11 — Outils du DJ (phase 6) : étiquettes, historique de jeu, volume perçu, analyse.
+    "CREATE TABLE user_tags (
+        id    INTEGER PRIMARY KEY,
+        name  TEXT NOT NULL UNIQUE COLLATE NOCASE,
+        color TEXT NOT NULL DEFAULT 'gray'
+    );
+    CREATE TABLE track_user_tags (
+        track_id INTEGER NOT NULL REFERENCES tracks(id) ON DELETE CASCADE,
+        tag_id   INTEGER NOT NULL REFERENCES user_tags(id) ON DELETE CASCADE,
+        PRIMARY KEY (track_id, tag_id)
+    );
+    CREATE INDEX track_user_tags_tag ON track_user_tags(tag_id);
+    CREATE TABLE plays (
+        id        INTEGER PRIMARY KEY,
+        track_id  INTEGER NOT NULL REFERENCES tracks(id) ON DELETE CASCADE,
+        played_at TEXT NOT NULL,
+        source    TEXT NOT NULL,
+        UNIQUE (track_id, played_at, source)
+    );
+    CREATE INDEX plays_track ON plays(track_id);
+    CREATE TABLE loudness (
+        track_id INTEGER PRIMARY KEY REFERENCES tracks(id) ON DELETE CASCADE,
+        size     INTEGER NOT NULL,
+        mtime    INTEGER NOT NULL,
+        lufs     REAL,
+        peak_db  REAL,
+        analyzed_at INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+    CREATE TABLE analysis (
+        track_id INTEGER PRIMARY KEY REFERENCES tracks(id) ON DELETE CASCADE,
+        size     INTEGER NOT NULL,
+        mtime    INTEGER NOT NULL,
+        bpm      REAL,
+        musical_key TEXT,
+        energy   INTEGER,
+        analyzed_at INTEGER NOT NULL DEFAULT (unixepoch())
+    );",
 ];
 
 /// Ouvre une connexion supplémentaire (tâches de fond). La base doit déjà exister et être migrée.

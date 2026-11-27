@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { analysisRun } from "../core/djtools";
 import { Activity, FolderSearch, HeartPulse, Wrench } from "lucide-react";
 import { emptyQuery, libraryQuery, libraryRows, onEvent, pickFolder } from "../core/library";
 import type { EditReport } from "../core/edit";
@@ -19,7 +20,10 @@ interface Props {
 }
 
 /** Correction disponible pour chaque compteur (toujours avec aperçu ou validation). */
-const FIX: Record<string, "online" | "rename" | "sync" | "relocate" | "review" | "duplicates" | "analyze"> = {
+const FIX: Record<string, "online" | "rename" | "sync" | "relocate" | "review" | "duplicates" | "analyze" | "bpmKey"> = {
+  // Phase 6 : analyse BPM / tonalité (résultats à valider dans Réglages › Outils du DJ).
+  no_bpm: "bpmKey",
+  no_key: "bpmKey",
   no_cover: "online",
   small_cover: "online",
   no_year: "online",
@@ -62,6 +66,10 @@ export function HealthView({ onOpen, onGo, onRename, onDone, onToast }: Props) {
     }
     const ids = await idsOf(key);
     if (ids.length === 0) return;
+    if (kind === "bpmKey") {
+      const started = await analysisRun(ids);
+      return onToast(started ? t("analysis.startedHealth") : t("analysis.already"), { label: t("analysis.openReview"), run: () => onGo("settings") });
+    }
     if (kind === "online") {
       await onlineSearch(ids);
       onToast(t("health.onlineQueued", { count: ids.length }), { label: t("online.view"), run: () => onGo("review") });

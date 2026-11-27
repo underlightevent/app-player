@@ -1,4 +1,7 @@
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { tagsList, type UserTag } from "../core/djtools";
+import { onEvent } from "../core/library";
 import { FolderPlus, SearchX, Unplug } from "lucide-react";
 import type { LibraryQuery, RootInfo, SortKey, TrackRow, VolumeStatus } from "../core/library";
 import { TrackTable } from "./table/TrackTable";
@@ -55,6 +58,13 @@ export function LibraryView(p: Props) {
   const { query, onQueryChange } = p;
   const set = (patch: Partial<LibraryQuery>) => onQueryChange({ ...query, ...patch });
   const nf = new Intl.NumberFormat(i18n.language);
+  // Étiquettes personnelles (phase 6), pour le filtre.
+  const [tags, setTags] = useState<UserTag[]>([]);
+  useEffect(() => {
+    const load = () => void tagsList().then(setTags).catch(() => {});
+    load();
+    return onEvent("library:changed", load);
+  }, []);
 
   // Disques utilisés par la bibliothèque mais débranchés.
   const usedVolumes = new Set(p.roots.map((r) => r.volumeId));
@@ -75,7 +85,7 @@ export function LibraryView(p: Props) {
     );
   }
 
-  const filtersActive = query.formats.length > 0 || query.noCover || query.minRating > 0 || query.status != null;
+  const filtersActive = query.formats.length > 0 || query.noCover || query.minRating > 0 || query.status != null || query.tag != null || query.played != null;
   const toggleFormat = (f: string) =>
     set({ formats: query.formats.includes(f) ? query.formats.filter((x) => x !== f) : [...query.formats, f] });
 
@@ -135,6 +145,25 @@ export function LibraryView(p: Props) {
             ))}
           </select>
         </label>
+        {tags.length > 0 && (
+          <label className="chip-select">
+            {t("library.tag")}
+            <select value={query.tag ?? ""} onChange={(e) => set({ tag: e.target.value ? Number(e.target.value) : null })}>
+              <option value="">{t("library.anyTag")}</option>
+              {tags.map((g) => (
+                <option key={g.id} value={g.id}>{g.name} ({g.count})</option>
+              ))}
+            </select>
+          </label>
+        )}
+        <label className="chip-select">
+          {t("library.played")}
+          <select value={query.played ?? ""} onChange={(e) => set({ played: e.target.value || null })}>
+            <option value="">{t("library.playedAny")}</option>
+            <option value="never">{t("library.playedNever")}</option>
+            <option value="recent">{t("library.playedRecent")}</option>
+          </select>
+        </label>
         <label className="chip-select">
           {t("library.sortBy")}
           <select
@@ -152,7 +181,7 @@ export function LibraryView(p: Props) {
           </select>
         </label>
         {filtersActive && (
-          <button className="chip chip-clear" onClick={() => set({ formats: [], noCover: false, minRating: 0, status: null })}>
+          <button className="chip chip-clear" onClick={() => set({ formats: [], noCover: false, minRating: 0, status: null, tag: null, played: null })}>
             {t("library.clearFilters")}
           </button>
         )}

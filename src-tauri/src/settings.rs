@@ -42,6 +42,8 @@ const KNOWN: &[(&str, &[&str], &str)] = &[
     // Rekordbox et mises à jour (phase 4)
     ("rekordbox_protected", &["true", "false"], "true"),
     ("update_check", &["true", "false"], "true"),
+    // Phase 6 : rappel de sauvegarde (jours), colonne des pochettes.
+    ("backup_remind", &["off", "7", "14", "30"], "off"),
     // Veille musicale (phase 5) : sources désactivées par défaut.
     ("watch_apple", &["true", "false"], "false"),
     ("watch_deezer", &["true", "false"], "false"),
@@ -69,6 +71,9 @@ const FREE_TEXT: &[(&str, &str)] = &[
     // Labels favoris (liste JSON) et labels ajoutés par l'utilisateur.
     ("watch_labels_fav", "[]"),
     ("watch_labels_custom", "[]"),
+    // Sauvegarde (phase 6) : dossier de destination et date de la dernière sauvegarde.
+    ("backup_dest", ""),
+    ("backup_last", ""),
 ];
 const MAX_FREE_TEXT: usize = 20_000;
 

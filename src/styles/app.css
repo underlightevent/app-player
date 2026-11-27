@@ -2881,3 +2881,273 @@ body.is-dragging * {
   padding: 2px 8px 2px 0;
   color: var(--color-text-secondary);
 }
+
+/* ---------- Outils du DJ (phase 6) ---------- */
+.cover-thumb {
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  border-radius: 3px;
+  object-fit: cover;
+  vertical-align: middle;
+}
+
+.cover-thumb.empty {
+  background: var(--color-surface-hover);
+}
+
+.tag-chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.tag-chip {
+  padding: 0 6px;
+  border: 1px solid;
+  border-radius: 999px;
+  font-size: var(--font-size-small);
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.tag-list {
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+
+.tag-row {
+  display: flex;
+  align-items: center;
+}
+
+.tag-toggle {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px 4px;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tag-toggle:hover {
+  background: var(--color-surface-hover);
+}
+
+.tag-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: 2px solid;
+  border-radius: 4px;
+  color: #fff;
+}
+
+.tag-box.some {
+  color: inherit;
+}
+
+.color-picks {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.color-pick {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.color-pick.on {
+  border-color: var(--color-text);
+}
+
+.sets {
+  max-width: 1200px;
+}
+
+.sets-layout {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.sets-main {
+  min-width: 0;
+}
+
+.sets-main .folder-actions {
+  flex-wrap: wrap;
+}
+
+.set-table td:nth-child(4) {
+  min-width: 160px;
+}
+
+@media (max-width: 1100px) {
+  .sets-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.sets-list .playlist-open[aria-current="true"] {
+  background: var(--color-accent-soft);
+}
+
+.sets-title {
+  margin: 0;
+  font-size: 18px;
+}
+
+.set-table {
+  width: 100%;
+}
+
+.set-table td {
+  vertical-align: middle;
+}
+
+.set-table tr.selected {
+  background: var(--color-accent-soft);
+}
+
+.set-table tr.drop-over {
+  outline: 2px solid var(--color-accent);
+}
+
+.drag-handle {
+  width: 16px;
+  color: var(--color-text-secondary);
+  cursor: grab;
+}
+
+.sets-suggestions {
+  margin-top: var(--space-6);
+}
+
+.compat {
+  display: inline-block;
+  min-width: 30px;
+  padding: 0 4px;
+  border-radius: 4px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.compat-good {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.compat-mid {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.compat-bad {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.stats {
+  max-width: 1200px;
+}
+
+.stat-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.stat-num {
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: var(--space-6);
+}
+
+.stat-grid h2 {
+  margin: 0 0 var(--space-2);
+  font-size: 15px;
+}
+
+.bars {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bar-row {
+  display: grid;
+  grid-template-columns: 130px 1fr auto;
+  gap: var(--space-2);
+  align-items: center;
+  padding: 2px 0;
+  font-size: var(--font-size-small);
+}
+
+.bar-label {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.bar-track {
+  height: 10px;
+  border-radius: 5px;
+  background: var(--color-surface-hover);
+  overflow: hidden;
+}
+
+.bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 5px;
+  background: var(--color-accent);
+}
+
+.nav-item.drop-over {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+:root[data-theme="dark"] .compat-good {
+  background: #14532d;
+  color: #bbf7d0;
+}
+
+:root[data-theme="dark"] .compat-mid {
+  background: #78350f;
+  color: #fde68a;
+}
+
+:root[data-theme="dark"] .compat-bad {
+  background: #7f1d1d;
+  color: #fecaca;
+}

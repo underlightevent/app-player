@@ -25,7 +25,10 @@
     "sectionTools": "Outils",
     "toHandle_one": "{{count}} élément à traiter",
     "toHandle_other": "{{count}} éléments à traiter",
-    "watch": "Sorties"
+    "watch": "Sorties",
+    "sets": "Sets",
+    "stats": "Statistiques",
+    "dropHint": "Déposez ici des morceaux glissés depuis le tableau"
   },
   "topbar": {
     "searchPlaceholder": "Rechercher dans la bibliothèque",
@@ -115,7 +118,13 @@
       "artist": "Artiste principal",
       "title": "Titre",
       "custom": "Colonnes du tableau"
-    }
+    },
+    "tag": "Étiquette",
+    "anyTag": "Toutes",
+    "played": "Joué",
+    "playedAny": "Peu importe",
+    "playedNever": "Jamais joué",
+    "playedRecent": "Ces 30 derniers jours"
   },
   "table": {
     "label": "Morceaux",
@@ -141,7 +150,14 @@
     "quality": "Qualité",
     "duration": "Durée",
     "fileName": "Nom de fichier",
-    "status": "État"
+    "status": "État",
+    "thumb": "Vignette",
+    "userTags": "Étiquettes",
+    "plays": "Passages",
+    "lastPlayed": "Dernier passage",
+    "energy": "Énergie",
+    "lufs": "Volume (LUFS)",
+    "lufsHint": "Volume perçu (EBU R128). Orange : très fort (au-dessus de −5) ou faible (en dessous de −14)."
   },
   "fields": {
     "title": "Titre",
@@ -243,7 +259,11 @@
     "quality": "Contrôle qualité",
     "relocate": "Recherche des fichiers manquants",
     "convert": "Conversion WAV vers AIFF",
-    "titleFormat": "Réécriture des titres dans les fichiers"
+    "titleFormat": "Réécriture des titres dans les fichiers",
+    "backup": "Sauvegarde de la bibliothèque",
+    "usbCopy": "Copie vers la clé USB",
+    "loudness": "Mesure du volume (LUFS)",
+    "analysis": "Analyse BPM, tonalité et énergie"
   },
   "player": {
     "nothing": "Aucun morceau en lecture",
@@ -339,7 +359,9 @@
     "duplicates": "le traitement des doublons",
     "syncWav": "la resynchronisation des WAV",
     "wavToAiff": "la conversion en AIFF",
-    "titleFormat": "la nouvelle présentation des titres"
+    "titleFormat": "la nouvelle présentation des titres",
+    "repairDates": "la réparation des dates",
+    "analysis": "l'écriture des BPM et tonalités analysés"
   },
   "edit": {
     "saved_one": "Morceau modifié",
@@ -398,7 +420,12 @@
     "addToPlaylist": "Ajouter à une playlist…",
     "removeFromPlaylist": "Retirer de « {{name}} »",
     "exportM3u": "Exporter la sélection en M3U…",
-    "convertAiff": "Convertir les WAV en AIFF…"
+    "convertAiff": "Convertir les WAV en AIFF…",
+    "tags": "Étiquettes…",
+    "usbCopy": "Copier vers une clé USB…",
+    "analyze": "Analyser BPM, tonalité et énergie",
+    "loudness": "Mesurer le volume (LUFS)",
+    "repairDates": "Réparer les dates abîmées…"
   },
   "rename": {
     "title_one": "Renommer {{count}} fichier",
@@ -808,7 +835,12 @@
       "wav_desync": "WAV désynchronisés",
       "missing": "Fichiers manquants",
       "unreadable": "Fichiers illisibles",
-      "corrupt": "Fichiers abîmés ou tronqués"
+      "corrupt": "Fichiers abîmés ou tronqués",
+      "too_loud": "Volume très fort (au-dessus de −5 LUFS)",
+      "too_quiet": "Volume faible (en dessous de −14 LUFS)",
+      "no_bpm": "Sans BPM",
+      "no_key": "Sans tonalité",
+      "never_played": "Jamais joués (d'après l'historique importé)"
     },
     "fix": {
       "online": "Rechercher en ligne",
@@ -817,7 +849,8 @@
       "relocate": "Retrouver dans un dossier…",
       "review": "Ouvrir « À valider »",
       "duplicates": "Ouvrir « Doublons »",
-      "analyze": "Analyser"
+      "analyze": "Analyser",
+      "bpmKey": "Analyser"
     },
     "onlineQueued_one": "{{count}} morceau ajouté à la recherche en ligne. Les cas incertains iront dans « À valider ».",
     "onlineQueued_other": "{{count}} morceaux ajoutés à la recherche en ligne. Les cas incertains iront dans « À valider ».",
@@ -891,7 +924,11 @@
       "rating": "Note",
       "duration": "Durée (secondes)",
       "rekordbox": "Dans Rekordbox",
-      "hasCover": "A une pochette"
+      "hasCover": "A une pochette",
+      "userTag": "Étiquette",
+      "plays": "Nombre de passages",
+      "energy": "Énergie (1 à 10)",
+      "lufs": "Volume (LUFS)"
     },
     "ops": {
       "contains": "contient",
@@ -1191,5 +1228,174 @@
       "addPlaceholder": "Ajouter un label (nom exact)",
       "remove": "Retirer « {{label}} »"
     }
+  },
+  "sets": {
+    "prefix": "Set :",
+    "intro": "Un set est une liste ordonnée. Pour chaque enchaînement : compatibilité de tonalité (roue Camelot) et écart de BPM. Cliquez sur un morceau pour voir les suggestions qui s'enchaînent bien après lui. Glissez la poignée ⋮⋮ pour changer l'ordre.",
+    "newPlaceholder": "Nom du nouveau set",
+    "create": "Créer",
+    "createWith_one": "Le morceau sélectionné y sera ajouté",
+    "createWith_other": "Les {{count}} morceaux sélectionnés y seront ajoutés",
+    "none": "Aucun set pour l'instant.",
+    "empty": "Créez un set à gauche. Astuce : sélectionnez d'abord des morceaux dans la bibliothèque, ils y seront ajoutés.",
+    "emptySet": "Ce set est vide. Sélectionnez des morceaux dans la bibliothèque puis « Ajouter la sélection », ou glissez-les sur « Sets » dans la barre latérale.",
+    "summary_one": "{{count}} morceau · {{duration}}",
+    "summary_other": "{{count}} morceaux · {{duration}}",
+    "rename": "Renommer le set",
+    "delete": "Supprimer le set",
+    "confirmDelete": "Supprimer le set « {{name}} » ? Les morceaux et les fichiers ne sont pas touchés.",
+    "addSelection_one": "Ajouter la sélection ({{count}})",
+    "addSelection_other": "Ajouter la sélection ({{count}})",
+    "added_one": "{{count}} morceau ajouté au set.",
+    "added_other": "{{count}} morceaux ajoutés au set.",
+    "xmlExported_one": "{{count}} morceau exporté vers le fichier XML.",
+    "xmlExported_other": "{{count}} morceaux exportés vers le fichier XML.",
+    "transition": "Enchaînement",
+    "up": "Monter",
+    "down": "Descendre",
+    "remove": "Retirer du set",
+    "dragHint": "Glisser pour changer l'ordre",
+    "suggestionsFor": "Suggestions après « {{title}} »",
+    "bpmRange": "Écart de BPM",
+    "noSuggestion": "Aucun morceau compatible trouvé (il faut un BPM et une tonalité).",
+    "addOne": "Ajouter",
+    "compat": {
+      "same": "Même tonalité",
+      "adjacent": "Tonalité voisine (±1 sur la roue Camelot)",
+      "relative": "Relative majeur / mineur (A ↔ B)",
+      "energy": "+2 : montée d'énergie",
+      "clash": "Tonalités qui risquent de sonner faux",
+      "unknown": "Tonalité inconnue"
+    }
+  },
+  "stats": {
+    "tracks": "morceaux",
+    "size": "sur le disque",
+    "duration": "de musique",
+    "empty": "La bibliothèque est vide.",
+    "genres": "Genres",
+    "years": "Décennies",
+    "formats": "Formats",
+    "quality": "Qualité",
+    "keys": "Tonalités (Camelot)",
+    "bpm": "BPM",
+    "disks": "Disques",
+    "added": "Ajoutés par mois",
+    "mostPlayed": "Les plus joués",
+    "noHistory": "Importez l'historique de Rekordbox (Réglages › Outils du DJ) pour voir les morceaux les plus joués.",
+    "q": {
+      "192": "192 kbit/s",
+      "256": "256 kbit/s",
+      "320": "320 kbit/s",
+      "lossless": "Sans perte",
+      "low": "Moins de 192 kbit/s"
+    }
+  },
+  "tags": {
+    "title_one": "Étiquettes du morceau",
+    "title_other": "Étiquettes de {{count}} morceaux",
+    "hint": "Cliquez sur une étiquette pour la poser ou la retirer. Les étiquettes restent dans l'application (elles ne sont pas écrites dans les fichiers) et servent de filtre et de règle de filtre intelligent.",
+    "none": "Aucune étiquette. Créez-en une ci-dessous (par exemple « Mariage », « Cocktail », « Dancefloor », « Version clean »).",
+    "count_one": "{{count}} morceau",
+    "count_other": "{{count}} morceaux",
+    "delete": "Supprimer l'étiquette",
+    "confirmDelete": "Supprimer l'étiquette « {{name}} » ({{count}} morceaux) ? Les morceaux ne sont pas touchés.",
+    "newPlaceholder": "Nouvelle étiquette",
+    "color": "Couleur",
+    "create": "Créer et poser"
+  },
+  "usb": {
+    "action": "Clé USB…",
+    "title_one": "Copier {{count}} morceau vers une clé USB",
+    "title_other": "Copier {{count}} morceaux vers une clé USB",
+    "hint": "Les fichiers sont copiés (jamais déplacés), et chaque copie est vérifiée. Un fichier déjà présent et identique n'est pas recopié.",
+    "pick": "Choisir la clé ou le dossier…",
+    "noDest": "Aucun dossier choisi",
+    "layout": "Rangement",
+    "layouts": {
+      "playlist": "Un dossier au nom de la playlist",
+      "flat": "Tous les fichiers à la racine",
+      "folders": "Arborescence d'origine"
+    },
+    "name": "Nom (dossier et playlist)",
+    "m3u": "Créer une playlist M3U8 sur la clé",
+    "copy": "Copier",
+    "copying": "Copie en cours…",
+    "defaultName": "Sélection",
+    "done_one": "{{count}} fichier copié et vérifié.",
+    "done_other": "{{count}} fichiers copiés et vérifiés.",
+    "report": "{{copied}} copié(s), {{skipped}} déjà à jour ({{size}}).",
+    "offline_one": "{{count}} morceau sur un disque débranché n'a pas été copié.",
+    "offline_other": "{{count}} morceaux sur un disque débranché n'ont pas été copiés."
+  },
+  "tools": {
+    "title": "Outils du DJ",
+    "hint": "Historique de jeu, sauvegarde, volume perçu, analyse et réparation. Aucun de ces outils ne modifie le son de vos fichiers."
+  },
+  "plays": {
+    "title": "Historique de jeu",
+    "hint": "Dans Rekordbox, exportez la collection en XML (Fichier › Exporter la collection au format xml) : les listes du dossier « HISTORY » sont lues. Vous pouvez aussi exporter une liste d'historique en M3U8 ou TXT (clic droit › Exporter). Chaque soirée compte une fois par morceau ; réimporter ne double pas les passages.",
+    "import": "Importer un historique…",
+    "imported": "Historique importé : {{sessions}} soirée(s), {{plays}} nouveau(x) passage(s), {{unmatched}} morceau(x) introuvable(s) dans la bibliothèque.",
+    "clear": "Effacer l'historique",
+    "confirmClear": "Effacer tout l'historique de jeu importé ? Les morceaux et les fichiers ne sont pas touchés.",
+    "cleared": "Historique de jeu effacé."
+  },
+  "backup": {
+    "title": "Sauvegarde de la bibliothèque",
+    "hint": "Copie de tous vos morceaux vers un disque de secours, rangés par disque d'origine. Seuls les fichiers nouveaux ou modifiés sont copiés ; chaque copie est vérifiée ; rien n'est jamais effacé dans la sauvegarde (une ancienne version est gardée à côté, « (ancienne date) »).",
+    "pick": "Choisir le dossier de sauvegarde…",
+    "noDest": "Aucun dossier choisi",
+    "run": "Sauvegarder maintenant",
+    "running": "Sauvegarde en cours…",
+    "last": "Dernière sauvegarde : {{date}}",
+    "never": "jamais",
+    "remind": "Rappel",
+    "remindOff": "Pas de rappel",
+    "remindDays_one": "Après {{count}} jour",
+    "remindDays_other": "Après {{count}} jours",
+    "report": "{{copied}} fichier(s) copié(s), {{skipped}} déjà à jour ({{size}} copiés).",
+    "done": "Sauvegarde terminée : {{copied}} copié(s), {{skipped}} déjà à jour.",
+    "doneWithFailures_one": "Sauvegarde terminée, mais {{count}} fichier n'a pas pu être copié.",
+    "doneWithFailures_other": "Sauvegarde terminée, mais {{count}} fichiers n'ont pas pu être copiés.",
+    "reminder": "Votre dernière sauvegarde date de plus longtemps que le rappel choisi.",
+    "openSettings": "Ouvrir les réglages"
+  },
+  "loudness": {
+    "title": "Volume perçu (LUFS)",
+    "hint": "Mesure le volume perçu de chaque morceau (norme EBU R128) : colonne « Volume (LUFS) » et compteurs « très fort » / « faible » dans Santé de la bibliothèque. Le son n'est jamais modifié.",
+    "run": "Mesurer les morceaux pas encore mesurés",
+    "started": "Mesure du volume lancée en tâche de fond.",
+    "already": "La mesure du volume est déjà en cours."
+  },
+  "analysis": {
+    "title": "Analyse BPM, tonalité et énergie",
+    "hint": "Pour les morceaux sans BPM ou sans tonalité. Les résultats sont proposés avant d'être écrits ; une valeur existante n'est jamais remplacée (Rekordbox reste la référence). Fiabilité mesurée sur votre bibliothèque : BPM juste 33 fois sur 34, tonalité exacte environ 6 fois sur 10 et compatible pour le mixage 3 fois sur 4. L'énergie (1 à 10) est une estimation.",
+    "run": "Analyser les morceaux sans BPM ou sans tonalité",
+    "review": "Voir les résultats et les écrire…",
+    "started": "Analyse lancée en tâche de fond.",
+    "startedSelection": "Analyse de la sélection lancée. Les résultats seront à valider dans Réglages › Outils du DJ.",
+    "startedHealth": "Analyse lancée. Les résultats seront à valider dans Réglages › Outils du DJ.",
+    "already": "L'analyse est déjà en cours.",
+    "openReview": "Ouvrir les réglages",
+    "reviewTitle": "Résultats de l'analyse",
+    "reviewHint": "Seules les valeurs manquantes seront écrites (les valeurs grisées existent déjà et ne changent pas). Les champs verrouillés ne sont jamais touchés. Ctrl+Z annule.",
+    "nothing": "Aucun résultat à écrire. Lancez d'abord l'analyse.",
+    "apply_one": "Écrire pour {{count}} morceau",
+    "apply_other": "Écrire pour {{count}} morceaux",
+    "applied_one": "BPM et tonalité écrits pour {{count}} morceau.",
+    "applied_other": "BPM et tonalités écrits pour {{count}} morceaux."
+  },
+  "dates": {
+    "title": "Dates abîmées",
+    "settingsHint": "Certains fichiers ont une date mal formée dans leurs tags : l'application refuse alors, par sécurité, de modifier leurs tags. La réparation retire seulement ces dates illisibles (le fichier garde la même taille, le son et les autres tags ne bougent pas). Ctrl+Z remet les octets d'origine.",
+    "check": "Chercher les dates abîmées…",
+    "hint": "Les dates illisibles ci-dessous seront retirées. Le son et les autres tags ne bougent pas. Ctrl+Z remet exactement les octets d'origine.",
+    "searching": "Recherche en cours…",
+    "nothing": "Aucune date abîmée trouvée.",
+    "apply_one": "Réparer {{count}} fichier",
+    "apply_other": "Réparer {{count}} fichiers",
+    "repaired_one": "{{count}} fichier réparé.",
+    "repaired_other": "{{count}} fichiers réparés."
   }
 }

@@ -6,6 +6,7 @@ import type { Changes, EditableField } from "../core/edit";
 import { trackCover } from "../core/edit";
 import { formatBpm, formatDuration, formatKey, formatQuality, formatSize } from "../core/format";
 import { startDrag, useDropTarget } from "../core/dnd";
+import { TagChips } from "./table/columns";
 import { qualityAnalyze, qualityInfo, qualitySpectrogram, qualityText, type QualityInfo } from "../core/quality";
 import { Modal } from "./Modal";
 
@@ -388,6 +389,10 @@ export function DetailPanel(p: Props) {
             {info(t("detail.quality"), formatQuality(single, locale))}
             {single.status === "ok" && info(t("quality.title"), <QualityLine row={single} revision={p.revision} />)}
             {info(t("detail.duration"), formatDuration(single.durationMs))}
+            {single.userTags.length > 0 && info(t("columns.userTags"), <TagChips tags={single.userTags} />)}
+            {single.lufs != null && info(t("columns.lufs"), `${single.lufs.toLocaleString(locale, { maximumFractionDigits: 1 })} LUFS`)}
+            {single.energy != null && info(t("columns.energy"), `${single.energy} / 10`)}
+            {single.playCount > 0 && info(t("columns.plays"), `${single.playCount}${single.lastPlayed ? ` · ${new Date(single.lastPlayed).toLocaleDateString(locale)}` : ""}`)}
             {info(t("detail.size"), formatSize(single.size, locale))}
             {info(t("detail.channels"), single.channels)}
             {info(t("detail.cover"), single.coverCount > 0 ? `${single.coverWidth ?? "?"} px${single.coverCount > 1 ? ` · ${t("detail.coverCount", { count: single.coverCount })}` : ""}` : t("badges.noCover"))}

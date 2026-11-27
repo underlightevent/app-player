@@ -24,6 +24,7 @@ mod tasks;
 mod update;
 mod util;
 mod watch;
+mod djtools;
 #[cfg(test)]
 mod testdata;
 
@@ -1293,6 +1294,227 @@ async fn spotify_add(state: State<'_, AppState>, playlist_id: String, uris: Vec<
     blocking(move || watch::spotify::add(&online.http, &db::open_worker(lib.db_path())?, &playlist_id, &uris)).await
 }
 
+// ---------- Outils du DJ (phase 6) ----------
+
+static LOUDNESS_RUNNING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+static ANALYSIS_RUNNING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+#[tauri::command]
+async fn tags_list(state: State<'_, AppState>) -> Result<Vec<djtools::UserTag>, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || djtools::tags_list(&db::open_worker(lib.db_path())?)).await
+}
+
+#[tauri::command]
+async fn tag_create(state: State<'_, AppState>, name: String, color: String) -> Result<i64, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || djtools::tag_create(&db::open_worker(lib.db_path())?, &name, &color)).await
+}
+
+#[tauri::command]
+async fn tag_update(state: State<'_, AppState>, id: i64, name: String, color: String) -> Result<(), AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        djtools::tag_update(&db::open_worker(lib.db_path())?, id, &name, &color)?;
+        lib.notify_changed(true);
+        Ok(())
+    })
+    .await
+}
+
+#[tauri::command]
+async fn tag_delete(state: State<'_, AppState>, id: i64) -> Result<(), AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        djtools::tag_delete(&db::open_worker(lib.db_path())?, id)?;
+        lib.notify_changed(true);
+        Ok(())
+    })
+    .await
+}
+
+#[tauri::command]
+async fn tag_apply(state: State<'_, AppState>, tag: i64, ids: Vec<i64>, on: bool) -> Result<usize, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        let n = djtools::tag_apply(&db::open_worker(lib.db_path())?, tag, &ids, on)?;
+        lib.notify_changed(true);
+        Ok(n)
+    })
+    .await
+}
+
+#[tauri::command]
+async fn stats_get(state: State<'_, AppState>) -> Result<djtools::Stats, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || djtools::stats(&db::open_worker(lib.db_path())?)).await
+}
+
+#[tauri::command]
+async fn set_create(state: State<'_, AppState>, name: String) -> Result<i64, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || playlists::create_set(&db::open_worker(lib.db_path())?, &name)).await
+}
+
+#[tauri::command]
+async fn set_tracks(state: State<'_, AppState>, id: i64) -> Result<Vec<djtools::SetTrack>, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || djtools::set_tracks(&db::open_worker(lib.db_path())?, id)).await
+}
+
+#[tauri::command]
+async fn set_move(state: State<'_, AppState>, id: i64, track: i64, to: usize) -> Result<(), AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || djtools::set_move(&db::open_worker(lib.db_path())?, id, track, to)).await
+}
+
+#[tauri::command]
+async fn set_suggestions(state: State<'_, AppState>, after: i64, exclude: Vec<i64>, bpm_range: f64) -> Result<Vec<djtools::Suggestion>, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || djtools::suggestions(&db::open_worker(lib.db_path())?, after, &exclude, bpm_range.clamp(1.0, 20.0), 30)).await
+}
+
+#[tauri::command]
+async fn history_import(state: State<'_, AppState>, path: String) -> Result<djtools::HistoryReport, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        let r = djtools::import_history(&db::open_worker(lib.db_path())?, &lib.mounts(), std::path::Path::new(&path))?;
+        lib.notify_changed(true);
+        Ok(r)
+    })
+    .await
+}
+
+#[tauri::command]
+async fn history_clear(state: State<'_, AppState>) -> Result<(), AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        db::open_worker(lib.db_path())?.execute("DELETE FROM plays", [])?;
+        lib.notify_changed(true);
+        Ok(())
+    })
+    .await
+}
+
+/// Sauvegarde de la bibliothèque vers `dest` (tâche suivie dans le panneau des tâches).
+#[tauri::command]
+async fn backup_run(state: State<'_, AppState>, dest: String) -> Result<djtools::backup::CopyReport, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        let conn = db::open_worker(lib.db_path())?;
+        let task = lib.tasks.start("tasks.backup", None);
+        let r = djtools::backup::backup(&lib, &conn, std::path::Path::new(&dest), Some(&task));
+        match &r {
+            Ok(_) => task.finish(),
+            Err(e) => task.fail(e.to_string()),
+        }
+        if r.as_ref().map(|x| !x.cancelled).unwrap_or(false) {
+            settings::set(&conn, "backup_last", &db::today())?;
+        }
+        r
+    })
+    .await
+}
+
+/// Copie vers une clé USB (ou tout autre dossier), avec playlist M3U8.
+#[tauri::command]
+async fn usb_copy(state: State<'_, AppState>, ids: Vec<i64>, dest: String, layout: djtools::backup::Layout, name: String, m3u: bool) -> Result<djtools::backup::CopyReport, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        let conn = db::open_worker(lib.db_path())?;
+        let task = lib.tasks.start("tasks.usbCopy", None);
+        let r = djtools::backup::copy_to(&lib, &conn, &ids, std::path::Path::new(&dest), layout, &name, m3u, Some(&task));
+        match &r {
+            Ok(_) => task.finish(),
+            Err(e) => task.fail(e.to_string()),
+        }
+        r
+    })
+    .await
+}
+
+/// Mesure du volume perçu en tâche de fond (tous les morceaux non mesurés, ou `ids`).
+#[tauri::command]
+async fn loudness_run(state: State<'_, AppState>, ids: Option<Vec<i64>>) -> Result<bool, AppError> {
+    use std::sync::atomic::Ordering;
+    let lib = state.library()?.clone();
+    if LOUDNESS_RUNNING.swap(true, Ordering::SeqCst) {
+        return Ok(false);
+    }
+    std::thread::spawn(move || {
+        let task = lib.tasks.start("tasks.loudness", None);
+        let res = db::open_worker(lib.db_path()).and_then(|conn| djtools::loudness::run(&lib, &conn, ids.as_deref(), Some(&task)));
+        match res {
+            Ok(_) => task.finish(),
+            Err(e) => task.fail(e.to_string()),
+        }
+        LOUDNESS_RUNNING.store(false, Ordering::SeqCst);
+    });
+    Ok(true)
+}
+
+/// Analyse BPM / tonalité / énergie en tâche de fond (morceaux sans BPM ou tonalité, ou `ids`).
+#[tauri::command]
+async fn analysis_run(state: State<'_, AppState>, ids: Option<Vec<i64>>) -> Result<bool, AppError> {
+    use std::sync::atomic::Ordering;
+    let lib = state.library()?.clone();
+    if ANALYSIS_RUNNING.swap(true, Ordering::SeqCst) {
+        return Ok(false);
+    }
+    std::thread::spawn(move || {
+        let task = lib.tasks.start("tasks.analysis", None);
+        let res = db::open_worker(lib.db_path()).and_then(|conn| djtools::analysis::run(&lib, &conn, ids.as_deref(), Some(&task)));
+        match res {
+            Ok(_) => task.finish(),
+            Err(e) => task.fail(e.to_string()),
+        }
+        ANALYSIS_RUNNING.store(false, Ordering::SeqCst);
+    });
+    Ok(true)
+}
+
+#[tauri::command]
+async fn analysis_proposals(state: State<'_, AppState>) -> Result<Vec<djtools::analysis::Proposal>, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || djtools::analysis::proposals(&db::open_worker(lib.db_path())?)).await
+}
+
+#[tauri::command]
+async fn analysis_apply(state: State<'_, AppState>, ids: Vec<i64>) -> Result<EditReport, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        let conn = db::open_worker(lib.db_path())?;
+        let task = (ids.len() > 3).then(|| lib.tasks.start("tasks.edit", None));
+        let r = djtools::analysis::apply(&lib, &conn, &ids, task.as_ref());
+        if let Some(t) = task {
+            t.finish();
+        }
+        r
+    })
+    .await
+}
+
+/// Aperçu de la réparation des dates abîmées (morceaux `ids`, sinon toute la bibliothèque).
+#[tauri::command]
+async fn dates_plan(state: State<'_, AppState>, ids: Option<Vec<i64>>) -> Result<Vec<djtools::dates::RepairItem>, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        let conn = db::open_worker(lib.db_path())?;
+        let ids = match ids {
+            Some(v) => v,
+            None => all_track_ids(&conn)?,
+        };
+        djtools::dates::plan(&lib, &conn, &ids)
+    })
+    .await
+}
+
+#[tauri::command]
+async fn dates_apply(state: State<'_, AppState>, ids: Vec<i64>) -> Result<EditReport, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || djtools::dates::apply(&lib, &db::open_worker(lib.db_path())?, &ids)).await
+}
+
 #[tauri::command]
 async fn update_check() -> Result<update::UpdateInfo, AppError> {
     blocking(update::check).await
@@ -1498,6 +1720,26 @@ pub fn run() {
             convert_apply,
             update_check,
             open_release_page,
+            tags_list,
+            tag_create,
+            tag_update,
+            tag_delete,
+            tag_apply,
+            stats_get,
+            set_create,
+            set_tracks,
+            set_move,
+            set_suggestions,
+            history_import,
+            history_clear,
+            backup_run,
+            usb_copy,
+            loudness_run,
+            analysis_run,
+            analysis_proposals,
+            analysis_apply,
+            dates_plan,
+            dates_apply,
             watch_chart,
             watch_genres,
             watch_releases,

@@ -58,6 +58,11 @@ fn column(field: &str) -> Option<(&'static str, &'static str)> {
         "duration" => ("(t.duration_ms / 1000)", "number"),
         "rekordbox" => ("(t.id IN (SELECT track_id FROM rekordbox_tracks))", "bool"),
         "hasCover" => ("(t.cover_count > 0)", "bool"),
+        // Phase 6
+        "userTag" => ("(SELECT group_concat(g.name, ' | ') FROM track_user_tags tt JOIN user_tags g ON g.id = tt.tag_id WHERE tt.track_id = t.id)", "text"),
+        "plays" => ("(SELECT count(*) FROM plays p WHERE p.track_id = t.id)", "number"),
+        "energy" => ("(SELECT energy FROM analysis a WHERE a.track_id = t.id)", "number"),
+        "lufs" => ("(SELECT lufs FROM loudness l WHERE l.track_id = t.id)", "number"),
         _ => return None,
     })
 }
@@ -160,6 +165,12 @@ pub fn create(conn: &Connection, name: &str, rules: Option<&Rules>) -> Result<i6
     Ok(conn.last_insert_rowid())
 }
 
+/// Nouveau set (liste ordonnée de l’écran Sets, phase 6).
+pub fn create_set(conn: &Connection, name: &str) -> Result<i64, AppError> {
+    conn.execute("INSERT INTO playlists (name, kind) VALUES (?1, 'set')", [clean_name(name)?])?;
+    Ok(conn.last_insert_rowid())
+}
+
 pub fn update(conn: &Connection, id: i64, name: Option<&str>, rules: Option<&Rules>) -> Result<(), AppError> {
     if let Some(n) = name {
         conn.execute("UPDATE playlists SET name = ?2 WHERE id = ?1", params![id, clean_name(n)?])?;
@@ -179,7 +190,7 @@ pub fn delete(conn: &Connection, id: i64) -> Result<(), AppError> {
 
 pub fn add_tracks(conn: &Connection, id: i64, ids: &[i64]) -> Result<usize, AppError> {
     let kind: String = conn.query_row("SELECT kind FROM playlists WHERE id = ?1", [id], |r| r.get(0))?;
-    if kind != "static" {
+    if kind == "smart" {
         return Err(AppError::InvalidSetting("un filtre intelligent se remplit tout seul".into()));
     }
     let mut pos: i64 = conn.query_row("SELECT coalesce(max(position), 0) FROM playlist_tracks WHERE playlist_id = ?1", [id], |r| r.get(0))?;

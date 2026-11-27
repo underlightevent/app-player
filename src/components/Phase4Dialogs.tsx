@@ -71,7 +71,8 @@ export function AddToPlaylistDialog({ ids, onClose, onDone }: { ids: number[]; o
   const [lists, setLists] = useState<Playlist[]>([]);
   const [name, setName] = useState("");
   useEffect(() => {
-    void playlistsList().then((l) => setLists(l.filter((p) => p.kind === "static")));
+    // Playlists et sets (phase 6) ; les filtres intelligents se remplissent tout seuls.
+    void playlistsList().then((l) => setLists(l.filter((p) => p.kind === "static" || p.kind === "set")));
   }, []);
   const add = async (p: Playlist) => {
     const n = await playlistAdd(p.id, ids);
@@ -86,7 +87,7 @@ export function AddToPlaylistDialog({ ids, onClose, onDone }: { ids: number[]; o
             <li key={p.id} className="playlist-row">
               <button className="playlist-open" onClick={() => void add(p)}>
                 <ListMusic size={16} aria-hidden />
-                <span className="playlist-name">{p.name}</span>
+                <span className="playlist-name">{p.kind === "set" ? `${t("sets.prefix")} ${p.name}` : p.name}</span>
                 <span className="muted small tabular">{t("playlists.count", { count: p.count })}</span>
               </button>
             </li>

@@ -306,3 +306,33 @@ Liste d'environ 70 grands labels dans l'interface (électro, majors, rap frança
 
 ### D-511 · Disque interne du Mac présenté depuis « / »
 Sur les Mac récents, les fichiers de l'utilisateur sont sur la partie « données » du disque interne, montée à `/System/Volumes/Data` et visible depuis `/` par les liens du système (firmlinks : /Users, /private…). L'application construisait des chemins `/System/Volumes/Data/Users/…` : les fichiers étaient trouvés, mais ces chemins n'auraient pas correspondu à ceux de Rekordbox (export XML, import, journal) ni à ce que l'utilisateur connaît. Le point de montage présenté pour ce volume est maintenant `/`. Les chemins relatifs enregistrés et l'identifiant du volume (UUID) ne changent pas. Repéré grâce au test de quarantaine sur la machine macOS de GitHub (0.6.1).
+
+## Phase 6 — Outils du DJ
+
+### D-601 · Sets
+Un set est une playlist de type `set` (même table `playlists`, ordre gardé par `position`) : réutilise l'ajout, le retrait, l'export M3U8 et l'export XML vers Rekordbox. Compatibilité harmonique sur la roue Camelot : même tonalité, ±1, relative (A ↔ B), +2 (« montée d'énergie »), sinon « risque de sonner faux ». Écart de BPM en % en tenant compte du demi et du double tempo. Suggestions : tonalité compatible, BPM dans l'écart choisi (3, 6 ou 10 %), +15 points pour le même genre, 30 au plus. Réordonnancement par le glisser-déposer interne de l'application (le glisser-déposer HTML ne fonctionne pas dans la fenêtre sous Windows, voir core/dnd.ts) et par les flèches.
+
+### D-602 · Étiquettes personnelles
+Tables `user_tags` et `track_user_tags` (migration 11). Gardées dans la base, pas écrites dans les fichiers : les logiciels DJ les liraient mal et un tag de plus dans les fichiers n'apporte rien ici. Filtre de la bibliothèque, règle des filtres intelligents (« Étiquette contient… »), colonne et panneau de détail.
+
+### D-603 · Historique de jeu
+Table `plays` (morceau, date, source ; unique) : une soirée compte une fois par morceau et réimporter ne double rien. Sources : XML de Rekordbox (listes du dossier « HISTORY », « Historique », ou dont le nom contient une date) et listes exportées en M3U8 / TXT (date prise dans le nom du fichier, sinon sa date de modification). Rapprochement par chemin complet, sinon par nom de fichier s'il est unique. Le lecteur de l'application ne compte pas comme un passage.
+
+### D-604 · Sauvegarde et copie USB
+Copie dans un fichier temporaire, comparaison BLAKE3 du fichier entier avec l'original, puis renommage ; la copie reprend la date de modification de l'original, ce qui permet la seconde passe incrémentale (même taille et même date à 2 s près, à cause de FAT/exFAT). Rien n'est jamais effacé dans la destination : une ancienne copie différente est renommée « nom (ancienne AAAA-MM-JJ).ext ». Destination refusée si elle est dans un dossier de la bibliothèque. Sauvegarde rangée par nom de disque d'origine ; copie USB à plat, par playlist ou en arborescence, avec M3U8 à chemins relatifs. Rappel au démarrage (réglage `backup_remind`, désactivé par défaut).
+
+### D-605 · Volume perçu (LUFS)
+Bibliothèque `ebur128` (licence MIT) : volume intégré EBU R128 et crête vraie. Table `loudness` (gardée par taille et date du fichier). Seuils des compteurs : au-dessus de −5 LUFS « très fort », en dessous de −14 LUFS « faible » (les masters de club sont vers −10 à −6). Vérifié sur un sinus de référence (−20 dBFS → −20 LUFS à 0,7 LU près, conforme au test de l'EBU).
+
+### D-606 · Analyse BPM, tonalité et énergie
+Ajoutée au périmètre à la demande de l'utilisateur. Programme maison, sans bibliothèque externe (rustfft déjà présent) :
+- BPM : enveloppe des attaques **des graves seuls** (grosse caisse, sous 150 Hz ; tout le spectre en secours), autocorrélation, peigne sur 1, 2 et 4 périodes (pas 3, qui faisait gagner les 2/3 du tempo), période la plus rapide bien marquée, ramenée entre 78 et 185 BPM par doublements et moitiés. Testé sur des rythmes synthétiques (90, 124, 128, 140, 174 BPM) et sur la bibliothèque de l'utilisateur (lecture seule) : 33 sur 34 identiques aux BPM de ses tags, 1 au double.
+- Tonalité : chromagramme 65 Hz – 2,1 kHz, profils de Krumhansl. Sur la bibliothèque : 25 sur 44 exactes, 8 voisines. Les profils « EDMA » et d'autres réglages du chromagramme ont été essayés et donnaient moins bien (23 et 21).
+- Énergie (1–10) : volume moyen, brillance, densité d'attaques ; estimation, gardée dans la base seulement.
+Les résultats sont gardés dans la table `analysis` puis proposés ; seules les valeurs **manquantes** sont écrites (modification automatique : champs verrouillés jamais touchés ; annulable).
+
+### D-607 · Réparation des dates ID3
+Les trames de date mal formées (TDRC, TDEN, TDOR, TDRL, TDTG, TYER, TDAT, TIME, TRDA, TORY) sont remplacées par du remplissage : même taille de tag, même taille de fichier, autres trames et son identiques (empreinte du son vérifiée, relecture stricte exigée). Les octets d'origine du tag sont gardés dans l'historique (kind `raw_tag`) : l'annulation les remet exactement, si le fichier n'a pas changé entre-temps. Tags désynchronisés, à en-tête étendu, compressés ou chiffrés : non touchés.
+
+### D-608 · Vignettes, glisser-déposer, mises à jour, Tidal
+Vignettes : colonne optionnelle, pochette en 64 px chargée à l'affichage de la ligne, gardée en mémoire pour la session. Glisser des morceaux du tableau sur « Playlists » ou « Sets » dans la barre latérale ouvre le choix de la playlist ou du set. Installation automatique des mises à jour : toujours préparée mais inactive, elle exige une clé de signature des mises à jour que seul l'utilisateur peut créer et garder (docs/SIGNATURE.md) ; la vérification et le lien de téléchargement restent en place. Tidal : non fait dans cette phase (documentation officielle non vérifiée), noté dans docs/IDEES.md.

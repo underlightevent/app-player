@@ -34,7 +34,7 @@ export interface Rules {
 export interface Playlist {
   id: number;
   name: string;
-  kind: "static" | "smart";
+  kind: "static" | "smart" | "set";
   rules: Rules | null;
   count: number;
 }
@@ -73,6 +73,11 @@ export const RULE_FIELDS: Record<string, "text" | "number" | "bool"> = {
   duration: "number",
   rekordbox: "bool",
   hasCover: "bool",
+  // Phase 6
+  userTag: "text",
+  plays: "number",
+  energy: "number",
+  lufs: "number",
 };
 
 export const RULE_OPS: Record<"text" | "number" | "bool", string[]> = {
@@ -85,6 +90,7 @@ export const RULE_OPS: Record<"text" | "number" | "bool", string[]> = {
 const now = Math.floor(Date.now() / 1000);
 let previewPlaylists: Playlist[] = [
   { id: 1, name: "Warm-up vendredi", kind: "static", rules: null, count: 24 },
+  { id: 7, name: "Mariage – ouverture du bal", kind: "set", rules: null, count: 4 },
   { id: 2, name: "Peak time", kind: "static", rules: null, count: 38 },
   {
     id: 3,

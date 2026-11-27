@@ -59,6 +59,10 @@ import { watchPreview, wishlistCount, type WatchItem } from "./core/watch";
 import { WatchView } from "./components/WatchView";
 import { PlaylistsView } from "./components/PlaylistsView";
 import { AddToPlaylistDialog, ConvertDialog } from "./components/Phase4Dialogs";
+import { DatesDialog, TagsDialog, UsbCopyDialog } from "./components/Phase6Dialogs";
+import { SetsView } from "./components/SetsView";
+import { StatsView } from "./components/StatsView";
+import { analysisRun, loudnessRun } from "./core/djtools";
 import { Modal } from "./components/Modal";
 import { exportM3u, openReleasePage, pickSave, playlistRemove, rekordboxStatus, updateCheck, type Playlist } from "./core/rekordbox";
 
@@ -370,6 +374,10 @@ export default function App() {
   const [renameIds, setRenameIds] = useState<number[] | null>(null);
   const [playlistDialog, setPlaylistDialog] = useState<number[] | null>(null);
   const [convertIds, setConvertIds] = useState<number[] | null>(null);
+  // Phase 6 : étiquettes, copie USB, réparation des dates.
+  const [tagsRows, setTagsRows] = useState<TrackRow[] | null>(null);
+  const [usbIds, setUsbIds] = useState<number[] | null>(null);
+  const [datesIds, setDatesIds] = useState<number[] | null>(null);
   const [quarantineAsk, setQuarantineAsk] = useState<{ ids: number[]; inRekordbox: number } | null>(null);
   const [openPlaylist, setOpenPlaylist] = useState<Playlist | null>(null);
   // Au démarrage : export Rekordbox trop ancien, nouvelle version disponible (si activé).
@@ -380,6 +388,13 @@ export default function App() {
         if (s.stale) toast.show(t("rekordbox.staleToast"), { label: t("rekordbox.reimport"), run: () => setView("settings") });
       })
       .catch(() => {});
+    // Rappel de sauvegarde (phase 6, désactivé par défaut).
+    void getSettings().then((s) => {
+      const days = Number(s.backup_remind);
+      if (!days || !s.backup_dest) return;
+      const last = s.backup_last ? new Date(s.backup_last).getTime() : 0;
+      if (Date.now() - last > days * 86_400_000) toast.show(t("backup.reminder"), { label: t("backup.openSettings"), run: () => setView("settings") });
+    });
     void getSettings().then((s) => {
       if (s.update_check === "false") return;
       void updateCheck()
@@ -503,6 +518,22 @@ export default function App() {
       disabled: !selectedRows.some((r) => r.format === "wav"),
       run: () => setConvertIds(selectedRows.filter((r) => r.format === "wav").map((r) => r.id)),
     },
+    // ---------- Phase 6 ----------
+    { id: "tags", label: t("actions.tags"), disabled: selection.size === 0, run: () => setTagsRows(selectedRows) },
+    { id: "usb", label: t("actions.usbCopy"), disabled: selection.size === 0, run: () => setUsbIds([...selection]) },
+    {
+      id: "analyze",
+      label: t("actions.analyze"),
+      disabled: selection.size === 0,
+      run: async () => toast.show((await analysisRun([...selection])) ? t("analysis.startedSelection") : t("analysis.already")),
+    },
+    {
+      id: "loudness",
+      label: t("actions.loudness"),
+      disabled: selection.size === 0,
+      run: async () => toast.show((await loudnessRun([...selection])) ? t("loudness.started") : t("loudness.already")),
+    },
+    { id: "dates", label: t("actions.repairDates"), disabled: selection.size === 0, run: () => setDatesIds([...selection]) },
   ];
 
   // ---------- Dossiers ----------
@@ -779,7 +810,8 @@ export default function App() {
 
   return (
     <div className={`app ${platformClass} ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
-      <Sidebar current={view} onSelect={setView} collapsed={sidebarCollapsed} onToggleCollapsed={() => setSidebarCollapsed((c) => !c)} tree={folderTree} badges={{ inbox: online.inbox, review: online.review, duplicates: dupCount, watch: wishCount }} />
+      <Sidebar current={view} onSelect={setView} collapsed={sidebarCollapsed} onToggleCollapsed={() => setSidebarCollapsed((c) => !c)} tree={folderTree} badges={{ inbox: online.inbox, review: online.review, duplicates: dupCount, watch: wishCount }}
+        onDropTracks={(ids) => setPlaylistDialog(ids)} />
       <TopBar
         onSearchOnline={() => void searchOnline()}
         onlineQueued={online.queued}
@@ -854,6 +886,10 @@ export default function App() {
                 setView("library");
               }}
             />
+          ) : view === "sets" ? (
+            <SetsView selection={selectedIdList} keyNotation={keyNotation} onPlay={(id) => void playTrack(id)} onToast={toast.show} />
+          ) : view === "stats" ? (
+            <StatsView />
           ) : view === "watch" ? (
             <WatchView
               values={settingsValues}
@@ -1047,6 +1083,9 @@ export default function App() {
       )}
       {playlistDialog && <AddToPlaylistDialog ids={playlistDialog} onClose={() => setPlaylistDialog(null)} onDone={(text) => toast.show(text)} />}
       {convertIds && <ConvertDialog ids={convertIds} onClose={() => setConvertIds(null)} onDone={(r) => reportDone(r, "convert.done")} />}
+      {tagsRows && <TagsDialog rows={tagsRows} onClose={() => setTagsRows(null)} onToast={toast.show} />}
+      {usbIds && <UsbCopyDialog ids={usbIds} defaultName={t("usb.defaultName")} onClose={() => setUsbIds(null)} onToast={toast.show} />}
+      {datesIds && <DatesDialog ids={datesIds} onClose={() => setDatesIds(null)} onDone={(r) => reportDone(r, "dates.repaired")} />}
       {quarantineAsk && (
         <Modal
           title={t("rekordbox.quarantineTitle")}

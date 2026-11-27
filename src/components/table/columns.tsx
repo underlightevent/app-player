@@ -1,8 +1,52 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { TFunction } from "i18next";
 import { AlertTriangle, Lock, Unplug } from "lucide-react";
 import type { TrackRow } from "../../core/library";
 import { formatBpm, formatDuration, formatKey, formatQuality, isLowBitrate } from "../../core/format";
+import { trackCover } from "../../core/edit";
+
+/** Vignettes déjà chargées (mémoire de la session, pour un défilement fluide). */
+const thumbs = new Map<string, string | null>();
+
+/** Vignette de la pochette, chargée seulement quand la ligne est affichée. */
+function CoverThumb({ row }: { row: TrackRow }) {
+  const key = `${row.id}-${row.size}`;
+  const [src, setSrc] = useState<string | null | undefined>(thumbs.get(key));
+  useEffect(() => {
+    if (row.coverCount === 0 || thumbs.has(key)) return;
+    let alive = true;
+    void trackCover(row.id, 64)
+      .catch(() => null)
+      .then((c) => {
+        thumbs.set(key, c);
+        if (alive) setSrc(c);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [key, row.id, row.coverCount]);
+  return src ? <img className="cover-thumb" src={src} alt="" /> : <span className="cover-thumb empty" />;
+}
+
+const TAG_BG: Record<string, string> = {
+  gray: "#78716c", red: "#dc2626", orange: "#ea580c", yellow: "#ca8a04", green: "#16a34a", teal: "#0d9488", blue: "#2563eb", purple: "#9333ea", pink: "#db2777",
+};
+
+export function TagChips({ tags }: { tags: { id: number; name: string; color: string }[] }) {
+  return (
+    <span className="tag-chips">
+      {tags.map((g) => (
+        <span key={g.id} className="tag-chip" style={{ borderColor: TAG_BG[g.color] ?? TAG_BG.gray, color: TAG_BG[g.color] ?? TAG_BG.gray }}>
+          {g.name}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+export function tagColor(c: string): string {
+  return TAG_BG[c] ?? TAG_BG.gray;
+}
 
 export interface ColumnDef {
   id: string;
@@ -58,6 +102,7 @@ export const COLUMNS: ColumnDef[] = [
         <span className="cover-dot missing" title={t("badges.noCover")} aria-label={t("badges.noCover")} />
       ),
   },
+  { id: "thumb", width: 44, minWidth: 36, align: "center", defaultVisible: false, render: (r) => <CoverThumb row={r} /> },
   { id: "rating", sortField: "rating", width: 84, defaultVisible: true, render: (r) => <Stars value={r.rating} /> },
   { id: "mainArtist", sortField: "mainArtist", width: 180, defaultVisible: true, render: (r) => r.mainArtist ?? "" },
   { id: "title", sortField: "title", width: 240, defaultVisible: true, render: (r) => r.title ?? r.fileName },
@@ -82,6 +127,23 @@ export const COLUMNS: ColumnDef[] = [
   },
   { id: "duration", sortField: "duration", width: 64, align: "right", defaultVisible: true, render: (r) => formatDuration(r.durationMs) },
   { id: "fileName", sortField: "fileName", width: 260, defaultVisible: false, render: (r) => r.fileName },
+  { id: "userTags", width: 160, defaultVisible: false, render: (r) => <TagChips tags={r.userTags} /> },
+  { id: "plays", sortField: "plays", width: 64, align: "right", defaultVisible: false, render: (r) => (r.playCount ? r.playCount : "") },
+  { id: "lastPlayed", sortField: "lastPlayed", width: 96, defaultVisible: false, render: (r, c) => (r.lastPlayed ? new Date(r.lastPlayed).toLocaleDateString(c.locale) : "") },
+  { id: "energy", sortField: "energy", width: 60, align: "right", defaultVisible: false, render: (r) => r.energy ?? "" },
+  {
+    id: "lufs",
+    sortField: "lufs",
+    width: 72,
+    align: "right",
+    defaultVisible: false,
+    render: (r, c) =>
+      r.lufs == null ? "" : (
+        <span className={r.lufs > -5 || r.lufs < -14 ? "text-warning" : undefined} title={c.t("columns.lufsHint")}>
+          {r.lufs.toLocaleString(c.locale, { maximumFractionDigits: 1 })}
+        </span>
+      ),
+  },
   { id: "status", width: 140, defaultVisible: true, render: (r, c) => <Badges row={r} ctx={c} /> },
 ];
 

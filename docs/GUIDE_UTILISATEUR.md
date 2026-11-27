@@ -264,6 +264,34 @@ Rekordbox ne lit dans un WAV que 5 champs (titre, artiste, album, genre, comment
 
 Rien n'est jamais converti automatiquement.
 
+## Sets
+
+L'écran **Sets** prépare l'ordre d'une soirée.
+1. Sélectionnez des morceaux dans la bibliothèque (facultatif), puis dans **Sets** tapez un nom et **Créer** : les morceaux sélectionnés y sont ajoutés. Vous pouvez aussi glisser des morceaux du tableau sur **Sets** dans la barre latérale.
+2. Pour chaque enchaînement, la colonne **Enchaînement** indique la compatibilité de tonalité (roue Camelot) : **=** même tonalité, **±1** voisine, **A↔B** relative, **+2** montée d'énergie (vert ou orange) ; **✕** risque de sonner faux (rouge). L'écart de BPM est en %.
+3. Cliquez sur un morceau : les **suggestions** en dessous montrent ce qui s'enchaîne bien après lui (tonalité compatible, BPM proche, même genre en priorité). **Ajouter** le met à la fin du set.
+4. Changez l'ordre en glissant la poignée ⋮⋮, ou avec les flèches.
+5. **M3U8**, **Rekordbox (XML)** et **Clé USB…** exportent le set.
+
+## Statistiques
+
+L'écran **Statistiques** montre la taille de la bibliothèque, la répartition par genre, décennie, format, qualité, tonalité et BPM, la place par disque, les morceaux ajoutés chaque mois et les plus joués (après import de l'historique).
+
+## Étiquettes personnelles
+
+Sélectionnez des morceaux puis **… › Étiquettes…** : cliquez sur une étiquette pour la poser ou la retirer, ou créez-en une (nom et couleur), par exemple « Mariage », « Cocktail », « Dancefloor », « Version clean ». Les étiquettes restent dans l'application (elles ne sont pas écrites dans les fichiers). Elles servent de **filtre** (menu **Étiquette** au-dessus du tableau), de **règle de filtre intelligent** (« Étiquette contient Mariage ») et s'affichent dans la colonne **Étiquettes** (clic droit sur les en-têtes pour l'afficher) et dans le panneau de détail.
+
+## Outils du DJ (Réglages)
+
+- **Historique de jeu** : dans Rekordbox, **Fichier › Exporter la collection au format xml**, puis **Importer un historique…** : les listes du dossier « HISTORY » sont lues. Colonnes **Passages** et **Dernier passage**, filtre **Joué › Jamais joué / Ces 30 derniers jours**, compteur « Jamais joués » dans Santé de la bibliothèque.
+- **Sauvegarde** : choisissez un dossier sur un disque de secours, puis **Sauvegarder maintenant**. La première fois tout est copié ; ensuite, seulement ce qui a changé. Chaque copie est vérifiée et rien n'est jamais effacé dans la sauvegarde. Un **rappel** au démarrage peut être activé (7, 14 ou 30 jours).
+- **Copie vers une clé USB** : sélectionnez des morceaux (ou ouvrez un set) puis **… › Copier vers une clé USB…** : choisissez la clé, le rangement (un dossier au nom de la playlist, tout à la racine, ou l'arborescence d'origine) et, si vous voulez, une playlist M3U8 sur la clé.
+- **Volume perçu (LUFS)** : **Mesurer les morceaux pas encore mesurés** (ou **… › Mesurer le volume** sur une sélection). Colonne **Volume (LUFS)** et compteurs « très fort » / « faible ». Le son n'est jamais modifié.
+- **Analyse BPM, tonalité et énergie** : pour les morceaux sans BPM ou sans tonalité. **Analyser…** puis **Voir les résultats et les écrire…** : seules les valeurs manquantes sont écrites, Ctrl+Z annule. Le BPM est très fiable ; la tonalité est exacte environ 6 fois sur 10 (compatible pour le mixage 3 fois sur 4) : Rekordbox reste la référence. Colonne **Énergie** (1 à 10, estimation).
+- **Dates abîmées** : **Chercher les dates abîmées…** répare les fichiers dont une date mal formée bloquait la modification des tags (même taille de fichier, son et autres tags intacts, Ctrl+Z possible).
+
+Autres ajouts : colonne **Vignette** (pochettes miniatures, clic droit sur les en-têtes), et glisser des morceaux du tableau sur **Playlists** ou **Sets** dans la barre latérale pour les y ajouter.
+
 ## Sorties
 
 L'écran **Sorties** consulte des classements et des nouvelles sorties sur internet, et garde les titres repérés dans une **liste d'envies**. L'application ne télécharge jamais de musique : elle vous donne des liens vers les boutiques.
@@ -313,6 +341,7 @@ Dans l'application, le titre, la version et l'artiste restent séparés : seul l
 - **Doublons et qualité** : ordre des formats sans perte pour choisir le fichier à garder, seuil du débit faible.
 - **Rekordbox** : import du XML, mode protégé, liste « À recharger », journal des chemins, export XML (voir [Rekordbox](#rekordbox)).
 - **Mises à jour** : vérification au démarrage, « Vérifier maintenant ».
+- **Outils du DJ** : historique de jeu, sauvegarde, volume perçu, analyse BPM et tonalité, dates abîmées (voir [Outils du DJ](#outils-du-dj-réglages)).
 - **Sorties** : sources des classements et des nouveautés, extraits, site d'ouverture, labels favoris, compte Spotify (voir [Sorties](#sorties)).
 - **Base de données** : une copie est faite chaque jour (7 gardées). « Exporter la base… » pour en garder une copie où vous voulez ; « Importer une base… » la remettra en place au prochain démarrage.
 - **Signaler un problème** : copie un rapport à coller dans votre message.

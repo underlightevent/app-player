@@ -343,6 +343,7 @@ impl Library {
                 }
                 "move" => self.restore_path(&conn, op.track_id.unwrap_or_default(), state_json),
                 "quarantine" => self.restore_quarantine(&conn, op.track_id.unwrap_or_default(), state_json),
+                "raw_tag" => crate::djtools::dates::restore(self, &conn, op.track_id.unwrap_or_default(), state_json),
                 "mkdir" | "dir_move" => {
                     let other = if undo { &op.after } else { &op.before };
                     self.restore_dir(&conn, &op.kind, state_json, other)

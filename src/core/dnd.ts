@@ -11,7 +11,8 @@ import { useEffect, useRef, type MouseEvent as ReactMouseEvent, type RefObject }
 export type Payload =
   | { kind: "tracks"; ids: number[] }
   | { kind: "column"; id: string }
-  | { kind: "artist"; index: number };
+  | { kind: "artist"; index: number }
+  | { kind: "setRow"; id: number };
 
 interface Target {
   kind: Payload["kind"];

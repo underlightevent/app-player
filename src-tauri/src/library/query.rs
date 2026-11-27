@@ -29,6 +29,10 @@ pub struct Query {
     pub playlist: Option<i64>,
     /// Morceaux présents dans Rekordbox (badge) ; « reload » : à recharger dans Rekordbox.
     pub rekordbox: Option<String>,
+    /// Étiquette personnelle (phase 6).
+    pub tag: Option<i64>,
+    /// Historique de jeu : « never » (jamais joué) ou « recent » (joué ces 30 derniers jours).
+    pub played: Option<String>,
     pub sort: Vec<SortKey>,
 }
 
@@ -57,6 +61,10 @@ fn sort_column(field: &str) -> Option<&'static str> {
         "duration" => "t.duration_ms",
         "fileName" => "t.file_name COLLATE NOCASE",
         "added" => "t.id",
+        "plays" => "(SELECT count(*) FROM plays p WHERE p.track_id = t.id)",
+        "lastPlayed" => "(SELECT max(played_at) FROM plays p WHERE p.track_id = t.id)",
+        "lufs" => "(SELECT lufs FROM loudness l WHERE l.track_id = t.id)",
+        "energy" => "(SELECT energy FROM analysis a WHERE a.track_id = t.id)",
         _ => return None,
     })
 }
@@ -142,6 +150,15 @@ pub fn ids(conn: &Connection, q: &Query) -> Result<Vec<i64>, AppError> {
         Some("out") => wheres.push("t.id NOT IN (SELECT track_id FROM rekordbox_tracks)".into()),
         _ => {}
     }
+    if let Some(tag) = q.tag {
+        wheres.push("t.id IN (SELECT track_id FROM track_user_tags WHERE tag_id = ?)".into());
+        args.push(tag.into());
+    }
+    match q.played.as_deref() {
+        Some("never") => wheres.push("t.id NOT IN (SELECT track_id FROM plays)".into()),
+        Some("recent") => wheres.push("t.id IN (SELECT track_id FROM plays WHERE played_at >= date('now', '-30 days'))".into()),
+        _ => {}
+    }
     if let Some((vol, folder)) = &q.folder {
         wheres.push("t.volume_id = ? AND substr(t.rel_path, 1, length(?)) = ?".into());
         let prefix = if folder.is_empty() { String::new() } else { format!("{folder}/") };
@@ -157,8 +174,12 @@ pub fn ids(conn: &Connection, q: &Query) -> Result<Vec<i64>, AppError> {
     for k in &q.sort {
         if let Some(col) = sort_column(&k.field) {
             let bare = col.split(' ').next().unwrap_or(col);
-            // Valeurs vides toujours en fin de liste.
-            order.push(format!("({bare} IS NULL)"));
+            // Valeurs vides toujours en fin de liste (sous-requêtes : pas de découpage).
+            if col.starts_with('(') {
+                order.push(format!("({col} IS NULL)"));
+            } else {
+                order.push(format!("({bare} IS NULL)"));
+            }
             order.push(format!("{col} {}", if k.desc { "DESC" } else { "ASC" }));
         }
     }
@@ -221,6 +242,20 @@ pub struct TrackRow {
     pub in_rekordbox: bool,
     /// Tags modifiés depuis : à recharger dans Rekordbox.
     pub reload: bool,
+    /// Étiquettes personnelles (phase 6).
+    pub user_tags: Vec<UserTagRef>,
+    pub play_count: i64,
+    pub last_played: Option<String>,
+    pub lufs: Option<f64>,
+    pub energy: Option<i64>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UserTagRef {
+    pub id: i64,
+    pub name: String,
+    pub color: String,
 }
 
 /// Lignes demandées, dans l'ordre des identifiants fournis.
@@ -235,7 +270,11 @@ pub fn rows(conn: &Connection, ids: &[i64], mounts: &HashMap<i64, PathBuf>) -> R
                 t.file_name, t.rel_path, t.volume_id, v.label, t.status, t.error, t.cover_count, t.cover_width,
                 t.wav_desync,
                 EXISTS (SELECT 1 FROM rekordbox_tracks rb WHERE rb.track_id = t.id),
-                EXISTS (SELECT 1 FROM rekordbox_reload rr WHERE rr.track_id = t.id)
+                EXISTS (SELECT 1 FROM rekordbox_reload rr WHERE rr.track_id = t.id),
+                (SELECT count(*) FROM plays p WHERE p.track_id = t.id),
+                (SELECT max(played_at) FROM plays p WHERE p.track_id = t.id),
+                (SELECT lufs FROM loudness l WHERE l.track_id = t.id),
+                (SELECT energy FROM analysis a WHERE a.track_id = t.id)
          FROM tracks t JOIN volumes v ON v.id = t.volume_id WHERE t.id IN ({marks})"
     );
     let mut stmt = conn.prepare(&sql)?;
@@ -278,6 +317,11 @@ pub fn rows(conn: &Connection, ids: &[i64], mounts: &HashMap<i64, PathBuf>) -> R
             locked: vec![],
             in_rekordbox: r.get(27)?,
             reload: r.get(28)?,
+            user_tags: vec![],
+            play_count: r.get(29)?,
+            last_played: r.get(30)?,
+            lufs: r.get(31)?,
+            energy: r.get(32)?,
         })
     })?;
     for row in iter {
@@ -294,6 +338,19 @@ pub fn rows(conn: &Connection, ids: &[i64], mounts: &HashMap<i64, PathBuf>) -> R
             let (id, name) = x?;
             if let Some(row) = map.get_mut(&id) {
                 row.artists.push(name);
+            }
+        }
+        let mut st = conn.prepare(&format!(
+            "SELECT tt.track_id, g.id, g.name, g.color FROM track_user_tags tt JOIN user_tags g ON g.id = tt.tag_id
+             WHERE tt.track_id IN ({marks}) ORDER BY g.name COLLATE NOCASE"
+        ))?;
+        let it = st.query_map(params_from_iter(ids.iter()), |r| {
+            Ok((r.get::<_, i64>(0)?, UserTagRef { id: r.get(1)?, name: r.get(2)?, color: r.get(3)? }))
+        })?;
+        for x in it {
+            let (id, tag) = x?;
+            if let Some(row) = map.get_mut(&id) {
+                row.user_tags.push(tag);
             }
         }
         let mut st = conn.prepare(&format!(

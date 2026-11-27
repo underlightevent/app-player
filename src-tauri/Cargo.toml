@@ -1,6 +1,6 @@
 [package]
 name = "dj-library-manager"
-version = "0.6.2"
+version = "0.7.0"
 description = "Gestionnaire de bibliothèque audio pour DJ"
 edition = "2021"
 rust-version = "1.80"
@@ -44,6 +44,7 @@ trash = "5"
 quick-xml = "0.42"
 sha2 = "0.10"
 getrandom = "0.3"
+ebur128 = "0.1"
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = ["Win32_Storage_FileSystem", "Win32_Foundation", "Win32_System_Diagnostics_Debug"] }

@@ -26,6 +26,10 @@ export interface LibraryQuery {
   playlist: number | null;
   /** « in » : dans Rekordbox ; « reload » : à recharger dans Rekordbox. */
   rekordbox: string | null;
+  /** Étiquette personnelle (phase 6). */
+  tag: number | null;
+  /** Historique de jeu : « never » ou « recent » (30 jours). */
+  played: string | null;
   sort: SortKey[];
 }
 
@@ -40,6 +44,8 @@ export const emptyQuery: LibraryQuery = {
   health: null,
   playlist: null,
   rekordbox: null,
+  tag: null,
+  played: null,
   sort: [],
 };
 
@@ -79,6 +85,12 @@ export interface TrackRow {
   inRekordbox: boolean;
   /** Tags modifiés depuis : à recharger dans Rekordbox. */
   reload: boolean;
+  /** Phase 6 */
+  userTags: { id: number; name: string; color: string }[];
+  playCount: number;
+  lastPlayed: string | null;
+  lufs: number | null;
+  energy: number | null;
 }
 
 export interface RootInfo {
@@ -146,6 +158,11 @@ const previewRows: TrackRow[] = Array.from({ length: previewCount }, (_, i) => (
   locked: [],
   inRekordbox: i % 3 !== 2,
   reload: i % 40 === 0,
+  userTags: i % 9 === 0 ? [{ id: 1, name: "Mariage", color: "pink" }] : i % 13 === 0 ? [{ id: 3, name: "Dancefloor", color: "orange" }] : [],
+  playCount: i % 5,
+  lastPlayed: i % 5 ? "2026-11-" + String(1 + (i % 27)).padStart(2, "0") : null,
+  lufs: -6 - (i % 9),
+  energy: 1 + (i % 10),
 }));
 
 export async function libraryQuery(query: LibraryQuery): Promise<number[]> {

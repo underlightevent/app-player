@@ -1,6 +1,8 @@
 import { useTranslation } from "react-i18next";
+import { useDropTarget } from "../core/dnd";
 import {
   AudioLines,
+  BarChart3,
   CopyX,
   Folder,
   HeartPulse,
@@ -8,6 +10,7 @@ import {
   Library,
   ListChecks,
   ListMusic,
+  ListOrdered,
   PanelLeftClose,
   Radar,
   PanelLeftOpen,
@@ -24,6 +27,8 @@ export type ViewId =
   | "health"
   | "quarantine"
   | "playlists"
+  | "sets"
+  | "stats"
   | "watch"
   | "folders"
   | "settings";
@@ -44,7 +49,9 @@ const TOOLS: NavEntry[] = [
   { id: "health", icon: HeartPulse },
   { id: "quarantine", icon: ShieldAlert },
   { id: "playlists", icon: ListMusic },
+  { id: "sets", icon: ListOrdered },
   { id: "watch", icon: Radar },
+  { id: "stats", icon: BarChart3 },
   { id: "folders", icon: Folder },
 ];
 
@@ -57,27 +64,48 @@ interface Props {
   tree?: React.ReactNode;
   /** Nombre d'éléments à traiter par écran (Inbox, À valider, Doublons). */
   badges?: Partial<Record<ViewId, number>>;
+  /** Morceaux glissés depuis le tableau sur « Playlists » ou « Sets » (phase 6). */
+  onDropTracks?: (ids: number[]) => void;
 }
 
-export function Sidebar({ current, onSelect, collapsed, onToggleCollapsed, tree, badges }: Props) {
+/** Entrée de la barre latérale ; « Playlists » et « Sets » acceptent des morceaux glissés
+ * depuis le tableau (glisser-déposer interne, voir core/dnd). */
+function NavItem({ entry, current, collapsed, badge, onSelect, onDropTracks }: {
+  entry: NavEntry;
+  current: ViewId;
+  collapsed: boolean;
+  badge?: number;
+  onSelect: (v: ViewId) => void;
+  onDropTracks?: (ids: number[]) => void;
+}) {
   const { t } = useTranslation();
-
-  const item = ({ id, icon: Icon }: NavEntry) => (
+  const { id, icon: Icon } = entry;
+  const accepts = (id === "playlists" || id === "sets") && !!onDropTracks;
+  const ref = useDropTarget<HTMLButtonElement>("tracks", (p) => p.kind === "tracks" && onDropTracks?.(p.ids), accepts);
+  return (
     <button
-      key={id}
+      ref={ref}
       className="nav-item"
       aria-current={current === id ? "page" : undefined}
       onClick={() => onSelect(id)}
-      title={collapsed ? t(`nav.${id}`) : undefined}
+      title={collapsed ? t(`nav.${id}`) : accepts ? t("nav.dropHint") : undefined}
     >
       <Icon size={20} strokeWidth={1.75} aria-hidden />
       <span className="nav-label">{t(`nav.${id}`)}</span>
-      {!!badges?.[id] && (
-        <span className="nav-badge tabular" aria-label={t("nav.toHandle", { count: badges[id] })}>
-          {badges[id]! > 999 ? "999+" : badges[id]}
+      {!!badge && (
+        <span className="nav-badge tabular" aria-label={t("nav.toHandle", { count: badge })}>
+          {badge > 999 ? "999+" : badge}
         </span>
       )}
     </button>
+  );
+}
+
+export function Sidebar({ current, onSelect, collapsed, onToggleCollapsed, tree, badges, onDropTracks }: Props) {
+  const { t } = useTranslation();
+
+  const item = (entry: NavEntry) => (
+    <NavItem key={entry.id} entry={entry} current={current} collapsed={collapsed} badge={badges?.[entry.id]} onSelect={onSelect} onDropTracks={onDropTracks} />
   );
 
   return (

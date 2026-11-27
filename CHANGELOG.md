@@ -1,5 +1,16 @@
 # Journal des versions
 
+## 0.7.0 — Phase 6 : outils du DJ (à valider)
+
+- Écran Sets : ordre d'un set, compatibilité de tonalité (Camelot) et de BPM de chaque enchaînement, suggestions du morceau suivant, export M3U8, Rekordbox et clé USB.
+- Étiquettes personnelles (mariage, cocktail, dancefloor…) : filtre, règle de filtre intelligent, colonne.
+- Historique de jeu importé de Rekordbox : passages, dernier passage, « jamais joué ».
+- Sauvegarde vérifiée et incrémentale de la bibliothèque ; copie vérifiée vers une clé USB avec M3U8.
+- Volume perçu (LUFS) mesuré ; compteurs « très fort » / « faible ».
+- Analyse BPM, tonalité et énergie pour les morceaux qui n'en ont pas (aperçu avant écriture).
+- Écran Statistiques.
+- Réparation des dates ID3 abîmées (annulable) ; vignettes des pochettes ; glisser des morceaux sur Playlists et Sets.
+
 ## 0.6.2 — Correction pour le Mac (à valider)
 
 - Sur Mac, les chemins du disque interne s’écrivaient « /System/Volumes/Data/Users/… » au lieu de « /Users/… » (problème pour Rekordbox et à l’affichage). Aucun changement pour Windows.

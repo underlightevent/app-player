@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, ExternalLink, EyeOff, FileDown, Heart, Info, ListPlus, LoaderCircle, Music2, Pause, Play, RefreshCw, Search, Trash2, Star, WifiOff } from "lucide-react";
 import { isCoreError } from "../core/api";
@@ -84,12 +84,17 @@ function readLast(raw: string | undefined): Last {
 export function WatchView({ values, onSettingChange, onToast, onOpenSettings, onWishlistChanged, playingKey, playing, onPlayPreview, onTogglePlay }: Props) {
   const { t, i18n } = useTranslation();
   const [last, setLastState] = useState<Last>(() => readLast(values.watch_last));
-  const setLast = (patch: Partial<Last>) =>
-    setLastState((l) => {
-      const n = { ...l, ...patch };
-      onSettingChange("watch_last", JSON.stringify(n));
-      return n;
-    });
+  // Choix retenus : mis à jour ici, enregistrés après l'affichage (jamais pendant).
+  const setLast = (patch: Partial<Last>) => setLastState((l) => ({ ...l, ...patch }));
+  const firstSave = useRef(true);
+  useEffect(() => {
+    if (firstSave.current) {
+      firstSave.current = false;
+      return;
+    }
+    onSettingChange("watch_last", JSON.stringify(last));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [last]);
 
   const enabled = {
     apple: values.watch_apple === "true",
