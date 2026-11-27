@@ -1,6 +1,6 @@
 # Journal des versions
 
-## 0.3.0 — Phase 2 : recherche en ligne et Inbox (à valider)
+## 0.3.0 — Phase 2 : recherche en ligne et Inbox (validée sous Windows le 27 novembre 2026)
 
 - Empreintes audio calculées sur l'ordinateur ; AcoustID, MusicBrainz et Cover Art Archive (Deezer et iTunes disponibles mais désactivés par défaut, voir docs/SOURCES.md).
 - Score de confiance détaillé ; application automatique prudente (champs vides seulement, jamais sans empreinte, jamais entre deux versions différentes) ; file « À valider » avec comparaison champ par champ, choix du candidat et de la pochette, raccourcis clavier, acceptation d'un album entier ; liste « Non identifiés » ; taux d'identification affiché.
