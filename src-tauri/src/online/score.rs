@@ -23,7 +23,7 @@ pub fn similarity(a: &str, b: &str) -> f64 {
 }
 
 /// Versions équivalentes : « Original Mix » et « Original » ; sinon identiques après normalisation.
-fn same_version(a: &str, b: &str) -> bool {
+pub fn same_version(a: &str, b: &str) -> bool {
     let norm = |s: &str| {
         let c = comparable(s);
         match c.as_str() {

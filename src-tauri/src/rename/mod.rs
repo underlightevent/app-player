@@ -113,6 +113,44 @@ fn with_suffix(stem: &str, ext: &str, n: usize) -> String {
     format!("{stem} ({n}).{ext}")
 }
 
+/// Nom sans suffixe de conflit « (2) », « (3) »…
+fn without_suffix(stem: &str) -> &str {
+    if let Some(open) = stem.rfind(" (") {
+        let inner = &stem[open + 2..];
+        if let Some(num) = inner.strip_suffix(')') {
+            if !num.is_empty() && num.chars().all(|c| c.is_ascii_digit()) {
+                return &stem[..open];
+            }
+        }
+    }
+    stem
+}
+
+/// Morceaux dont le nom de fichier ne suit pas le modèle (un suffixe « (2) » est toléré).
+pub fn nonconforming(conn: &Connection, tpl: &str) -> Result<Vec<i64>, AppError> {
+    if template::validate(tpl).is_err() {
+        return Ok(vec![]);
+    }
+    let key_camelot = crate::library::edit::write_settings(conn).key_camelot;
+    let ids: Vec<i64> = {
+        let mut st = conn.prepare("SELECT id FROM tracks WHERE status = 'ok'")?;
+        let v = st.query_map([], |r| r.get(0))?.collect::<Result<Vec<i64>, _>>()?;
+        v
+    };
+    let mut out = Vec::new();
+    for r in load_rows(conn, &ids, key_camelot)? {
+        let (_, name) = split_rel(&r.rel_path);
+        let stem = nfc(&Path::new(name).file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default());
+        let Ok(Some(expected)) = render(tpl, &r.values) else { continue }; // tags insuffisants : rien à proposer
+        let expected = sanitize(&expected);
+        if expected.is_empty() || stem == expected || without_suffix(&stem) == expected {
+            continue;
+        }
+        out.push(r.id);
+    }
+    Ok(out)
+}
+
 /// Calcule l'aperçu du renommage.
 pub fn plan(lib: &Library, conn: &Connection, ids: &[i64], tpl: &str, on_conflict: OnConflict) -> Result<Vec<PlanItem>, AppError> {
     template::validate(tpl).map_err(|e| AppError::InvalidSetting(e.to_string()))?;

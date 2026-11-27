@@ -8,9 +8,11 @@ mod artwork;
 mod audio;
 mod db;
 mod diagnostics;
+mod duplicates;
 mod error;
 mod history;
 mod library;
+mod quality;
 mod online;
 mod rename;
 mod settings;
@@ -639,6 +641,178 @@ async fn parse_apply(state: State<'_, AppState>, ids: Vec<i64>, pattern: String,
     .await
 }
 
+// ---------- Doublons, quarantaine, contrôle qualité (phase 3) ----------
+
+static DUPLICATES_RUNNING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+static QUALITY_RUNNING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Lance la recherche des doublons en tâche de fond (empreintes calculées si besoin).
+#[tauri::command]
+async fn duplicates_find(state: State<'_, AppState>) -> Result<bool, AppError> {
+    use std::sync::atomic::Ordering;
+    let lib = state.library()?.clone();
+    if DUPLICATES_RUNNING.swap(true, Ordering::SeqCst) {
+        return Ok(false);
+    }
+    std::thread::spawn(move || {
+        let task = lib.tasks.start("tasks.duplicates", None);
+        match duplicates::find(&lib, Some(&task)) {
+            Ok(_) => task.finish(),
+            Err(AppError::Cancelled) => task.finish(),
+            Err(e) => task.fail(e.to_string()),
+        }
+        DUPLICATES_RUNNING.store(false, Ordering::SeqCst);
+        lib.notify_changed(true);
+    });
+    Ok(true)
+}
+
+#[tauri::command]
+async fn duplicates_list(state: State<'_, AppState>) -> Result<Vec<duplicates::Group>, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        let conn = db::open_worker(lib.db_path())?;
+        duplicates::list(&conn, &lib.mounts())
+    })
+    .await
+}
+
+#[tauri::command]
+async fn duplicates_set_keeper(state: State<'_, AppState>, group: i64, track: i64) -> Result<(), AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || duplicates::set_keeper(&db::open_worker(lib.db_path())?, group, track)).await
+}
+
+#[tauri::command]
+async fn duplicates_not_duplicates(state: State<'_, AppState>, group: i64) -> Result<(), AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        duplicates::not_duplicates(&db::open_worker(lib.db_path())?, group)?;
+        lib.notify_changed(true);
+        Ok(())
+    })
+    .await
+}
+
+#[tauri::command]
+async fn duplicates_plan(state: State<'_, AppState>, requests: Vec<duplicates::ResolveRequest>) -> Result<Vec<duplicates::ResolvePlan>, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        let conn = db::open_worker(lib.db_path())?;
+        let mounts = lib.mounts();
+        requests.iter().map(|r| duplicates::plan(&conn, &mounts, r)).collect()
+    })
+    .await
+}
+
+#[tauri::command]
+async fn duplicates_resolve(state: State<'_, AppState>, requests: Vec<duplicates::ResolveRequest>) -> Result<EditReport, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        let task = (requests.len() > 1).then(|| lib.tasks.start("tasks.duplicatesResolve", None));
+        let r = duplicates::resolve(&lib, &requests, task.as_ref());
+        if let Some(t) = task {
+            t.finish();
+        }
+        r
+    })
+    .await
+}
+
+#[tauri::command]
+async fn quarantine_tracks(state: State<'_, AppState>, ids: Vec<i64>) -> Result<EditReport, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || lib.quarantine(&ids, "manual")).await
+}
+
+#[tauri::command]
+async fn quarantine_list(state: State<'_, AppState>) -> Result<Vec<library::quarantine::QuarantineItem>, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || lib.quarantine_list()).await
+}
+
+#[tauri::command]
+async fn quarantine_restore(state: State<'_, AppState>, ids: Vec<i64>) -> Result<EditReport, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || lib.quarantine_restore(&ids)).await
+}
+
+#[tauri::command]
+async fn quarantine_summary(state: State<'_, AppState>, ids: Option<Vec<i64>>) -> Result<library::quarantine::QuarantineSummary, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || lib.quarantine_summary(ids.as_deref())).await
+}
+
+/// Envoie les fichiers à la corbeille du système. L'interface a d'abord demandé
+/// confirmation en affichant leur nombre et leur taille.
+#[tauri::command]
+async fn quarantine_empty(state: State<'_, AppState>, ids: Option<Vec<i64>>) -> Result<EditReport, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || lib.quarantine_empty(ids.as_deref())).await
+}
+
+/// Analyse qualité en tâche de fond : tous les morceaux pas encore analysés, ou ceux demandés.
+#[tauri::command]
+async fn quality_analyze(state: State<'_, AppState>, ids: Option<Vec<i64>>) -> Result<bool, AppError> {
+    use std::sync::atomic::Ordering;
+    let lib = state.library()?.clone();
+    if QUALITY_RUNNING.swap(true, Ordering::SeqCst) {
+        return Ok(false);
+    }
+    std::thread::spawn(move || {
+        let task = lib.tasks.start("tasks.quality", None);
+        match quality::run(&lib, ids, &task) {
+            Ok(_) => task.finish(),
+            Err(e) => task.fail(e.to_string()),
+        }
+        QUALITY_RUNNING.store(false, Ordering::SeqCst);
+    });
+    Ok(true)
+}
+
+#[tauri::command]
+async fn quality_info(state: State<'_, AppState>, id: i64) -> Result<Option<quality::QualityInfo>, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || quality::info(&db::open_worker(lib.db_path())?, id)).await
+}
+
+/// Spectrogramme d'un morceau (image « data: »), calculé à la demande.
+#[tauri::command]
+async fn quality_spectrogram(state: State<'_, AppState>, id: i64) -> Result<String, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        let conn = db::open_worker(lib.db_path())?;
+        let path = lib.track_path(&conn, id)?.ok_or(AppError::Offline)?;
+        let png = quality::spectrogram_png(&path).map_err(|e| AppError::Io(std::io::Error::other(e)))?;
+        Ok(format!("data:image/png;base64,{}", util::b64_encode(&png)))
+    })
+    .await
+}
+
+#[tauri::command]
+async fn health_report(state: State<'_, AppState>) -> Result<quality::HealthReport, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || quality::health(&db::open_worker(lib.db_path())?)).await
+}
+
+#[tauri::command]
+async fn relocate_preview(state: State<'_, AppState>, dir: String) -> Result<Vec<quality::Relocation>, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        let task = lib.tasks.start("tasks.relocate", None);
+        let r = quality::relocate_preview(&lib, std::path::Path::new(&dir), Some(&task));
+        task.finish();
+        r
+    })
+    .await
+}
+
+#[tauri::command]
+async fn relocate_apply(state: State<'_, AppState>, items: Vec<quality::Relocation>) -> Result<usize, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || quality::relocate_apply(&lib, &items)).await
+}
+
 #[tauri::command]
 fn tasks_list(state: State<'_, AppState>) -> Vec<TaskInfo> {
     state.tasks.list()
@@ -801,6 +975,23 @@ pub fn run() {
             clean_apply,
             parse_preview,
             parse_apply,
+            duplicates_find,
+            duplicates_list,
+            duplicates_set_keeper,
+            duplicates_not_duplicates,
+            duplicates_plan,
+            duplicates_resolve,
+            quarantine_tracks,
+            quarantine_list,
+            quarantine_restore,
+            quarantine_summary,
+            quarantine_empty,
+            quality_analyze,
+            quality_info,
+            quality_spectrogram,
+            health_report,
+            relocate_preview,
+            relocate_apply,
             tasks_list,
             task_cancel
         ])

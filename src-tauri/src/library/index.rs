@@ -206,7 +206,7 @@ pub fn scan_root(
         let seen: std::collections::HashSet<&str> = found.iter().map(|f| f.rel.as_str()).collect();
         let tx = conn.transaction()?;
         for (rel, e) in &existing {
-            if !seen.contains(rel.as_str()) && e.status != "missing" {
+            if !seen.contains(rel.as_str()) && e.status != "missing" && e.status != "quarantined" {
                 tx.execute("UPDATE tracks SET status = 'missing' WHERE id = ?1", [e.id])?;
                 stats.missing += 1;
             }

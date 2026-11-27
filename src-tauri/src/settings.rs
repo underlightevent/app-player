@@ -31,6 +31,13 @@ const KNOWN: &[(&str, &[&str], &str)] = &[
     ("review_threshold", &["40", "45", "50", "55", "60", "65", "70"], "60"),
     ("replace_existing", &["true", "false"], "false"),
     ("auto_rename", &["inbox", "library", "never"], "inbox"),
+    // Doublons et qualité (phase 3)
+    (
+        "duplicate_order",
+        &["wav,aiff,flac", "wav,flac,aiff", "aiff,wav,flac", "aiff,flac,wav", "flac,wav,aiff", "flac,aiff,wav"],
+        "wav,aiff,flac",
+    ),
+    ("low_bitrate", &["128", "160", "192", "256", "320"], "320"),
 ];
 
 /// Réglages en texte libre (modèles, règles), avec leur valeur par défaut.
@@ -72,6 +79,11 @@ pub fn get_all(conn: &Connection) -> Result<BTreeMap<String, String>, AppError> 
         }
     }
     Ok(map)
+}
+
+/// Valeur d'un réglage (valeur par défaut comprise).
+pub fn get(conn: &Connection, key: &str) -> Result<Option<String>, AppError> {
+    Ok(get_all(conn)?.remove(key))
 }
 
 pub fn set(conn: &Connection, key: &str, value: &str) -> Result<(), AppError> {

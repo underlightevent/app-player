@@ -161,6 +161,26 @@ impl Library {
         }
         let conn = db_conn(self)?;
         let batch = history::begin_batch(&conn, label, None)?;
+        let mut report = self.edit_each_in(&conn, items, source, batch, task)?;
+        if history::drop_if_empty(&conn, batch)? {
+            report.batch_id = None;
+        }
+        self.notify_changed(true);
+        Ok(report)
+    }
+
+    /// Comme `edit_each`, dans un lot d'historique déjà ouvert (actions composées : report
+    /// des tags vers le fichier gardé, puis mise en quarantaine des autres doublons).
+    pub(crate) fn edit_each_in(
+        &self,
+        conn: &Connection,
+        items: Vec<(i64, Changes)>,
+        source: Source,
+        batch: i64,
+        task: Option<&TaskHandle>,
+    ) -> Result<EditReport, AppError> {
+        let items: Vec<(i64, Changes)> =
+            items.into_iter().map(|(id, c)| (id, c.normalized())).filter(|(_, c)| !c.is_empty()).collect();
         let mut report = EditReport { batch_id: Some(batch), ..Default::default() };
         if let Some(t) = task {
             t.set_total(items.len() as u64);
@@ -172,10 +192,10 @@ impl Library {
             }
             if source == Source::Manual {
                 if let Some(a) = &changes.artists {
-                    learn_exceptions(&conn, a)?;
+                    learn_exceptions(conn, a)?;
                 }
             }
-            match self.edit_one(&conn, id, changes, source, batch) {
+            match self.edit_one(conn, id, changes, source, batch) {
                 Ok(()) => report.ok += 1,
                 Err(f) => report.failures.push(f),
             }
@@ -183,10 +203,6 @@ impl Library {
                 t.progress(n as u64 + 1);
             }
         }
-        if history::drop_if_empty(&conn, batch)? {
-            report.batch_id = None;
-        }
-        self.notify_changed(true);
         Ok(report)
     }
 
@@ -311,6 +327,7 @@ impl Library {
                     self.restore_tags(&conn, op.track_id.unwrap_or_default(), &state)
                 }
                 "move" => self.restore_path(&conn, op.track_id.unwrap_or_default(), state_json),
+                "quarantine" => self.restore_quarantine(&conn, op.track_id.unwrap_or_default(), state_json),
                 "mkdir" | "dir_move" => {
                     let other = if undo { &op.after } else { &op.before };
                     self.restore_dir(&conn, &op.kind, state_json, other)

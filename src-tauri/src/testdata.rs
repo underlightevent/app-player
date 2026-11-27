@@ -22,7 +22,11 @@ pub fn samples(frames: usize, seed: u32) -> Vec<i16> {
 }
 
 pub fn wav_bytes(seed: u32) -> Vec<u8> {
-    let s = samples(RATE as usize / 2, seed);
+    wav_from_samples(&samples(RATE as usize / 2, seed))
+}
+
+/// WAV PCM 16 bits stéréo 44,1 kHz à partir d'échantillons entrelacés.
+pub fn wav_from_samples(s: &[i16]) -> Vec<u8> {
     let data: Vec<u8> = s.iter().flat_map(|v| v.to_le_bytes()).collect();
     let mut out = b"RIFF".to_vec();
     out.extend(((4 + 8 + 16 + 8 + data.len()) as u32).to_le_bytes());
@@ -88,7 +92,34 @@ fn crc16(data: &[u8]) -> u16 {
 
 /// FLAC minimal : trames « VERBATIM » (sans compression), parfaitement valides.
 pub fn flac_bytes(seed: u32) -> Vec<u8> {
-    let s = samples(RATE as usize / 2, seed);
+    flac_from_samples(&samples(RATE as usize / 2, seed))
+}
+
+/// Échantillons entrelacés d'un WAV fabriqué par `wav_from_samples` (tags éventuels ignorés).
+pub fn wav_samples(bytes: &[u8]) -> Vec<i16> {
+    let mut i = 12;
+    while i + 8 <= bytes.len() {
+        let id = &bytes[i..i + 4];
+        let len = u32::from_le_bytes([bytes[i + 4], bytes[i + 5], bytes[i + 6], bytes[i + 7]]) as usize;
+        if id == b"data" {
+            return bytes[i + 8..i + 8 + len].chunks_exact(2).map(|c| i16::from_le_bytes([c[0], c[1]])).collect();
+        }
+        i += 8 + len + (len & 1);
+    }
+    vec![]
+}
+
+/// Numéro de trame FLAC (codage de type UTF-8).
+fn flac_frame_number(n: usize) -> Vec<u8> {
+    match n {
+        0..=0x7F => vec![n as u8],
+        0x80..=0x7FF => vec![0xC0 | (n >> 6) as u8, 0x80 | (n & 0x3F) as u8],
+        _ => vec![0xE0 | (n >> 12) as u8, 0x80 | ((n >> 6) & 0x3F) as u8, 0x80 | (n & 0x3F) as u8],
+    }
+}
+
+/// FLAC 16 bits stéréo 44,1 kHz à partir d'échantillons entrelacés (trames VERBATIM).
+pub fn flac_from_samples(s: &[i16]) -> Vec<u8> {
     let frames = s.len() / 2;
     let block = 256usize;
     let mut out = b"fLaC".to_vec();
@@ -109,8 +140,8 @@ pub fn flac_bytes(seed: u32) -> Vec<u8> {
         let len = chunk.len() / 2;
         // 0x6 : taille de bloc sur 8 bits en fin d'en-tête ; 0x9 : 44,1 kHz
         let mut f = vec![0xFF, 0xF8, 0x60 | 0x09, (1 << 4) | (0b100 << 1)];
-        assert!(n < 128);
-        f.push(n as u8);
+        assert!(n < 0x10000);
+        f.extend(flac_frame_number(n));
         f.push((len - 1) as u8);
         let c = crc8(&f);
         f.push(c);

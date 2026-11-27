@@ -23,6 +23,8 @@ pub struct Query {
     pub root_id: Option<i64>,
     /// Dossier (chemin relatif au volume) : morceaux de ce dossier et de ses sous-dossiers.
     pub folder: Option<(i64, String)>,
+    /// Compteur du tableau de bord « Santé de la bibliothèque » (no_cover, suspect…).
+    pub health: Option<String>,
     pub sort: Vec<SortKey>,
 }
 
@@ -101,11 +103,21 @@ pub fn ids(conn: &Connection, q: &Query) -> Result<Vec<i64>, AppError> {
             wheres.push("t.status = ?".into());
             args.push(s.to_string().into());
         }
-        None => {}
+        // Les morceaux en quarantaine n'apparaissent que dans l'écran Quarantaine.
+        None => wheres.push("t.status != 'quarantined'".into()),
     }
     if let Some(root) = q.root_id {
         wheres.push("t.root_id = ?".into());
         args.push(root.into());
+    }
+    let mut computed: Option<std::collections::HashSet<i64>> = None;
+    if let Some(key) = &q.health {
+        match crate::quality::health_sql(key, crate::quality::low_bitrate_setting(conn)) {
+            Some(cond) => wheres.push(format!("({cond})")),
+            None => {
+                computed = Some(crate::quality::computed_ids(conn, key)?.unwrap_or_default().into_iter().collect());
+            }
+        }
     }
     if let Some((vol, folder)) = &q.folder {
         wheres.push("t.volume_id = ? AND substr(t.rel_path, 1, length(?)) = ?".into());
@@ -137,7 +149,10 @@ pub fn ids(conn: &Connection, q: &Query) -> Result<Vec<i64>, AppError> {
     sql.push_str(&order.join(", "));
 
     let mut stmt = conn.prepare(&sql)?;
-    let rows = stmt.query_map(params_from_iter(args.iter()), |r| r.get(0))?.collect::<Result<Vec<i64>, _>>()?;
+    let mut rows = stmt.query_map(params_from_iter(args.iter()), |r| r.get(0))?.collect::<Result<Vec<i64>, _>>()?;
+    if let Some(set) = computed {
+        rows.retain(|id| set.contains(id));
+    }
     Ok(rows)
 }
 

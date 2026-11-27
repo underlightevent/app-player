@@ -20,6 +20,8 @@ pub struct Decoder {
     pub sample_rate: u32,
     /// Durée totale en millisecondes, si le conteneur la donne.
     pub duration_ms: Option<u64>,
+    /// Paquets abîmés rencontrés (et sautés) depuis l'ouverture.
+    pub decode_errors: u32,
 }
 
 impl Decoder {
@@ -52,7 +54,7 @@ impl Decoder {
             .map_err(|e| e.to_string())?;
         let sample_rate = params.sample_rate.unwrap_or(44_100);
         let channels = params.channels.as_ref().map(|c| c.count() as u16).unwrap_or(2).max(1);
-        Ok(Decoder { format, decoder, track_id, channels, sample_rate, duration_ms })
+        Ok(Decoder { format, decoder, track_id, channels, sample_rate, duration_ms, decode_errors: 0 })
     }
 
     /// Bloc suivant d'échantillons entrelacés. `Ok(false)` en fin de fichier.
@@ -75,7 +77,10 @@ impl Decoder {
                     }
                 }
                 // Paquet abîmé : on passe au suivant plutôt que de couper le son.
-                Err(symphonia::core::errors::Error::DecodeError(_)) => continue,
+                Err(symphonia::core::errors::Error::DecodeError(_)) => {
+                    self.decode_errors = self.decode_errors.saturating_add(1);
+                    continue;
+                }
                 Err(e) => return Err(e.to_string()),
             }
         }

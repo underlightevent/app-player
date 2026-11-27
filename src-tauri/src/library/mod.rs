@@ -4,6 +4,7 @@
 pub mod edit;
 pub mod folders;
 pub mod index;
+pub mod quarantine;
 pub mod query;
 pub mod volumes;
 
@@ -158,7 +159,7 @@ impl Library {
         let mounts = self.mounts();
         let mut stmt = conn.prepare(
             "SELECT r.id, r.volume_id, v.label, r.rel_path, r.kind,
-                    (SELECT count(*) FROM tracks t WHERE t.root_id = r.id AND t.status != 'missing')
+                    (SELECT count(*) FROM tracks t WHERE t.root_id = r.id AND t.status NOT IN ('missing', 'quarantined'))
              FROM roots r JOIN volumes v ON v.id = r.volume_id ORDER BY r.id",
         )?;
         let rows = stmt

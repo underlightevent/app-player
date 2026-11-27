@@ -36,6 +36,9 @@ pub enum AppError {
 
     #[error("état interne indisponible")]
     Poisoned,
+
+    #[error("opération annulée")]
+    Cancelled,
 }
 
 impl AppError {
@@ -51,6 +54,7 @@ impl AppError {
             AppError::Keyring(_) => "keyring",
             AppError::Network(_) => "network",
             AppError::Poisoned => "internal",
+            AppError::Cancelled => "cancelled",
         }
     }
 }

@@ -50,7 +50,7 @@ fn join(dir: &str, name: &str) -> String {
 fn count_under(conn: &Connection, volume_id: i64, rel: &str) -> Result<i64, AppError> {
     let p = prefix(rel);
     Ok(conn.query_row(
-        "SELECT count(*) FROM tracks WHERE volume_id = ?1 AND status != 'missing' AND substr(rel_path, 1, length(?2)) = ?2",
+        "SELECT count(*) FROM tracks WHERE volume_id = ?1 AND status NOT IN ('missing', 'quarantined') AND substr(rel_path, 1, length(?2)) = ?2",
         params![volume_id, p],
         |r| r.get(0),
     )?)
@@ -106,7 +106,7 @@ impl Library {
             let rows = st.query_map(params![volume_id, p], |r| r.get::<_, String>(0))?;
             for r in rows {
                 if let Some((first, _)) = r?.split_once('/') {
-                    if !names.iter().any(|n| n == first) {
+                    if first != index::QUARANTINE_DIR && !names.iter().any(|n| n == first) {
                         names.push(first.to_string());
                     }
                 }

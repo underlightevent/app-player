@@ -184,6 +184,48 @@ const MIGRATIONS: &[&str] = &[
         state    TEXT NOT NULL DEFAULT 'pending',
         added_at INTEGER NOT NULL DEFAULT (unixepoch())
     );",
+    // 6 — Doublons, quarantaine et contrôle qualité (phase 3).
+    "CREATE TABLE quarantine (
+        id        INTEGER PRIMARY KEY,
+        track_id  INTEGER UNIQUE REFERENCES tracks(id) ON DELETE SET NULL,
+        volume_id INTEGER NOT NULL REFERENCES volumes(id),
+        orig_rel  TEXT NOT NULL,
+        quar_rel  TEXT NOT NULL,
+        size      INTEGER NOT NULL DEFAULT 0,
+        reason    TEXT,
+        added_at  INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+    CREATE TABLE duplicate_groups (
+        id            INTEGER PRIMARY KEY,
+        kind          TEXT NOT NULL,
+        keeper_id     INTEGER,
+        keeper_manual INTEGER NOT NULL DEFAULT 0,
+        created_at    INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+    CREATE TABLE duplicate_members (
+        group_id   INTEGER NOT NULL REFERENCES duplicate_groups(id) ON DELETE CASCADE,
+        track_id   INTEGER NOT NULL REFERENCES tracks(id) ON DELETE CASCADE,
+        similarity REAL,
+        PRIMARY KEY (group_id, track_id)
+    );
+    CREATE INDEX duplicate_members_track ON duplicate_members(track_id);
+    CREATE TABLE not_duplicates (
+        a INTEGER NOT NULL,
+        b INTEGER NOT NULL,
+        PRIMARY KEY (a, b)
+    );
+    CREATE TABLE quality (
+        track_id     INTEGER PRIMARY KEY REFERENCES tracks(id) ON DELETE CASCADE,
+        size         INTEGER NOT NULL,
+        mtime        INTEGER NOT NULL,
+        verdict      TEXT NOT NULL,
+        cutoff_hz    INTEGER,
+        decode_errors INTEGER NOT NULL DEFAULT 0,
+        truncated    INTEGER NOT NULL DEFAULT 0,
+        detail       TEXT,
+        analyzed_at  INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+    CREATE INDEX quality_verdict ON quality(verdict);",
 ];
 
 /// Ouvre une connexion supplémentaire (tâches de fond). La base doit déjà exister et être migrée.
