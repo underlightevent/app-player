@@ -9,7 +9,7 @@ use lofty::picture::{PictureInformation, PictureType};
 use lofty::tag::{Accessor, ItemKey, Tag, TagExt, TagType};
 
 use super::chunks;
-use super::text::{normalize_key, rating_text_to_stars, split_artists, split_title_version};
+use super::text::{normalize_key, rating_text_to_stars, split_artists, split_title_version, strip_artist_prefix};
 use super::{CoverInfo, FileInfo, TrackTags};
 
 #[derive(Debug, thiserror::Error)]
@@ -199,6 +199,15 @@ pub fn read_file(path: &Path, exceptions: &[String]) -> Result<FileInfo, ReadErr
         }
     }
 
+    // Titre écrit « Artiste - Titre » (réglage « artiste dans le titre ») : on retrouve le titre seul.
+    if let (Some(t), Some(a)) = (tags.title.as_deref(), tags.artists.first()) {
+        tags.title = Some(strip_artist_prefix(t, a));
+    }
+    let raw_title = main_tag
+        .and_then(|t| t.get_string(ItemKey::TrackTitle))
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty());
+
     let codec = match ft {
         FileType::Mp4 => Some(if props.bit_depth().is_some() { "ALAC" } else { "AAC" }.to_string()),
         FileType::Wav => Some("PCM".to_string()),
@@ -221,6 +230,7 @@ pub fn read_file(path: &Path, exceptions: &[String]) -> Result<FileInfo, ReadErr
         tags,
         cover,
         wav_desync,
+        raw_title,
     })
 }
 

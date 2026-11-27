@@ -57,4 +57,7 @@ pub struct FileInfo {
     pub cover: CoverInfo,
     /// WAV : RIFF INFO et ID3 ne disent pas la même chose.
     pub wav_desync: bool,
+    /// Texte exact du champ titre (avant séparation de la version et de l'artiste).
+    #[serde(skip)]
+    pub raw_title: Option<String>,
 }

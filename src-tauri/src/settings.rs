@@ -17,6 +17,7 @@ const KNOWN: &[(&str, &[&str], &str)] = &[
     ("table_density", &["compact", "comfortable"], "compact"),
     ("key_notation", &["camelot", "musical"], "camelot"),
     ("version_in_title", &["true", "false"], "true"),
+    ("artist_in_title", &["true", "false"], "false"),
     ("artist_separator", &["comma", "ampersand", "semicolon"], "comma"),
     ("bpm_decimals", &["true", "false"], "false"),
     ("single_cover", &["true", "false"], "true"),

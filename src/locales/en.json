@@ -104,6 +104,16 @@
     "rekordboxFilter": {
       "in": "In Rekordbox",
       "reload": "To reload in Rekordbox"
+    },
+    "sortBy": "Sort by",
+    "sort": {
+      "none": "Date added",
+      "ratingDesc": "Rating: ★★★★★ first",
+      "ratingAsc": "Rating: unrated first",
+      "recent": "Recently added",
+      "artist": "Main artist",
+      "title": "Title",
+      "custom": "Table columns"
     }
   },
   "table": {
@@ -231,7 +241,8 @@
     "duplicatesResolve": "Handling duplicates",
     "quality": "Quality check",
     "relocate": "Looking for missing files",
-    "convert": "WAV to AIFF conversion"
+    "convert": "WAV to AIFF conversion",
+    "titleFormat": "Rewriting titles in files"
   },
   "player": {
     "nothing": "Nothing playing",
@@ -324,7 +335,8 @@
     "restore": "restoring",
     "duplicates": "handling duplicates",
     "syncWav": "resyncing WAV files",
-    "wavToAiff": "the AIFF conversion"
+    "wavToAiff": "the AIFF conversion",
+    "titleFormat": "the new title format"
   },
   "edit": {
     "saved_one": "Track updated",
@@ -984,5 +996,25 @@
       "exists": "AIFF already exists",
       "offline": "disk disconnected"
     }
+  },
+  "titleFormat": {
+    "label": "Title written in files",
+    "hint": "DJ players (and Rekordbox) often show only the title in playlists. Choose what it contains. In the application, title, version and artist stay separate.",
+    "options": {
+      "title": "Title only: “Strobe”",
+      "titleVersion": "Title and version: “Strobe (Extended Mix)”",
+      "artistTitle": "Main artist and title: “Deadmau5 - Strobe”",
+      "artistTitleVersion": "Main artist, title and version: “Deadmau5 - Strobe (Extended Mix)”"
+    },
+    "applyButton": "Apply to existing files…",
+    "confirmTitle": "Rewrite titles",
+    "confirmText_one": "The title field of {{formatted}} track will be rewritten with the chosen format.",
+    "confirmText_other": "The title field of {{formatted}} tracks will be rewritten with the chosen format.",
+    "examples": "Examples:",
+    "confirmHint": "Only the title field changes; the audio is not touched. Files already written this way are left as they are. Ctrl+Z restores the previous titles. In Rekordbox, then run “Reload Tag” (“To reload” list).",
+    "confirm": "Rewrite",
+    "done": "Titles rewritten. Ctrl+Z to undo.",
+    "doneWithFailures_one": "Titles rewritten, except {{count}} file (disk unplugged or unreadable file).",
+    "doneWithFailures_other": "Titles rewritten, except {{count}} files (disks unplugged or unreadable files)."
   }
 }

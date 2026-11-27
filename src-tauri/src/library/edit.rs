@@ -43,6 +43,7 @@ pub fn write_settings(conn: &Connection) -> WriteSettings {
     let s = settings::get_all(conn).unwrap_or_default();
     WriteSettings {
         version_in_title: s.get("version_in_title").map(|v| v == "true").unwrap_or(true),
+        artist_in_title: s.get("artist_in_title").map(|v| v == "true").unwrap_or(false),
         artist_separator: match s.get("artist_separator").map(String::as_str) {
             Some("ampersand") => "&".into(),
             Some("semicolon") => ";".into(),
@@ -102,6 +103,7 @@ fn inverse(current: &TrackTags, c: &Changes) -> Changes {
         rating: c.rating.map(|_| current.rating),
         cover: None,
         sync_wav: false,
+        raw_title: None,
     }
 }
 
@@ -227,10 +229,20 @@ impl Library {
         let exceptions = index::artist_exceptions(conn).unwrap_or_default();
         let current = read_file(&path, &exceptions).map_err(|e| failure(Some(&loc), id, "unreadable", e.to_string()))?;
         let fields = changes.fields();
+        // Nouvelle présentation du titre : rien à faire si le fichier n'a pas de titre
+        // ou s'il est déjà écrit ainsi (aucune écriture inutile).
+        if let Some(raw) = &changes.raw_title {
+            match &current.raw_title {
+                None => return Ok(()),
+                Some(old) if old.trim() == raw.trim() => return Ok(()),
+                _ => {}
+            }
+        }
 
         // État avant (pour l'annulation), pochette comprise.
         let mut before = TagState { changes: inverse(&current.tags, &changes), cover: None, locked: vec![] };
         before.locked = locked.iter().filter(|l| fields.contains(&l.as_str())).cloned().collect();
+        before.changes.raw_title = changes.raw_title.as_ref().and(current.raw_title.clone());
         if changes.cover.is_some() {
             let old = write::current_cover(&path).map_err(|e| failure(Some(&loc), id, e.code(), e.to_string()))?;
             before.cover = Some(match old {
@@ -537,6 +549,56 @@ mod tests {
         assert_eq!(r.ok, 0);
         assert_eq!(r.failures[0].code, "offline");
         assert_eq!(r.batch_id, None, "pas de lot vide dans l'historique");
+    }
+
+    #[test]
+    fn artiste_dans_le_titre_puis_annuler() {
+        let (_dir, lib, ids) = setup();
+        let c = Changes {
+            title: Some(Some("Été".into())),
+            version: Some(Some("Extended Mix".into())),
+            artists: Some(vec!["DJ Lumière".into(), "B".into()]),
+            ..Default::default()
+        };
+        assert_eq!(lib.edit(&ids, c, Source::Manual, "history.editTags", None).unwrap().ok, 4);
+        let conn = crate::db::open_worker(lib.db_path()).unwrap();
+        let raw = |id: i64| {
+            let path = lib.track_path(&conn, id).unwrap().unwrap();
+            let info = read_file(&path, &[]).unwrap();
+            (info.raw_title.unwrap_or_default(), info.tags.title.unwrap_or_default(), info.tags.version.unwrap_or_default())
+        };
+        assert_eq!(raw(ids[0]).0, "Été (Extended Mix)");
+
+        // Nouvelle présentation : « Artiste principal - Titre (Version) » écrite dans chaque fichier.
+        settings::set(&conn, "artist_in_title", "true").unwrap();
+        let items: Vec<(i64, Changes)> = ids
+            .iter()
+            .map(|id| (*id, Changes { raw_title: Some("DJ Lumière - Été (Extended Mix)".into()), ..Default::default() }))
+            .collect();
+        let report = lib.edit_each(items.clone(), Source::Automatic, "history.titleFormat", None).unwrap();
+        assert_eq!(report.ok, 4, "{:?}", report.failures);
+        for &id in &ids {
+            // Le fichier porte l'artiste dans le titre, mais la relecture retrouve le titre seul.
+            assert_eq!(raw(id), ("DJ Lumière - Été (Extended Mix)".into(), "Été".into(), "Extended Mix".into()));
+            assert_eq!(title_of(&lib, id).0.as_deref(), Some("Été"));
+        }
+        // Déjà écrit ainsi : aucun nouveau changement enregistré.
+        let again = lib.edit_each(items, Source::Automatic, "history.titleFormat", None).unwrap();
+        assert_eq!(again.batch_id, None);
+
+        // Une modification de l'artiste suit la présentation choisie.
+        let c = Changes { artists: Some(vec!["Autre".into()]), ..Default::default() };
+        lib.edit(&ids[..1], c, Source::Manual, "history.editTags", None).unwrap();
+        assert_eq!(raw(ids[0]).0, "Autre - Été (Extended Mix)");
+        let c = Changes { artists: Some(vec!["DJ Lumière".into(), "B".into()]), ..Default::default() };
+        lib.edit(&ids[..1], c, Source::Manual, "history.editTags", None).unwrap();
+
+        // Ctrl+Z : les titres d'avant reviennent.
+        let undo = lib.apply_history(report.batch_id.unwrap(), true).unwrap();
+        assert_eq!(undo.ok, 4, "{:?}", undo.failures);
+        for &id in &ids {
+            assert_eq!(raw(id).0, "Été (Extended Mix)");
+        }
     }
 
     #[test]

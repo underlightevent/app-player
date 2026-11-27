@@ -30,7 +30,7 @@ use serde::{Deserialize, Serialize};
 
 use super::chunks::{self, InfoItem, Replacement};
 use super::read::read_file;
-use super::text::{compose_title, join_artists, normalize_key, remixer_from_version, stars_to_popm, to_camelot};
+use super::text::{full_title, join_artists, normalize_key, remixer_from_version, stars_to_popm, to_camelot};
 use super::{FileInfo, TrackTags};
 use crate::audio::hash::audio_stream_hash;
 
@@ -41,6 +41,8 @@ pub const POPM_EMAIL: &str = "Windows Media Player 9 Series";
 #[derive(Debug, Clone)]
 pub struct WriteSettings {
     pub version_in_title: bool,
+    /// « Artiste principal - Titre » (les platines n'affichent souvent que le titre).
+    pub artist_in_title: bool,
     /// « , », « & » ou « ; »
     pub artist_separator: String,
     pub key_camelot: bool,
@@ -52,6 +54,7 @@ impl Default for WriteSettings {
     fn default() -> Self {
         WriteSettings {
             version_in_title: true,
+            artist_in_title: false,
             artist_separator: ",".into(),
             key_camelot: true,
             bpm_integer: true,
@@ -121,6 +124,10 @@ pub struct Changes {
     /// WAV : réécrire RIFF INFO depuis les valeurs complètes (correction d'une désynchronisation).
     #[serde(skip)]
     pub sync_wav: bool,
+    /// Texte exact du champ titre du fichier (changement de présentation du titre et
+    /// son annulation) : la valeur du titre en base ne change pas.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub raw_title: Option<String>,
 }
 
 impl Changes {
@@ -136,12 +143,13 @@ impl Changes {
             && self.rating.is_none()
             && self.cover.is_none()
             && !self.sync_wav
+            && self.raw_title.is_none()
     }
 
     /// Noms des champs modifiés (pour l'historique et les cadenas).
     pub fn fields(&self) -> Vec<&'static str> {
         let mut f = Vec::new();
-        if self.title.is_some() {
+        if self.title.is_some() || self.raw_title.is_some() {
             f.push("title");
         }
         if self.version.is_some() {
@@ -376,6 +384,21 @@ fn fid(id: &'static str) -> FrameId<'static> {
     FrameId::Valid(Cow::Borrowed(id))
 }
 
+/// Valeur à écrire dans le champ titre, ou `None` s'il ne faut pas y toucher.
+/// `force` : réécriture complète (resynchronisation des WAV).
+fn title_text(t: &TrackTags, c: &Changes, s: &WriteSettings, force: bool) -> Option<Option<String>> {
+    if let Some(raw) = &c.raw_title {
+        return Some(Some(raw.trim().to_string()).filter(|r| !r.is_empty()));
+    }
+    let artist_changed = s.artist_in_title && c.artists.is_some();
+    if force || c.title.is_some() || c.version.is_some() || artist_changed {
+        return Some(t.title.as_deref().map(|ti| {
+            full_title(ti, t.version.as_deref(), t.artists.first().map(String::as_str), s.version_in_title, s.artist_in_title)
+        }));
+    }
+    None
+}
+
 fn set_text(tag: &mut Id3v2Tag, id: &'static str, value: Option<&str>) {
     let _ = tag.remove(&fid(id)).count();
     if let Some(v) = value.filter(|v| !v.is_empty()) {
@@ -384,9 +407,10 @@ fn set_text(tag: &mut Id3v2Tag, id: &'static str, value: Option<&str>) {
 }
 
 fn apply_id3(tag: &mut Id3v2Tag, t: &TrackTags, c: &Changes, s: &WriteSettings) {
-    if c.title.is_some() || c.version.is_some() {
-        let title = t.title.as_deref().map(|ti| compose_title(ti, t.version.as_deref(), s.version_in_title));
+    if let Some(title) = title_text(t, c, s, false) {
         set_text(tag, "TIT2", title.as_deref());
+    }
+    if c.title.is_some() || c.version.is_some() {
         set_text(tag, "TIT3", t.version.as_deref());
     }
     if c.version.is_some() {
@@ -486,8 +510,10 @@ fn vset(vc: &mut VorbisComments, key: &str, value: Option<String>) {
 }
 
 fn apply_vorbis(vc: &mut VorbisComments, t: &TrackTags, c: &Changes, s: &WriteSettings) {
+    if let Some(title) = title_text(t, c, s, false) {
+        vset(vc, "TITLE", title);
+    }
     if c.title.is_some() || c.version.is_some() {
-        vset(vc, "TITLE", t.title.as_deref().map(|ti| compose_title(ti, t.version.as_deref(), s.version_in_title)));
         vset(vc, "SUBTITLE", t.version.clone());
     }
     if c.version.is_some() {
@@ -548,8 +574,7 @@ fn info_set(items: &mut Vec<InfoItem>, id: &[u8; 4], value: Option<&str>) {
 
 fn apply_info(items: &mut Vec<InfoItem>, t: &TrackTags, c: &Changes, s: &WriteSettings) {
     let all = c.sync_wav;
-    if all || c.title.is_some() || c.version.is_some() {
-        let title = t.title.as_deref().map(|ti| compose_title(ti, t.version.as_deref(), s.version_in_title));
+    if let Some(title) = title_text(t, c, s, all) {
         info_set(items, b"INAM", title.as_deref());
     }
     if all || c.artists.is_some() {
@@ -673,8 +698,10 @@ fn write_into_temp_inner(path: &Path, tmp: &Path, t: &TrackTags, c: &Changes, s:
                     tag.insert_text(k, v);
                 }
             };
+            if let Some(title) = title_text(t, c, s, false) {
+                set(ItemKey::TrackTitle, title);
+            }
             if c.title.is_some() || c.version.is_some() {
-                set(ItemKey::TrackTitle, t.title.as_deref().map(|ti| compose_title(ti, t.version.as_deref(), s.version_in_title)));
                 set(ItemKey::TrackSubtitle, t.version.clone());
             }
             if c.version.is_some() {
@@ -730,6 +757,11 @@ fn verify(read: &FileInfo, want: &TrackTags, c: &Changes, s: &WriteSettings) -> 
         }
         if !eq(&r.version, &want.version) {
             return Err(format!("version relue {:?} au lieu de {:?}", r.version, want.version));
+        }
+    }
+    if let Some(raw) = &c.raw_title {
+        if read.raw_title.as_deref().map(str::trim) != Some(raw.trim()) {
+            return Err(format!("titre relu {:?} au lieu de {:?}", read.raw_title, raw));
         }
     }
     if c.artists.is_some() && r.artists != want.artists {

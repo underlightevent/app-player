@@ -471,6 +471,7 @@ pub fn export_xml(
     ids: &[i64],
     playlists: &[ExportPlaylist],
     version_in_title: bool,
+    artist_in_title: bool,
 ) -> Result<(String, usize, usize), AppError> {
     let mut all: Vec<i64> = ids.to_vec();
     for p in playlists {
@@ -490,7 +491,14 @@ pub fn export_xml(
             continue;
         };
         exported.push(r.id);
-        let name = crate::tags::text::compose_title(r.title.as_deref().unwrap_or(""), r.version.as_deref(), version_in_title);
+        // Même titre que celui écrit dans le fichier (réglages « version » et « artiste dans le titre »).
+        let name = crate::tags::text::full_title(
+            r.title.as_deref().unwrap_or(""),
+            r.version.as_deref(),
+            r.artists.first().map(String::as_str),
+            version_in_title,
+            artist_in_title,
+        );
         col.push_str(&format!(
             "    <TRACK TrackID=\"{}\" Name=\"{}\" Artist=\"{}\" Composer=\"\" Album=\"{}\" Grouping=\"\" Genre=\"{}\" Kind=\"{}\" Size=\"{}\" TotalTime=\"{}\" DiscNumber=\"0\" TrackNumber=\"0\" Year=\"{}\" AverageBpm=\"{}\" DateAdded=\"{}\" BitRate=\"{}\" SampleRate=\"{}\" Comments=\"\" PlayCount=\"0\" Rating=\"{}\" Location=\"{}\" Remixer=\"{}\" Tonality=\"{}\" Label=\"{}\" Mix=\"{}\"/>\n",
             r.id,
@@ -613,7 +621,7 @@ mod tests {
         let conn = crate::db::open_worker(lib.db_path()).unwrap();
         conn.execute("UPDATE tracks SET rating = 4, title = 'Titre \"x\"', version = 'Extended Mix', musical_key = 'Am'", []).unwrap();
         let pls = vec![ExportPlaylist { name: "Soirée <1>".into(), ids: vec![ids[1]] }];
-        let (xml, n, skipped) = export_xml(&conn, &lib.mounts(), &[ids[0]], &pls, true).unwrap();
+        let (xml, n, skipped) = export_xml(&conn, &lib.mounts(), &[ids[0]], &pls, true, false).unwrap();
         assert_eq!((n, skipped), (2, 0));
         assert!(xml.contains("Rating=\"204\""));
         assert!(xml.contains("Mix=\"Extended Mix\""));

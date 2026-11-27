@@ -11,6 +11,8 @@
 - Conversion WAV vers AIFF à la demande : son identique vérifié échantillon par échantillon, tags et pochette recopiés, WAV d'origine en quarantaine, annulation en une fois.
 - Vérification des mises à jour au démarrage (désactivable) avec lien de téléchargement.
 - Guide utilisateur complet, avec captures d'écran.
+- Réglage « Titre écrit dans les fichiers » : titre seul, titre et version, artiste principal et titre, ou artiste principal, titre et version (pour les platines qui n'affichent que le titre), avec « Appliquer aux fichiers existants… » annulable.
+- Bibliothèque : menu « Trier par » (dont « Note : ★★★★★ d'abord ») ; la colonne Note trie les mieux notés en premier.
 
 ## 0.4.0 — Phase 3 : doublons et qualité (à valider)
 

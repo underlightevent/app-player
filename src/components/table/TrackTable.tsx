@@ -152,6 +152,7 @@ export function TrackTable(props: Props) {
   const rowActivate = useCallback((id: number) => handlers.current.activate(id), []);
 
   // ---------- Tri ----------
+  const DESC_FIRST = ["rating"];
   const onHeaderClick = (e: MouseEvent, field?: string) => {
     if (!field) return;
     const existing = sort.find((s) => s.field === field);
@@ -161,8 +162,10 @@ export function TrackTable(props: Props) {
       else onSortChange(sort.map((s) => (s.field === field ? { ...s, desc: !s.desc } : s)));
       return;
     }
-    if (!existing || sort.length > 1) onSortChange([{ field, desc: false }]);
-    else if (!existing.desc) onSortChange([{ field, desc: true }]);
+    // Note : les mieux notés d'abord au premier clic (puis l'inverse, puis sans tri).
+    const first = DESC_FIRST.includes(field);
+    if (!existing || sort.length > 1) onSortChange([{ field, desc: first }]);
+    else if (existing.desc === first) onSortChange([{ field, desc: !first }]);
     else onSortChange([]);
   };
 

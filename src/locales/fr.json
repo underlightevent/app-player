@@ -104,6 +104,16 @@
     "rekordboxFilter": {
       "in": "Dans Rekordbox",
       "reload": "À recharger dans Rekordbox"
+    },
+    "sortBy": "Trier par",
+    "sort": {
+      "none": "Ordre d'ajout",
+      "ratingDesc": "Note : ★★★★★ d'abord",
+      "ratingAsc": "Note : sans note d'abord",
+      "recent": "Ajoutés récemment",
+      "artist": "Artiste principal",
+      "title": "Titre",
+      "custom": "Colonnes du tableau"
     }
   },
   "table": {
@@ -231,7 +241,8 @@
     "duplicatesResolve": "Traitement des doublons",
     "quality": "Contrôle qualité",
     "relocate": "Recherche des fichiers manquants",
-    "convert": "Conversion WAV vers AIFF"
+    "convert": "Conversion WAV vers AIFF",
+    "titleFormat": "Réécriture des titres dans les fichiers"
   },
   "player": {
     "nothing": "Aucun morceau en lecture",
@@ -324,7 +335,8 @@
     "restore": "la restauration",
     "duplicates": "le traitement des doublons",
     "syncWav": "la resynchronisation des WAV",
-    "wavToAiff": "la conversion en AIFF"
+    "wavToAiff": "la conversion en AIFF",
+    "titleFormat": "la nouvelle présentation des titres"
   },
   "edit": {
     "saved_one": "Morceau modifié",
@@ -984,5 +996,25 @@
       "exists": "l'AIFF existe déjà",
       "offline": "disque déconnecté"
     }
+  },
+  "titleFormat": {
+    "label": "Titre écrit dans les fichiers",
+    "hint": "Les platines (et Rekordbox) affichent souvent seulement le titre dans les playlists. Choisissez ce qu'il contient. Dans l'application, le titre, la version et l'artiste restent séparés.",
+    "options": {
+      "title": "Titre seul : « Strobe »",
+      "titleVersion": "Titre et version : « Strobe (Extended Mix) »",
+      "artistTitle": "Artiste principal et titre : « Deadmau5 - Strobe »",
+      "artistTitleVersion": "Artiste principal, titre et version : « Deadmau5 - Strobe (Extended Mix) »"
+    },
+    "applyButton": "Appliquer aux fichiers existants…",
+    "confirmTitle": "Réécrire les titres",
+    "confirmText_one": "Le champ titre de {{formatted}} morceau sera réécrit avec la présentation choisie.",
+    "confirmText_other": "Le champ titre de {{formatted}} morceaux sera réécrit avec la présentation choisie.",
+    "examples": "Exemples :",
+    "confirmHint": "Seul le champ titre change, le son n'est pas touché. Les fichiers déjà écrits ainsi sont laissés tels quels. Ctrl+Z remet les titres d'avant. Dans Rekordbox, faites ensuite « Reload Tag » (liste « À recharger »).",
+    "confirm": "Réécrire",
+    "done": "Titres réécrits. Ctrl+Z pour annuler.",
+    "doneWithFailures_one": "Titres réécrits, sauf {{count}} fichier (disque débranché ou fichier illisible).",
+    "doneWithFailures_other": "Titres réécrits, sauf {{count}} fichiers (disques débranchés ou fichiers illisibles)."
   }
 }

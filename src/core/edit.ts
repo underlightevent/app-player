@@ -131,3 +131,15 @@ export async function clipboardImage(): Promise<string | null> {
   }
   return null;
 }
+
+/** Aperçu de la nouvelle présentation du titre : [nombre de morceaux, exemples]. */
+export async function titleFormatPreview(): Promise<[number, string[]]> {
+  if (!inTauri) return [1234, ["Artiste - Titre (Extended Mix)", "Autre artiste - Morceau (Original Mix)"]];
+  return invoke<[number, string[]]>("title_format_preview");
+}
+
+/** Réécrit le champ titre de tous les fichiers selon les réglages (annulable par Ctrl+Z). */
+export async function titleFormatApply(): Promise<EditReport> {
+  if (!inTauri) return { batchId: null, ok: 1234, failures: [] };
+  return invoke<EditReport>("title_format_apply");
+}

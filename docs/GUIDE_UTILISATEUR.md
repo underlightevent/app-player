@@ -56,7 +56,7 @@ Le thème sombre (bouton lune en haut à droite, ou Réglages › Apparence) :
 
 - **Rechercher** : tapez dans la barre du haut (titre, artistes, album, genre, nom de fichier ; les accents sont ignorés).
 - **Filtres rapides** au-dessus du tableau : format, sans pochette, fichiers à problème, note minimale. Un dossier choisi dans l'arborescence filtre aussi le tableau (puce « Dossier : … », cliquez dessus pour l'enlever).
-- **Trier** : cliquez sur un en-tête (une deuxième fois pour inverser). Maj + clic ajoute une colonne de tri.
+- **Trier** : menu **Trier par** au-dessus du tableau (par exemple **Note : ★★★★★ d'abord**, puis par artiste et titre à note égale), ou cliquez sur un en-tête (une deuxième fois pour inverser ; la colonne **Note** met les mieux notés en premier dès le premier clic). Maj + clic ajoute une colonne de tri.
 - **Colonnes** : clic droit sur les en-têtes pour en afficher ou masquer ; glissez un en-tête pour changer l'ordre ; tirez son bord droit pour la largeur. Tout est retenu.
 - **Sélection** : clic, Ctrl + clic (ajouter), Maj + clic (plage), Ctrl+A (tout), flèches du clavier.
 - Badges de la colonne État : hors ligne, manquant, illisible, cadenas, **RB** (le morceau est dans Rekordbox ; **RB ↻** : ses tags ont changé, à recharger dans Rekordbox), WAV, tags désaccordés.
@@ -275,7 +275,17 @@ Au démarrage, l'application demande à GitHub le numéro de la dernière versio
 
 - **Apparence**, **Langue**, **Densité du tableau**, **Notation des tonalités**.
 - **Recherche en ligne** : sources, clés AcoustID, contact, seuils, remplacement des valeurs existantes, renommage automatique, test de connexion, journal des appels.
-- **Écriture des tags** : version dans le titre, décimales du BPM, une seule pochette par fichier, séparateur des artistes, taille des pochettes.
+- **Écriture des tags** : titre écrit dans les fichiers (voir ci-dessous), décimales du BPM, une seule pochette par fichier, séparateur des artistes, taille des pochettes.
+
+### Titre écrit dans les fichiers (ce que la platine affiche)
+Sur une platine, une playlist exportée depuis Rekordbox montre souvent **seulement le titre**. Dans **Réglages › Écriture des tags › Titre écrit dans les fichiers**, choisissez ce qu'il contient :
+- titre seul (« Strobe ») ;
+- titre et version (« Strobe (Extended Mix) », le choix par défaut) ;
+- artiste principal et titre (« Deadmau5 - Strobe ») ;
+- artiste principal, titre et version (« Deadmau5 - Strobe (Extended Mix) »).
+
+Dans l'application, le titre, la version et l'artiste restent séparés : seul le champ titre du fichier change. Le choix s'applique à chaque nouvelle écriture de tags. Pour les fichiers déjà présents : **Appliquer aux fichiers existants…** montre le nombre de morceaux et des exemples, puis réécrit seulement le champ titre (le son n'est pas touché ; **Ctrl+Z** remet les titres d'avant). Ensuite, dans Rekordbox, rechargez les tags avec la liste **À recharger** (voir [Rekordbox](#rekordbox)), puis réexportez vers votre clé USB.
+
 - **Doublons et qualité** : ordre des formats sans perte pour choisir le fichier à garder, seuil du débit faible.
 - **Rekordbox** : import du XML, mode protégé, liste « À recharger », journal des chemins, export XML (voir [Rekordbox](#rekordbox)).
 - **Mises à jour** : vérification au démarrage, « Vérifier maintenant ».

@@ -687,6 +687,48 @@ async fn tracks_sync_wav(state: State<'_, AppState>, ids: Vec<i64>) -> Result<Ed
     .await
 }
 
+/// Titre de chaque morceau tel qu'il doit être écrit avec les réglages actuels.
+fn title_format_items(conn: &rusqlite::Connection) -> Result<Vec<(i64, String)>, AppError> {
+    let ws = library::edit::write_settings(conn);
+    let mut stmt = conn.prepare(
+        "SELECT id, title, version, main_artist FROM tracks
+         WHERE title IS NOT NULL AND title != '' AND status NOT IN ('missing', 'unreadable', 'quarantined')
+         ORDER BY id",
+    )?;
+    let rows = stmt.query_map([], |r| {
+        let (id, title, version, artist): (i64, String, Option<String>, Option<String>) = (r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?);
+        Ok((id, tags::text::full_title(&title, version.as_deref(), artist.as_deref(), ws.version_in_title, ws.artist_in_title)))
+    })?;
+    Ok(rows.collect::<Result<Vec<_>, _>>()?)
+}
+
+/// Aperçu : nombre de morceaux concernés et quelques exemples du titre écrit.
+#[tauri::command]
+async fn title_format_preview(state: State<'_, AppState>) -> Result<(usize, Vec<String>), AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        let items = title_format_items(&db::open_worker(lib.db_path())?)?;
+        Ok((items.len(), items.iter().take(3).map(|(_, t)| t.clone()).collect()))
+    })
+    .await
+}
+
+/// Réécrit le champ titre de tous les fichiers selon la présentation choisie dans les réglages
+/// (un seul lot d'historique : Ctrl+Z remet les titres d'avant).
+#[tauri::command]
+async fn title_format_apply(state: State<'_, AppState>) -> Result<EditReport, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        let items = title_format_items(&db::open_worker(lib.db_path())?)?;
+        let task = lib.tasks.start("tasks.titleFormat", None);
+        let items = items.into_iter().map(|(id, raw)| (id, Changes { raw_title: Some(raw), ..Default::default() })).collect();
+        let r = lib.edit_each(items, Source::Automatic, "history.titleFormat", Some(&task));
+        task.finish();
+        r
+    })
+    .await
+}
+
 #[tauri::command]
 async fn duplicates_count(state: State<'_, AppState>) -> Result<i64, AppError> {
     let lib = state.library()?.clone();
@@ -926,8 +968,8 @@ async fn rekordbox_export_xml(state: State<'_, AppState>, ids: Option<Vec<i64>>,
             let p = playlists::get(&conn, pid)?;
             pls.push(rekordbox::ExportPlaylist { ids: playlists::track_ids(&conn, &p)?, name: p.name });
         }
-        let vit = library::edit::write_settings(&conn).version_in_title;
-        let (xml, n, skipped) = rekordbox::export_xml(&conn, &lib.mounts(), &ids, &pls, vit)?;
+        let ws = library::edit::write_settings(&conn);
+        let (xml, n, skipped) = rekordbox::export_xml(&conn, &lib.mounts(), &ids, &pls, ws.version_in_title, ws.artist_in_title)?;
         write_export(&path, &xml)?;
         Ok((n, skipped))
     })
@@ -1209,6 +1251,8 @@ pub fn run() {
             duplicates_list,
             duplicates_count,
             tracks_sync_wav,
+            title_format_preview,
+            title_format_apply,
             duplicates_set_keeper,
             duplicates_not_duplicates,
             duplicates_plan,

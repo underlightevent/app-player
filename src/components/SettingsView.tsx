@@ -6,6 +6,7 @@ import type { ThemeSetting } from "../core/theme";
 import { LANGUAGES, type Language } from "../i18n";
 import { OnlineSettings } from "./OnlineSettings";
 import { RekordboxSettings } from "./RekordboxSettings";
+import { TitleFormatSettings } from "./TitleFormatSettings";
 
 export interface SettingsProps {
   theme: ThemeSetting;
@@ -137,10 +138,6 @@ export function SettingsView(p: SettingsProps) {
         <p className="hint">{t("settings.writingHint")}</p>
         <div className="checks">
           <label>
-            <input type="checkbox" checked={p.values.version_in_title !== "false"} onChange={(e) => p.onSettingChange("version_in_title", String(e.target.checked))} />
-            {t("settings.versionInTitle")}
-          </label>
-          <label>
             <input type="checkbox" checked={p.values.bpm_decimals === "true"} onChange={(e) => p.onSettingChange("bpm_decimals", String(e.target.checked))} />
             {t("settings.bpmDecimals")}
           </label>
@@ -149,6 +146,7 @@ export function SettingsView(p: SettingsProps) {
             {t("settings.singleCover")}
           </label>
         </div>
+        <TitleFormatSettings values={p.values} onSettingChange={p.onSettingChange} onToast={p.onToast} />
         <h3 className="form-label">{t("settings.artistSeparator")}</h3>
         <Segmented
           label={t("settings.artistSeparator")}

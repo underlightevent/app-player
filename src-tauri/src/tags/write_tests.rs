@@ -103,6 +103,7 @@ fn full_changes(cover: Option<CoverData>) -> Changes {
         rating: Some(4),
         cover: Some(cover),
         sync_wav: false,
+        raw_title: None,
     }
     .normalized()
 }

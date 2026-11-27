@@ -5,6 +5,30 @@ import { TrackTable } from "./table/TrackTable";
 
 const FORMATS = ["wav", "mp3", "flac", "aiff", "m4a"];
 
+/** Tris proposés dans la barre de filtres (le tableau permet aussi de cliquer sur les colonnes). */
+const SORT_PRESETS: Record<string, SortKey[]> = {
+  none: [],
+  ratingDesc: [
+    { field: "rating", desc: true },
+    { field: "mainArtist", desc: false },
+    { field: "title", desc: false },
+  ],
+  ratingAsc: [
+    { field: "rating", desc: false },
+    { field: "mainArtist", desc: false },
+    { field: "title", desc: false },
+  ],
+  recent: [{ field: "added", desc: true }],
+  artist: [
+    { field: "mainArtist", desc: false },
+    { field: "title", desc: false },
+  ],
+  title: [{ field: "title", desc: false }],
+};
+
+const sameSort = (a: SortKey[], b: SortKey[]) =>
+  a.length === b.length && a.every((k, i) => k.field === b[i].field && k.desc === b[i].desc);
+
 interface Props {
   /** Nom de la playlist affichée (filtre « playlist »). */
   playlistName: string | null;
@@ -109,6 +133,22 @@ export function LibraryView(p: Props) {
                 {n === 0 ? t("library.anyRating") : "★".repeat(n)}
               </option>
             ))}
+          </select>
+        </label>
+        <label className="chip-select">
+          {t("library.sortBy")}
+          <select
+            value={Object.keys(SORT_PRESETS).find((k) => sameSort(SORT_PRESETS[k], query.sort)) ?? "custom"}
+            onChange={(e) => SORT_PRESETS[e.target.value] && set({ sort: SORT_PRESETS[e.target.value] })}
+          >
+            {Object.keys(SORT_PRESETS).map((k) => (
+              <option key={k} value={k}>
+                {t(`library.sort.${k}`)}
+              </option>
+            ))}
+            {!Object.values(SORT_PRESETS).some((s) => sameSort(s, query.sort)) && (
+              <option value="custom">{t("library.sort.custom")}</option>
+            )}
           </select>
         </label>
         {filtersActive && (
