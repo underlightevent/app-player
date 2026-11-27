@@ -9,7 +9,7 @@ use lofty::file::AudioFile;
 use lofty::id3::v2::{
     BinaryFrame, CommentFrame, ExtendedTextFrame, Frame, FrameId, Id3v2Tag, PopularimeterFrame, PrivateFrame,
 };
-use lofty::tag::TagExt;
+use lofty::tag::{Accessor, TagExt};
 use lofty::TextEncoding;
 
 use super::*;
@@ -165,6 +165,53 @@ fn roundtrip(path: &Path) {
         .filter(|e| e.file_name().to_string_lossy().starts_with(".djlm-tmp"))
         .collect();
     assert!(leftovers.is_empty());
+}
+
+/// MP3 réel de l'utilisateur : tag APE de fin abîmé (annonce des éléments, ne contient
+/// que des zéros) devant un ID3v1. Les lecteurs l'ignorent ; il ne doit plus rendre le
+/// fichier « illisible », et l'écriture des tags ne doit pas toucher à la fin du fichier.
+#[test]
+fn mp3_avec_tag_ape_abime() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = testdata::write(dir.path(), "ape.mp3", &testdata::mp3_bytes());
+    let mut tag = foreign_id3();
+    tag.set_title("On avance (Original)".into());
+    tag.set_artist("Alain Souchon".into());
+    tag.save_to_path(&path, WriteOptions::default().use_id3v23(true)).unwrap();
+    // Tag APE abîmé + ID3v1, comme dans les fichiers de l'utilisateur.
+    let mut tail = Vec::new();
+    tail.extend_from_slice(&[0u8; 142]);
+    tail.extend_from_slice(b"APETAGEX");
+    for v in [2000u32, 174, 4, 0xa000_0000] {
+        tail.extend_from_slice(&v.to_le_bytes());
+    }
+    tail.extend_from_slice(&[0u8; 8]);
+    let mut v1 = b"TAG".to_vec();
+    v1.resize(128, b' ');
+    tail.extend_from_slice(&v1);
+    let mut bytes = std::fs::read(&path).unwrap();
+    bytes.extend_from_slice(&tail);
+    std::fs::write(&path, &bytes).unwrap();
+    assert!(lofty::read_from_path(&path).is_err(), "le cas doit reproduire l'erreur d'origine");
+
+    let info = read_file(&path, &[]).expect("lisible malgré le tag APE abîmé");
+    assert_eq!(info.tags.title.as_deref(), Some("On avance"));
+    assert_eq!(info.tags.version.as_deref(), Some("Original"));
+    assert_eq!(info.tags.artists, ["Alain Souchon"]);
+    assert!(info.duration_ms > 0);
+
+    let hash = audio_stream_hash(&path, None).unwrap();
+    let c = Changes { title: Some(Some("Nouveau".into())), rating: Some(4), ..Default::default() };
+    write_tags(&path, &info.tags, &c, &WriteSettings::default(), &[]).expect("écriture possible");
+    let after = read_file(&path, &[]).unwrap();
+    assert_eq!(after.tags.title.as_deref(), Some("Nouveau"));
+    assert_eq!(after.tags.rating, 4);
+    assert_eq!(audio_stream_hash(&path, None).unwrap(), hash, "son identique");
+    let head = crate::tags::read::salvage_bytes(&path, false).unwrap();
+    let id3 = MpegFile::read_from(&mut std::io::Cursor::new(head), ParseOptions::new().read_properties(false)).unwrap();
+    has_foreign_frames(id3.id3v2().unwrap());
+    let new_bytes = std::fs::read(&path).unwrap();
+    assert!(new_bytes.ends_with(&tail), "fin du fichier (APE, ID3v1) intacte");
 }
 
 #[test]

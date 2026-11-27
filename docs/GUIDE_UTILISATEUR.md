@@ -59,7 +59,7 @@ Le thème sombre (bouton lune en haut à droite, ou Réglages › Apparence) :
 - **Trier** : menu **Trier par** au-dessus du tableau (par exemple **Note : ★★★★★ d'abord**, puis par artiste et titre à note égale), ou cliquez sur un en-tête (une deuxième fois pour inverser ; la colonne **Note** met les mieux notés en premier dès le premier clic). Maj + clic ajoute une colonne de tri.
 - **Colonnes** : clic droit sur les en-têtes pour en afficher ou masquer ; glissez un en-tête pour changer l'ordre ; tirez son bord droit pour la largeur. Tout est retenu.
 - **Sélection** : clic, Ctrl + clic (ajouter), Maj + clic (plage), Ctrl+A (tout), flèches du clavier.
-- Badges de la colonne État : hors ligne, manquant, illisible, cadenas, **RB** (le morceau est dans Rekordbox ; **RB ↻** : ses tags ont changé, à recharger dans Rekordbox), WAV, tags désaccordés.
+- Badges de la colonne État : hors ligne, manquant, illisible (le message exact s'affiche dans le panneau de détail ; un fichier illisible est relu à chaque indexation, donc au démarrage ou avec **Dossiers › Réindexer**), cadenas, **RB** (le morceau est dans Rekordbox ; **RB ↻** : ses tags ont changé, à recharger dans Rekordbox), WAV, tags désaccordés.
 
 ## Modifier les informations
 

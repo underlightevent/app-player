@@ -239,3 +239,13 @@ Les platines n'affichent souvent que le titre dans les playlists exportées par 
 
 ### D-411 · Tri par note
 Le tri par note existait par clic sur la colonne. Ajout d'un menu « Trier par » dans la barre de filtres (préréglages : ordre d'ajout, note 5 étoiles d'abord, sans note d'abord, ajoutés récemment, artiste principal, titre ; à note égale, tri par artiste puis titre). La colonne Note trie du mieux noté au moins bien noté au premier clic.
+
+### D-412 · MP3 marqués « illisible » à tort
+Constat sur la bibliothèque de l'utilisateur (`E:\MUSICS\ALL`, 3 273 fichiers, vérification en lecture seule) : 44 MP3 lisibles par tous les lecteurs étaient refusés par lofty, pour deux raisons :
+1. un **tag APE de fin abîmé** (en-tête « APETAGEX » qui annonce 4 éléments mais ne contient que des zéros), placé devant l'ID3v1 : lofty abandonne le fichier entier ;
+2. des **octets vides entre l'ID3v2 et le premier bloc de son** : lofty ne devine pas le type du fichier.
+
+Lecture : si lofty échoue, on réessaie avec le type donné par l'extension ; pour un MP3, en dernier recours, les tags sont lus sur une copie **en mémoire** réduite à l'ID3v2, au début du son et à l'ID3v1, et les propriétés (durée, débit) sur le fichier entier sans les tags. Rien n'est écrit pendant la lecture.
+Écriture : si la lecture stricte échoue, l'ID3v2 est relu à part (toujours en mode strict, donc refus si lui-même est douteux) et seul l'ID3v2 est réécrit ; la fin du fichier (APE abîmé, ID3v1) reste octet pour octet identique et le son est vérifié comme d'habitude. Le tag APE abîmé n'est pas supprimé (il ne contient rien, mais on ne retire jamais un tag de nous-mêmes).
+Indexation : un fichier « illisible » est relu à chaque indexation, même s'il n'a pas changé, pour profiter des corrections ; s'il est dans un dossier d'arrivée, il entre dans l'Inbox dès qu'il devient lisible.
+Un test reproduit le cas réel. Un diagnostic en lecture seule d'un dossier reste disponible pour les développeurs (`DJLM_DIAG_DIR=… cargo test diag_dossier -- --ignored --nocapture`).

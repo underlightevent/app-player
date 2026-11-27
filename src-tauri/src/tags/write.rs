@@ -641,7 +641,26 @@ fn write_into_temp_inner(path: &Path, tmp: &Path, t: &TrackTags, c: &Changes, s:
         "mp3" => {
             fs::copy(path, tmp)?;
             let mut f = OpenOptions::new().read(true).write(true).open(tmp)?;
-            let mut file = MpegFile::read_from(&mut f, parse_opts()).map_err(lofty_err)?;
+            let mut file = match MpegFile::read_from(&mut f, parse_opts()) {
+                Ok(file) => file,
+                Err(e) => {
+                    // Tag de fin (APE) abîmé : le fichier est lu sans ses tags, l'ID3v2 à part
+                    // (lui aussi en mode strict). Seul l'ID3v2 est réécrit : les octets de la fin
+                    // du fichier ne sont pas touchés.
+                    let salvaged = super::read::salvage_bytes(tmp, false)
+                        .and_then(|b| MpegFile::read_from(&mut std::io::Cursor::new(b), parse_opts()).ok())
+                        .ok_or_else(|| lofty_err(e))?;
+                    rewind(&mut f)?;
+                    // Structure seule (aucun tag n'en est repris) : mode tolérant, sinon le tag
+                    // abîmé bloque la lecture même sans les tags.
+                    let structure = ParseOptions::new().parsing_mode(ParsingMode::BestAttempt).read_properties(false).read_tags(false);
+                    let mut bare = MpegFile::read_from(&mut f, structure).map_err(lofty_err)?;
+                    if let Some(t) = salvaged.id3v2() {
+                        bare.set_id3v2(t.clone());
+                    }
+                    bare
+                }
+            };
             let mut id3 = file.id3v2().cloned().unwrap_or_default();
             apply_id3(&mut id3, t, c, s);
             file.set_id3v2(id3);

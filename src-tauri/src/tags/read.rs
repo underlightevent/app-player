@@ -4,7 +4,9 @@ use std::fs::File;
 use std::path::Path;
 
 use lofty::config::{ParseOptions, ParsingMode};
-use lofty::file::{AudioFile, FileType, TaggedFileExt};
+use lofty::file::{AudioFile, FileType, TaggedFile, TaggedFileExt};
+use lofty::probe::Probe;
+use lofty::properties::FileProperties;
 use lofty::picture::{PictureInformation, PictureType};
 use lofty::tag::{Accessor, ItemKey, Tag, TagExt, TagType};
 
@@ -137,15 +139,98 @@ fn preferred_tag_types(ft: &FileType) -> &'static [TagType] {
 }
 
 /// Lit un fichier. `exceptions` : noms d'artistes à ne jamais découper.
+fn parse_opts() -> ParseOptions {
+    ParseOptions::new().parsing_mode(ParsingMode::BestAttempt)
+}
+
+/// Ouvre un fichier avec lofty, avec deux solutions de secours pour les fichiers que
+/// les lecteurs courants lisent sans problème :
+/// 1. type de fichier impossible à deviner (remplissage après l'ID3, par exemple) :
+///    on se fie à l'extension ;
+/// 2. MP3 dont un tag de fin (APE) est abîmé : les tags du début (ID3v2) et de la fin
+///    (ID3v1) sont lus à part, les propriétés sur le fichier entier sans les tags.
+/// Rien n'est jamais écrit ici.
+fn open_tagged(path: &Path) -> Result<(TaggedFile, FileProperties), ReadError> {
+    let first = (|| -> Result<TaggedFile, String> {
+        let mut f = File::open(path).map_err(|e| e.to_string())?;
+        let probe = Probe::new(&mut f).options(parse_opts()).guess_file_type().map_err(|e| e.to_string())?;
+        probe.read().map_err(|e| e.to_string())
+    })();
+    let first_err = match first {
+        Ok(t) => {
+            let p = t.properties().clone();
+            return Ok((t, p));
+        }
+        Err(e) => e,
+    };
+    File::open(path)?; // fichier absent ou inaccessible : erreur claire
+    let Some(ft) = FileType::from_path(path) else { return Err(ReadError::Parse(first_err)) };
+    let mut f = File::open(path)?;
+    if let Ok(t) = Probe::new(&mut f).options(parse_opts()).set_file_type(ft).read() {
+        let p = t.properties().clone();
+        return Ok((t, p));
+    }
+    if ft == FileType::Mpeg {
+        if let Some(r) = salvage_mpeg(path) {
+            return Ok(r);
+        }
+    }
+    Err(ReadError::Parse(first_err))
+}
+
+/// MP3 au tag de fin abîmé : tags lus sur une copie en mémoire réduite au tag ID3v2,
+/// au début du son et au tag ID3v1 ; propriétés lues sur le fichier entier sans les tags.
+fn salvage_mpeg(path: &Path) -> Option<(TaggedFile, FileProperties)> {
+    let mut f = File::open(path).ok()?;
+    let props = lofty::mpeg::MpegFile::read_from(&mut f, parse_opts().read_tags(false)).ok()?.properties().clone();
+    let tagged = Probe::new(std::io::Cursor::new(salvage_bytes(path, true)?)).options(parse_opts()).set_file_type(FileType::Mpeg).read().ok()?;
+    Some((tagged, props.into()))
+}
+
+/// Tag ID3v2 complet + 256 Kio de son (+ tag ID3v1 s'il existe et si `with_v1`), sans le reste de la fin du fichier.
+pub(crate) fn salvage_bytes(path: &Path, with_v1: bool) -> Option<Vec<u8>> {
+    use std::io::{Read, Seek, SeekFrom};
+    let mut f = File::open(path).ok()?;
+    let len = f.metadata().ok()?.len();
+    let mut head = [0u8; 10];
+    f.read_exact(&mut head).ok()?;
+    let tag_end = if &head[..3] == b"ID3" {
+        let size = head[6..10].iter().fold(0u64, |a, b| (a << 7) | (*b as u64 & 0x7f));
+        10 + size + if head[5] & 0x10 != 0 { 10 } else { 0 }
+    } else {
+        0
+    };
+    // Fin du son : avant l'ID3v1 (128 octets « TAG ») et avant un tag APE éventuel.
+    let mut v1 = [0u8; 128];
+    let has_v1 = len >= tag_end + 128
+        && f.seek(SeekFrom::Start(len - 128)).is_ok()
+        && f.read_exact(&mut v1).is_ok()
+        && &v1[..3] == b"TAG";
+    let mut audio_end = if has_v1 { len - 128 } else { len };
+    if audio_end >= tag_end + 32 {
+        let mut footer = [0u8; 32];
+        f.seek(SeekFrom::Start(audio_end - 32)).ok()?;
+        f.read_exact(&mut footer).ok()?;
+        if &footer[..8] == b"APETAGEX" {
+            let size = u32::from_le_bytes(footer[12..16].try_into().ok()?) as u64;
+            let header = if footer[23] & 0x80 != 0 { 32 } else { 0 };
+            audio_end = audio_end.saturating_sub(size + header).max(tag_end);
+        }
+    }
+    let keep = (tag_end + 256 * 1024).min(audio_end);
+    let mut buf = vec![0u8; keep as usize];
+    f.seek(SeekFrom::Start(0)).ok()?;
+    f.read_exact(&mut buf).ok()?;
+    if has_v1 && with_v1 {
+        buf.extend_from_slice(&v1);
+    }
+    Some(buf)
+}
+
 pub fn read_file(path: &Path, exceptions: &[String]) -> Result<FileInfo, ReadError> {
-    let mut file = File::open(path)?;
-    let probe = lofty::probe::Probe::new(&mut file)
-        .options(ParseOptions::new().parsing_mode(ParsingMode::BestAttempt))
-        .guess_file_type()
-        .map_err(|e| ReadError::Parse(e.to_string()))?;
-    let tagged = probe.read().map_err(|e| ReadError::Parse(e.to_string()))?;
+    let (tagged, props) = open_tagged(path)?;
+    let props = &props;
     let ft = tagged.file_type();
-    let props = tagged.properties();
 
     let main_tag = preferred_tag_types(&ft).iter().find_map(|t| tagged.tag(*t).filter(|t| !t.is_empty()));
     let mut tags = main_tag.map(|t| tags_from(t, exceptions)).unwrap_or_default();
@@ -269,3 +354,41 @@ fn wav_info_differs(path: &Path, id3: Option<&Tag>, exceptions: &[String]) -> st
         || norm(get(b"IPRD")) != norm(id3.get_string(ItemKey::AlbumTitle).map(str::to_string))
         || norm(get(b"IGNR")) != norm(id3.genre().map(|g| g.to_string())))
 }
+
+/// Diagnostic en lecture seule d'un dossier réel (jamais lancé automatiquement) :
+/// `DJLM_DIAG_DIR=E:\... cargo test diag_dossier -- --ignored --nocapture`
+#[cfg(test)]
+mod diag {
+    #[test]
+    #[ignore]
+    fn diag_dossier() {
+        let Ok(dir) = std::env::var("DJLM_DIAG_DIR") else { return };
+        let mut stack = vec![std::path::PathBuf::from(dir)];
+        let (mut total, mut bad) = (0, 0);
+        while let Some(d) = stack.pop() {
+            for e in std::fs::read_dir(&d).unwrap().flatten() {
+                let p = e.path();
+                if p.is_dir() {
+                    stack.push(p);
+                    continue;
+                }
+                if !crate::tags::is_audio_path(&p) {
+                    continue;
+                }
+                total += 1;
+                if let Err(err) = super::read_file(&p, &[]) {
+                    bad += 1;
+                    let play = match crate::audio::decode::Decoder::open(&p) {
+                        Ok(_) => "lecture OK".to_string(),
+                        Err(e) => format!("lecture KO: {e}"),
+                    };
+                    let mut head = [0u8; 12];
+                    let _ = std::io::Read::read(&mut std::fs::File::open(&p).unwrap(), &mut head);
+                    println!("DIAG|{}|{}|{}|{:?}", p.display(), err, play, String::from_utf8_lossy(&head));
+                }
+            }
+        }
+        println!("DIAG total={total} illisibles={bad}");
+    }
+}
+

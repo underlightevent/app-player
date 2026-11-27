@@ -164,7 +164,11 @@ pub fn scan_root(
     let mut seen_ids: Vec<i64> = Vec::new();
     for f in &found {
         match existing.get(&f.rel) {
-            Some(e) if e.size == f.size && e.mtime == f.mtime && e.status != "missing" => seen_ids.push(e.id),
+            // Un fichier illisible est relu à chaque scan : une nouvelle version de l'application
+            // sait peut-être le lire.
+            Some(e) if e.size == f.size && e.mtime == f.mtime && e.status != "missing" && e.status != "unreadable" => {
+                seen_ids.push(e.id)
+            }
             Some(e) => {
                 seen_ids.push(e.id);
                 to_read.push(f);
@@ -238,13 +242,15 @@ pub fn store(
 ) -> Result<i64, AppError> {
     let file_name = nfc(rel.rsplit('/').next().unwrap_or(rel));
     let format = Path::new(&file_name).extension().and_then(|e| e.to_str()).unwrap_or("").to_ascii_lowercase();
-    let previous: Option<(i64, i64)> = conn
+    let previous_row: Option<(i64, i64, String)> = conn
         .query_row(
-            "SELECT size, mtime FROM tracks WHERE volume_id = ?1 AND rel_path = ?2",
+            "SELECT size, mtime, status FROM tracks WHERE volume_id = ?1 AND rel_path = ?2",
             params![volume_id, rel],
-            |r| Ok((r.get(0)?, r.get(1)?)),
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
         )
         .optional()?;
+    let was_unreadable = previous_row.as_ref().map(|p| p.2 == "unreadable").unwrap_or(false);
+    let previous: Option<(i64, i64)> = previous_row.map(|p| (p.0, p.1));
     let file_changed = previous.map(|p| p != (size, mtime)).unwrap_or(true);
     conn.execute(
         "INSERT INTO tracks (volume_id, rel_path, file_name, root_id, size, mtime, format)
@@ -259,7 +265,8 @@ pub fn store(
         |r| r.get(0),
     )?;
     // Nouveau fichier dans un dossier d'arrivée : il entre dans l'Inbox (phase 2).
-    if previous.is_none() && res.is_ok() {
+    // Un fichier illisible à son arrivée y entre dès qu'il devient lisible.
+    if (previous.is_none() || was_unreadable) && res.is_ok() {
         if let Some(rid) = root_id {
             let kind: Option<String> = conn.query_row("SELECT kind FROM roots WHERE id = ?1", [rid], |r| r.get(0)).optional()?;
             if kind.as_deref() == Some("inbox") {
@@ -401,9 +408,11 @@ mod tests {
             conn.query_row("SELECT count(*) FROM tracks WHERE status = 'unreadable'", [], |r| r.get(0)).unwrap();
         assert_eq!(unreadable, 1);
 
-        // Deuxième passage : rien n'a changé, rien n'est relu.
+        // Deuxième passage : rien n'a changé, seul le fichier illisible est relu (une nouvelle
+        // version de l'application sait peut-être le lire).
         let stats = scan_root(&mut conn, &root, &vol.mount, &[], None, &|| {}).unwrap();
-        assert_eq!(stats.read, 0);
+        assert_eq!(stats.read, 1);
+        assert_eq!(stats.unreadable, 1);
 
         // Un fichier supprimé est marqué manquant, pas effacé.
         std::fs::remove_file(music.join("Techno").join("test.mp3")).unwrap();
