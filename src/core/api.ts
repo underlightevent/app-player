@@ -23,7 +23,14 @@ export interface StartupStatus {
 
 export const inTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
-const previewSettings: Settings = { theme: "light", language: "fr", onboarding_done: "false" };
+// Aperçu : « ?demo » saute le premier lancement, « ?theme=dark » et « ?lang=en » choisissent l'apparence
+// (servent aux captures d'écran du guide).
+const previewParams = typeof location !== "undefined" ? new URLSearchParams(location.search) : new URLSearchParams();
+const previewSettings: Settings = {
+  theme: previewParams.get("theme") ?? "light",
+  language: previewParams.get("lang") ?? "fr",
+  onboarding_done: previewParams.has("demo") ? "true" : "false",
+};
 
 export function isCoreError(e: unknown): e is CoreError {
   return typeof e === "object" && e !== null && "code" in e && "detail" in e;

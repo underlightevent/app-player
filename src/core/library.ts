@@ -20,6 +20,8 @@ export interface LibraryQuery {
   rootId: number | null;
   /** Dossier : [disque, chemin relatif] — ses morceaux et ceux de ses sous-dossiers. */
   folder: [number, string] | null;
+  /** Compteur du tableau de bord « Santé de la bibliothèque ». */
+  health: string | null;
   sort: SortKey[];
 }
 
@@ -31,6 +33,7 @@ export const emptyQuery: LibraryQuery = {
   status: null,
   rootId: null,
   folder: null,
+  health: null,
   sort: [],
 };
 
@@ -58,7 +61,7 @@ export interface TrackRow {
   relPath: string;
   volumeId: number;
   volumeLabel: string;
-  status: "ok" | "missing" | "unreadable";
+  status: "ok" | "missing" | "unreadable" | "quarantined";
   error: string | null;
   online: boolean;
   path: string | null;

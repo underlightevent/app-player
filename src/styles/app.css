@@ -2312,3 +2312,268 @@ body.is-dragging * {
   justify-content: center;
   margin-top: var(--space-4);
 }
+
+/* ---------- Phase 3 : doublons, quarantaine, santé ---------- */
+.btn-small {
+  height: 26px;
+  padding: 0 var(--space-2);
+  font-size: var(--font-size-small);
+  gap: var(--space-1);
+}
+.btn-danger {
+  background: var(--color-error);
+  border-color: var(--color-error);
+  color: var(--color-on-error);
+}
+.btn-danger:hover:not(:disabled) {
+  filter: brightness(1.08);
+  background: var(--color-error);
+}
+.spacer {
+  flex: 1;
+}
+.small-empty {
+  padding: var(--space-8) 0;
+}
+.check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+.plain-list {
+  margin: 0;
+  padding-left: var(--space-5);
+  max-height: 260px;
+  overflow: auto;
+}
+.plain-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-table);
+}
+.plain-table th,
+.plain-table td {
+  text-align: left;
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: top;
+}
+.plain-table th {
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-small);
+}
+.plain-table .num {
+  text-align: right;
+}
+.plain-table tr.offline td {
+  opacity: 0.55;
+}
+
+.duplicates,
+.health,
+.quarantine {
+  max-width: 1100px;
+}
+.dup-group {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+}
+.dup-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  flex-wrap: wrap;
+}
+.dup-members {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-3);
+}
+.dup-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-field);
+  padding: var(--space-3);
+  background: var(--color-bg);
+}
+.dup-card.keeper {
+  border-color: var(--color-accent);
+  box-shadow: inset 0 0 0 1px var(--color-accent);
+}
+.dup-card-top {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+.dup-card-title {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  align-items: flex-start;
+}
+.dup-format {
+  font-size: var(--font-size-small);
+  color: var(--color-text-secondary);
+}
+.dup-cover {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-field);
+  object-fit: cover;
+  flex: none;
+}
+.dup-cover-empty {
+  display: grid;
+  place-items: center;
+  background: var(--color-surface-hover);
+  color: var(--color-text-secondary);
+}
+.badge-keep {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  border-color: var(--color-accent);
+}
+.dup-facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px var(--space-3);
+  margin: var(--space-3) 0 0;
+  font-size: var(--font-size-small);
+}
+.dup-facts dt {
+  color: var(--color-text-secondary);
+}
+.dup-facts dd {
+  margin: 0;
+  min-width: 0;
+}
+.dup-path {
+  overflow-wrap: anywhere;
+  font-size: var(--font-size-small);
+}
+.dup-warn {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+  color: var(--color-warning);
+  font-size: var(--font-size-small);
+  margin: var(--space-2) 0 0;
+}
+.dup-plan {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 50vh;
+  overflow: auto;
+}
+.dup-plan > li {
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.dup-transfers,
+.dup-discard {
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-6);
+  font-size: var(--font-size-small);
+}
+.dup-discard {
+  color: var(--color-text-secondary);
+}
+
+.health-grid {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-4) 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: var(--space-3);
+}
+.health-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+.health-card.has {
+  border-color: color-mix(in srgb, var(--color-warning) 45%, var(--color-border));
+}
+.health-open {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  border-radius: var(--radius-field);
+}
+.health-open:disabled {
+  cursor: default;
+}
+.health-open:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+.health-count {
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+.health-card:not(.has) .health-count {
+  color: var(--color-text-secondary);
+}
+.health-label {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-small);
+}
+.health-open:not(:disabled):hover .health-label {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+
+.quality-line {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.quality-actions {
+  display: flex;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+}
+.spectrogram {
+  display: flex;
+  gap: var(--space-2);
+}
+.spectrogram img {
+  width: 100%;
+  min-width: 0;
+  height: 256px;
+  image-rendering: auto;
+  border-radius: var(--radius-field);
+  background: #000;
+}
+.spectrogram-axis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-size: var(--font-size-small);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+.plain-table .num,
+.plain-table .tabular {
+  white-space: nowrap;
+}

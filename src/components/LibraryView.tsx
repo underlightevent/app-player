@@ -63,6 +63,11 @@ export function LibraryView(p: Props) {
       ))}
 
       <div className="filter-bar" role="toolbar" aria-label={t("library.filters")}>
+        {query.health && (
+          <button className="chip" aria-pressed onClick={() => set({ health: null })} title={t("library.clearHealth")}>
+            {t(`health.keys.${query.health}`)} ×
+          </button>
+        )}
         {query.folder && (
           <button className="chip" aria-pressed onClick={() => set({ folder: null })} title={t("library.clearFolder")}>
             {t("library.folderFilter", { name: query.folder[1].split("/").pop() || "/" })} ×

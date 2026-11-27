@@ -6,6 +6,71 @@ import type { Changes, EditableField } from "../core/edit";
 import { trackCover } from "../core/edit";
 import { formatBpm, formatDuration, formatKey, formatQuality, formatSize } from "../core/format";
 import { startDrag, useDropTarget } from "../core/dnd";
+import { qualityAnalyze, qualityInfo, qualitySpectrogram, qualityText, type QualityInfo } from "../core/quality";
+import { Modal } from "./Modal";
+
+/** Contrôle qualité d'un morceau : verdict, explication, spectrogramme à la demande. */
+function QualityLine({ row, revision }: { row: TrackRow; revision: number }) {
+  const { t } = useTranslation();
+  const [q, setQ] = useState<QualityInfo | null | undefined>(undefined);
+  const [image, setImage] = useState<string | null | "loading">(null);
+  useEffect(() => {
+    let alive = true;
+    setQ(undefined);
+    void qualityInfo(row.id).then((r) => alive && setQ(r)).catch(() => alive && setQ(null));
+    return () => {
+      alive = false;
+    };
+  }, [row.id, revision]);
+  const open = async () => {
+    setImage("loading");
+    try {
+      setImage((await qualitySpectrogram(row.id)) ?? null);
+    } catch {
+      setImage(null);
+    }
+  };
+  if (q === undefined) return null;
+  return (
+    <div className="quality-line">
+      {q ? (
+        <span className={q.verdict === "ok" ? "" : q.verdict === "suspect" ? "text-warning" : "text-error"}>
+          {t(`quality.verdict.${q.verdict}`)} — {qualityText(q, t)}
+        </span>
+      ) : (
+        <span className="muted">{t("quality.notAnalyzed")}</span>
+      )}
+      <span className="quality-actions">
+        {!q && row.online && (
+          <button className="btn btn-small" onClick={() => void qualityAnalyze([row.id])}>{t("quality.analyzeOne")}</button>
+        )}
+        {row.online && (
+          <button className="btn btn-small" onClick={() => void open()}>{t("quality.spectrogram")}</button>
+        )}
+      </span>
+      {image && (
+        <Modal title={t("quality.spectrogramTitle", { name: row.fileName })} onClose={() => setImage(null)} wide>
+          {image === "loading" ? (
+            <p className="muted">{t("quality.computing")}</p>
+          ) : (
+            <>
+              <div className="spectrogram">
+                <img src={image} alt={t("quality.spectrogram")} />
+                <div className="spectrogram-axis" aria-hidden>
+                  <span>{((row.sampleRate ?? 44100) / 2000).toFixed(0)} kHz</span>
+                  <span>{((row.sampleRate ?? 44100) / 4000).toFixed(0)} kHz</span>
+                  <span>0</span>
+                </div>
+              </div>
+              <p className="hint small">{t("quality.spectrogramHint")}</p>
+              {q && q.cutoffHz != null && <p>{t("quality.cutoff", { khz: (q.cutoffHz / 1000).toFixed(1) })}</p>}
+            </>
+          )}
+        </Modal>
+      )}
+    </div>
+  );
+}
 
 interface Props {
   selected: TrackRow[];
@@ -321,6 +386,7 @@ export function DetailPanel(p: Props) {
           <h3 className="detail-section">{t("detail.technical")}</h3>
           <dl className="fields tabular">
             {info(t("detail.quality"), formatQuality(single, locale))}
+            {single.status === "ok" && info(t("quality.title"), <QualityLine row={single} revision={p.revision} />)}
             {info(t("detail.duration"), formatDuration(single.durationMs))}
             {info(t("detail.size"), formatSize(single.size, locale))}
             {info(t("detail.channels"), single.channels)}

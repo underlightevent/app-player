@@ -667,6 +667,33 @@ async fn duplicates_find(state: State<'_, AppState>) -> Result<bool, AppError> {
     Ok(true)
 }
 
+/// WAV : réécrit RIFF INFO pour qu'il dise la même chose que l'ID3 (Rekordbox lit RIFF INFO).
+#[tauri::command]
+async fn tracks_sync_wav(state: State<'_, AppState>, ids: Vec<i64>) -> Result<EditReport, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        let task = (ids.len() > 3).then(|| lib.tasks.start("tasks.edit", None));
+        let changes = Changes { sync_wav: true, ..Default::default() };
+        let r = lib.edit(&ids, changes, Source::Automatic, "history.syncWav", task.as_ref());
+        if let Some(t) = task {
+            t.finish();
+        }
+        r
+    })
+    .await
+}
+
+#[tauri::command]
+async fn duplicates_count(state: State<'_, AppState>) -> Result<i64, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        let conn = db::open_worker(lib.db_path())?;
+        duplicates::prune(&conn)?;
+        Ok(conn.query_row("SELECT count(*) FROM duplicate_groups", [], |r| r.get(0))?)
+    })
+    .await
+}
+
 #[tauri::command]
 async fn duplicates_list(state: State<'_, AppState>) -> Result<Vec<duplicates::Group>, AppError> {
     let lib = state.library()?.clone();
@@ -977,6 +1004,8 @@ pub fn run() {
             parse_apply,
             duplicates_find,
             duplicates_list,
+            duplicates_count,
+            tracks_sync_wav,
             duplicates_set_keeper,
             duplicates_not_duplicates,
             duplicates_plan,

@@ -51,6 +51,10 @@ import { PlayerBar } from "./components/PlayerBar";
 import { useTasks } from "./components/TasksPanel";
 import { initialPlayerState, playerCommand, playerLoad, playerState, type PlayerState } from "./core/player";
 import { Toast, useToast } from "./components/Toast";
+import { DuplicatesView } from "./components/DuplicatesView";
+import { QuarantineView } from "./components/QuarantineView";
+import { HealthView } from "./components/HealthView";
+import { duplicatesCount, quarantineTracks } from "./core/quality";
 
 function isLanguage(v: unknown): v is Language {
   return LANGUAGES.includes(v as Language);
@@ -355,6 +359,14 @@ export default function App() {
 
   // ---------- Renommage, nettoyage, tags depuis le nom ----------
   const [dialog, setDialog] = useState<null | "rename" | "clean" | "parse">(null);
+  /** Renommage demandé depuis « Santé de la bibliothèque » (morceaux hors sélection). */
+  const [renameIds, setRenameIds] = useState<number[] | null>(null);
+  const [dupCount, setDupCount] = useState(0);
+  useEffect(() => {
+    const refresh = () => void duplicatesCount().then(setDupCount).catch(() => {});
+    refresh();
+    return onEvent("library:changed", refresh);
+  }, []);
   const [renameTemplate, setRenameTemplate] = useState(DEFAULT_TEMPLATE);
   const [savedTemplates, setSavedTemplates] = useState<SavedTemplate[]>([]);
   const [parsePattern, setParsePattern] = useState("");
@@ -411,6 +423,17 @@ export default function App() {
     { id: "copy", label: t("actions.copyTags"), disabled: selection.size !== 1, run: copyTags },
     { id: "paste", label: t("actions.pasteTags"), disabled: selection.size === 0 || !copiedTags, run: () => copiedTags && void applyEdit([...selection], copiedTags) },
     { id: "reveal", label: t("actions.reveal"), disabled: selection.size !== 1, run: () => void revealSelected() },
+    {
+      id: "quarantine",
+      label: t("actions.quarantine"),
+      disabled: selection.size === 0,
+      run: async () => {
+        const ids = [...selection];
+        const r = await quarantineTracks(ids);
+        setSelection(new Set());
+        reportDone(r, "quarantine.done");
+      },
+    },
   ];
 
   // ---------- Dossiers ----------
@@ -647,7 +670,7 @@ export default function App() {
 
   return (
     <div className={`app ${platformClass} ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
-      <Sidebar current={view} onSelect={setView} collapsed={sidebarCollapsed} onToggleCollapsed={() => setSidebarCollapsed((c) => !c)} tree={folderTree} badges={{ inbox: online.inbox, review: online.review }} />
+      <Sidebar current={view} onSelect={setView} collapsed={sidebarCollapsed} onToggleCollapsed={() => setSidebarCollapsed((c) => !c)} tree={folderTree} badges={{ inbox: online.inbox, review: online.review, duplicates: dupCount }} />
       <TopBar
         onSearchOnline={() => void searchOnline()}
         onlineQueued={online.queued}
@@ -702,6 +725,31 @@ export default function App() {
             <FoldersView roots={lib.roots} onAddFolder={() => void addFolder()} onChanged={() => void lib.refresh()} onToast={toast.show} />
           ) : view === "review" ? (
             <ReviewView onDone={(r) => reportDone(r, "edit.saved")} />
+          ) : view === "duplicates" ? (
+            <DuplicatesView
+              playingId={player.trackId}
+              playing={player.playing}
+              onPlay={(id) => void playTrack(id)}
+              onToggle={togglePlay}
+              onDone={reportDone}
+              onToast={(text) => toast.show(text)}
+            />
+          ) : view === "quarantine" ? (
+            <QuarantineView onDone={reportDone} />
+          ) : view === "health" ? (
+            <HealthView
+              onOpen={(key) => {
+                setQuery({ ...emptyQuery, health: key });
+                setView("library");
+              }}
+              onGo={setView}
+              onRename={(ids) => {
+                setRenameIds(ids);
+                setDialog("rename");
+              }}
+              onDone={reportDone}
+              onToast={toast.show}
+            />
           ) : view === "inbox" ? (
             <InboxView
               roots={lib.roots}
@@ -804,7 +852,7 @@ export default function App() {
       )}
       {dialog === "rename" && (
         <RenameDialog
-          ids={selectedIdList}
+          ids={renameIds ?? selectedIdList}
           template={renameTemplate}
           saved={savedTemplates}
           onSaveTemplates={(tpl, list) => {
@@ -813,7 +861,10 @@ export default function App() {
             save("rename_template", tpl);
             save("rename_templates", JSON.stringify(list));
           }}
-          onClose={() => setDialog(null)}
+          onClose={() => {
+            setDialog(null);
+            setRenameIds(null);
+          }}
           onDone={(r) => reportDone(r, "rename.done")}
         />
       )}

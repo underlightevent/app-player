@@ -6,7 +6,8 @@
     "cancel": "Cancel",
     "undo": "Undo",
     "close": "Close",
-    "ok": "OK"
+    "ok": "OK",
+    "selectAll": "Select all"
   },
   "nav": {
     "library": "Library",
@@ -97,7 +98,8 @@
     "folderAdded": "Folder added: indexing in progress",
     "notAFolder": "This is not an accessible folder.",
     "folderFilter": "Folder: {{name}}",
-    "clearFolder": "Show the whole library"
+    "clearFolder": "Show the whole library",
+    "clearHealth": "Remove this filter"
   },
   "table": {
     "label": "Tracks",
@@ -219,7 +221,11 @@
       "cancelled": "Cancelled",
       "error": "Error"
     },
-    "edit": "Writing tags"
+    "edit": "Writing tags",
+    "duplicates": "Looking for duplicates",
+    "duplicatesResolve": "Handling duplicates",
+    "quality": "Quality check",
+    "relocate": "Looking for missing files"
   },
   "player": {
     "nothing": "Nothing playing",
@@ -272,7 +278,12 @@
     "export": "Export the database…",
     "import": "Import a database…",
     "exported": "Database exported",
-    "imported": "Database checked: it will be put in place at the next start of the application"
+    "imported": "Database checked: it will be put in place at the next start of the application",
+    "quality": "Duplicates and quality",
+    "qualityHint": "How to pick the file to keep among duplicates, and when a bitrate counts as low.",
+    "duplicateOrder": "Order of lossless formats",
+    "duplicateOrderHint": "Lossy files come next, from highest to lowest bitrate. A suspicious file goes behind a genuine MP3 320.",
+    "lowBitrate": "Bitrate counts as low below"
   },
   "languages": {
     "fr": "Français",
@@ -302,7 +313,11 @@
     "mkdir": "the folder creation",
     "moveDir": "the folder move",
     "moveTracks": "the track move",
-    "online": "the online search"
+    "online": "the online search",
+    "quarantine": "moving to quarantine",
+    "restore": "restoring",
+    "duplicates": "handling duplicates",
+    "syncWav": "resyncing WAV files"
   },
   "edit": {
     "saved_one": "Track updated",
@@ -341,7 +356,10 @@
     "rename_io": "the file could not be renamed; it stayed where it was.",
     "move_conflict": "a file with the same name already exists in this folder.",
     "move_offline": "the drive is disconnected.",
-    "move_other_disk": "moving between two drives is not possible yet."
+    "move_other_disk": "moving between two drives is not possible yet.",
+    "exists": "a file with the same name is already there; nothing was overwritten.",
+    "missing": "the file cannot be found.",
+    "trash": "the file could not be moved to the trash; it stays in quarantine."
   },
   "actions": {
     "clean": "Clean up tags…",
@@ -349,7 +367,8 @@
     "swap": "Swap artist and title",
     "copyTags": "Copy tags",
     "pasteTags": "Paste tags",
-    "reveal": "Show in Explorer or Finder"
+    "reveal": "Show in Explorer or Finder",
+    "quarantine": "Move to quarantine"
   },
   "rename": {
     "title_one": "Rename {{count}} file",
@@ -634,6 +653,168 @@
       "invalid_client_key": "application key rejected: check it on acoustid.org (copy it without spaces)",
       "invalid_user_key": "user key rejected: check it on acoustid.org/api-key",
       "invalid_fingerprint": "fingerprint rejected by AcoustID (application problem, please copy the diagnostic report)"
+    }
+  },
+  "duplicates": {
+    "intro": "Exact copies, and the same track in another format or quality (sound compared on this computer, no internet). Two different versions (Original Mix, Extended Mix, Radio Edit, remix) are never grouped.",
+    "search": "Find duplicates",
+    "searching": "Looking for duplicates. You can keep working.",
+    "alreadySearching": "A duplicate search is already running.",
+    "resolveAll_one": "Handle the group…",
+    "resolveAll_other": "Handle the {{count}} groups…",
+    "none": "No duplicates found. Run a search after adding tracks.",
+    "group": "Duplicate group",
+    "kind": {
+      "exact": "Exact copy",
+      "similar": "Same track, other file"
+    },
+    "notDuplicates": "These are not duplicates",
+    "resolve": "Handle…",
+    "keep": "Keep",
+    "makeKeeper": "Keep this one",
+    "size": "Size",
+    "tags": "Tags",
+    "path": "Location",
+    "similarity": "Similarity",
+    "suspect": "Suspicious quality: treble cut at {{khz}} kHz.",
+    "suggested": "File suggested by the ranking.",
+    "previewTitle_one": "Preview: {{count}} group",
+    "previewTitle_other": "Preview: {{count}} groups",
+    "previewHint": "The kept file receives what it is missing, then the others go to quarantine (nothing is deleted, everything can be undone).",
+    "transfer": "Carry rating, tags and cover over to the kept file",
+    "transferLine": "{{field}}: “{{value}}” (from {{from}})",
+    "toQuarantine": "{{name}} → quarantine",
+    "confirm_one": "Move {{count}} file to quarantine",
+    "confirm_other": "Move {{count}} files to quarantine",
+    "done_one": "{{count}} file moved to quarantine.",
+    "done_other": "{{count}} files moved to quarantine."
+  },
+  "quarantine": {
+    "intro": "Discarded files are kept in a “_Quarantaine” folder on the same disk, with their original folder structure. They take no extra space and go back to their place in one click.",
+    "restore_one": "Restore selection ({{count}})",
+    "restore_other": "Restore selection ({{count}})",
+    "restoreOne": "Restore",
+    "trashSelected_one": "Move {{count}} file to the trash…",
+    "trashSelected_other": "Move {{count}} files to the trash…",
+    "empty": "Empty quarantine…",
+    "none": "The quarantine is empty.",
+    "file": "Track",
+    "origin": "Original location",
+    "reason": "Reason",
+    "date": "Added on",
+    "offline": "Disk disconnected",
+    "gone": "File missing from the quarantine folder",
+    "reasons": {
+      "duplicate": "Duplicate",
+      "manual": "By hand",
+      "wav_to_aiff": "Converted to AIFF"
+    },
+    "confirmTitle": "Move to the trash?",
+    "confirmText_one": "{{count}} file ({{size}}) will be moved to the system trash.",
+    "confirmText_other": "{{count}} files ({{size}}) will be moved to the system trash.",
+    "confirmHint": "You can still recover them from the trash, but no longer from the app.",
+    "confirmOffline_one": "{{count}} file on a disconnected disk will be left aside.",
+    "confirmOffline_other": "{{count}} files on disconnected disks will be left aside.",
+    "confirmButton_one": "Move {{count}} file to the trash",
+    "confirmButton_other": "Move {{count}} files to the trash",
+    "restored_one": "{{count}} file put back in place.",
+    "restored_other": "{{count}} files put back in place.",
+    "emptied_one": "{{count}} file moved to the trash.",
+    "emptied_other": "{{count}} files moved to the trash.",
+    "done_one": "{{count}} track moved to quarantine.",
+    "done_other": "{{count}} tracks moved to quarantine."
+  },
+  "quality": {
+    "title": "Quality check",
+    "verdict": {
+      "ok": "Fine",
+      "suspect": "Suspicious",
+      "corrupt": "Damaged"
+    },
+    "notAnalyzed": "Not analysed yet",
+    "analyzeOne": "Analyse",
+    "spectrogram": "Spectrogram",
+    "spectrogramTitle": "Spectrogram — {{name}}",
+    "spectrogramHint": "Time runs left to right, treble is at the top. A sharp horizontal limit with only black above it gives away a file made from an MP3 or AAC.",
+    "computing": "Computing…",
+    "cutoff": "Sharp treble cut detected at {{khz}} kHz.",
+    "detail": {
+      "ok": "no problem found",
+      "fakeLossless": "sharp cut at {{khz}} kHz: probably a converted MP3 or AAC (fake lossless)",
+      "upscaled": "cut at {{khz}} kHz for {{kbps}} kbit/s claimed: probably upscaled",
+      "truncated": "truncated file: {{got}} s readable out of {{expected}} s",
+      "errors_one": "{{count}} damaged spot in the audio",
+      "errors_other": "{{count}} damaged spots in the audio",
+      "unreadable": "the audio cannot be decoded"
+    }
+  },
+  "health": {
+    "summary_one": "{{total}} tracks · {{count}} thing to check.",
+    "summary_other": "{{total}} tracks · {{count}} things to check.",
+    "quarantined_one": "{{count}} file in quarantine.",
+    "quarantined_other": "{{count}} files in quarantine.",
+    "analyze": "Run the quality check",
+    "analyzing": "Quality check running in the background. Counters update as it goes.",
+    "alreadyAnalyzing": "The quality check is already running.",
+    "notAnalyzed_one": "{{count}} track not analysed yet.",
+    "notAnalyzed_other": "{{formatted}} tracks not analysed yet.",
+    "analyzeHint": "The quality check reads each file in full (damaged audio, truncated file, fake lossless). It changes nothing. Allow a few seconds per track on a USB disk.",
+    "allGood": "Nothing to report: your library is in good health.",
+    "openList": "Show these tracks",
+    "keys": {
+      "no_cover": "No cover",
+      "small_cover": "Cover too small (under 500 px)",
+      "no_year": "No year",
+      "no_genre": "No genre",
+      "no_rating": "No rating",
+      "review": "To review",
+      "unidentified": "Unidentified",
+      "duplicates": "Duplicates",
+      "suspect": "Suspicious quality",
+      "low_bitrate": "Low bitrate",
+      "bad_names": "Names not matching the template",
+      "long_paths": "Paths too long",
+      "bad_chars": "Forbidden characters in the name",
+      "wav_desync": "Out-of-sync WAV files",
+      "missing": "Missing files",
+      "unreadable": "Unreadable files",
+      "corrupt": "Damaged or truncated files"
+    },
+    "fix": {
+      "online": "Search online",
+      "rename": "Rename…",
+      "sync": "Resync…",
+      "relocate": "Find in a folder…",
+      "review": "Open “To review”",
+      "duplicates": "Open “Duplicates”",
+      "analyze": "Analyse"
+    },
+    "onlineQueued_one": "{{count}} track added to the online search. Uncertain cases will go to “To review”.",
+    "onlineQueued_other": "{{count}} tracks added to the online search. Uncertain cases will go to “To review”.",
+    "syncTitle_one": "Resync {{count}} WAV",
+    "syncTitle_other": "Resync {{count}} WAV files",
+    "syncHint": "Rekordbox only reads the RIFF INFO part of WAV files. It will be rewritten to match the full tags (ID3). The audio is not touched.",
+    "syncConfirm_one": "Resync {{count}} file",
+    "syncConfirm_other": "Resync {{count}} files",
+    "synced_one": "{{count}} WAV resynced.",
+    "synced_other": "{{count}} WAV files resynced.",
+    "andMore_one": "and {{count}} more",
+    "andMore_other": "and {{count}} more",
+    "relocatePick": "Folder to search for missing files",
+    "relocateNone": "None of the missing files were found in this folder.",
+    "relocateTitle_one": "{{count}} file found",
+    "relocateTitle_other": "{{count}} files found",
+    "relocateHint": "The track records (locks, history, online results) will be linked to these files. No file is moved.",
+    "relocateConfirm_one": "Link {{count}} file",
+    "relocateConfirm_other": "Link {{count}} files",
+    "relocated_one": "{{count}} track found.",
+    "relocated_other": "{{count}} tracks found.",
+    "oldPath": "Old location",
+    "newPath": "Found here",
+    "method": "Matched by",
+    "methods": {
+      "name_size": "name and size",
+      "hash": "the audio itself"
     }
   }
 }

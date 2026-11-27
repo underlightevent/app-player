@@ -166,6 +166,32 @@ export function SettingsView(p: SettingsProps) {
       </section>
 
       <section>
+        <h2>{t("settings.quality")}</h2>
+        <p className="hint">{t("settings.qualityHint")}</p>
+        <h3 className="form-label">{t("settings.duplicateOrder")}</h3>
+        <select
+          className="text-input"
+          value={p.values.duplicate_order ?? "wav,aiff,flac"}
+          onChange={(e) => p.onSettingChange("duplicate_order", e.target.value)}
+          aria-label={t("settings.duplicateOrder")}
+        >
+          {["wav,aiff,flac", "wav,flac,aiff", "aiff,wav,flac", "aiff,flac,wav", "flac,wav,aiff", "flac,aiff,wav"].map((o) => (
+            <option key={o} value={o}>
+              {o.split(",").map((f) => f.toUpperCase()).join(" > ")}
+            </option>
+          ))}
+        </select>
+        <p className="hint small">{t("settings.duplicateOrderHint")}</p>
+        <h3 className="form-label">{t("settings.lowBitrate")}</h3>
+        <Segmented
+          label={t("settings.lowBitrate")}
+          value={(p.values.low_bitrate ?? "320") as "320"}
+          onChange={(v) => p.onSettingChange("low_bitrate", v)}
+          options={["128", "160", "192", "256", "320"].map((s) => ({ id: s as "320", label: `${s} kbit/s` }))}
+        />
+      </section>
+
+      <section>
         <h2>{t("settings.database")}</h2>
         <p className="hint">{t("settings.databaseHint")}</p>
         <div className="folder-actions">

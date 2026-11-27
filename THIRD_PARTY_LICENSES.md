@@ -31,6 +31,9 @@ Uniquement des licences permissives (principe 12 du cahier des charges). La list
 | rusty-chromaprint | empreintes audio | MIT |
 | keyring | clés dans le trousseau du système | MIT ou Apache-2.0 |
 | strsim | ressemblance des titres et artistes | MIT |
+| rustfft | analyse spectrale (faux sans perte, spectrogramme) | MIT ou Apache-2.0 |
+| trash | envoi à la corbeille du système (« Vider la quarantaine ») | MIT |
+| quick-xml | lecture et écriture du XML Rekordbox | MIT |
 | tempfile (tests uniquement) | dossiers temporaires | MIT ou Apache-2.0 |
 
 ## Interface (JavaScript)

@@ -165,3 +165,42 @@ Un dossier ajouté comme « dossier d'arrivée » est indexé comme les autres ;
 
 ### D-210 · Recadrage
 L'éditeur garde un carré (déplaçable, redimensionnable), pivote par quarts de tour et compare avant / après. Le recadrage est appliqué par le cœur sur l'image d'origine (pas sur l'aperçu). Les images presque carrées (écart de 10 % au plus) sont recadrées automatiquement, sans ouvrir l'éditeur.
+
+## Phase 3 — Doublons et qualité
+
+### D-301 · Emplacement de la quarantaine
+Le cahier des charges place `_Quarantaine` « à la racine du même disque ». Sur le disque interne d'un Mac, la racine (`/` ou `/System/Volumes/Data`) n'est pas modifiable sans mot de passe administrateur, et la racine de `C:\` peut l'être aussi sur certains Windows. Le dossier `_Quarantaine` est donc créé **en haut du dossier de bibliothèque** qui contient le fichier (par exemple `E:\Musique\_Quarantaine\…`). Quand ce dossier de bibliothèque est la racine du disque, c'est exactement la racine du disque. Les garanties demandées restent vraies : même disque, déplacement instantané (simple renommage, aucune copie), arborescence d'origine gardée, dossier jamais indexé, rien n'est écrasé (un nom déjà pris reçoit « (2) »).
+
+### D-302 · Fiche d'un morceau en quarantaine
+Le morceau garde sa fiche en base (état « quarantined ») : ses verrous, son historique et ses résultats en ligne reviennent avec lui à la restauration. Il est caché de la bibliothèque, des compteurs et des recherches. Une nouvelle indexation ne le marque jamais « manquant ». Mise en quarantaine, restauration et leurs annulations passent par l'historique (opération « quarantine »), même après redémarrage. « Vider la quarantaine » (après confirmation affichant le nombre et la taille) envoie chaque fichier dans la corbeille du système avec la bibliothèque `trash` (licence MIT), un fichier à la fois, puis retire sa fiche ; cette dernière étape n'est plus annulable dans l'application (le fichier reste récupérable depuis la corbeille). Les fichiers d'un disque débranché sont laissés de côté.
+
+### D-303 · Recherche des doublons
+- **Copies exactes** : même hash du seul flux audio (calculé à l'indexation).
+- **Même enregistrement** : présélection par artiste principal et titre normalisés (sans accents, sans ponctuation ; nom de fichier si le titre manque), écart de durée de 2 s au plus, versions compatibles (« Original » = « Original Mix »…). Les empreintes Chromaprint de la phase 2 (gardées en base) sont alors comparées sur l'ordinateur : part des bits identiques au meilleur décalage (± 5 s). Seuil : **0,85** (deux morceaux différents donnent environ 0,5 ; un WAV et son MP3 320 plus de 0,9).
+- Deux versions connues différentes ne sont **jamais** regroupées, même avec des empreintes proches (test automatique). Lors de la fusion des paires en groupes, chaque nouveau membre est vérifié contre tous les autres.
+- « Ce ne sont pas des doublons » enregistre toutes les paires du groupe (table `not_duplicates`) : elles ne seront plus proposées. Un « À garder » choisi à la main est conservé aux recherches suivantes.
+- La recherche se lance à la demande (bouton « Rechercher les doublons ») : elle peut calculer beaucoup d'empreintes, donc lire beaucoup de fichiers.
+
+### D-304 · Meilleure version
+Ordre : 1. sans perte non suspect (WAV, AIFF, FLAC, ALAC dans l'ordre réglable, puis la plus haute résolution) ; 2. avec perte d'au moins 320 kbit/s ; 3. fichier suspect (faux sans perte, gonflé), donc derrière un vrai MP3 320 ; 4. avec perte sous 320 kbit/s, par débit décroissant. À égalité : tags les plus complets, puis pochette, puis note. Le réglage propose les six ordres possibles des trois formats sans perte (liste fermée, validée par le cœur).
+
+### D-305 · Traitement d'un groupe
+Aperçu obligatoire. Le fichier gardé reçoit **uniquement ce qui lui manque** (champs vides), pris dans le meilleur des autres fichiers, ainsi que la note la plus haute du groupe et une pochette s'il n'en a pas. Ce report se fait comme une automatisation : un champ verrouillé n'est jamais écrasé. Puis les autres fichiers partent en quarantaine. Tout est dans **un seul lot d'historique** : une seule annulation remet tags et fichiers en place. Si le report échoue (fichier verrouillé, disque plein…), les autres fichiers du groupe **ne sont pas écartés**.
+
+### D-306 · Analyse spectrale
+Chaque fichier est décodé en entier (Symphonia). Une fenêtre de 4 096 échantillons (Hann, FFT `rustfft`, licence MIT / Apache-2.0) est analysée toutes les 0,25 s ; les passages silencieux sont ignorés. Le spectre moyen est découpé en bandes de 250 Hz. On cherche la bande la plus haute dont le niveau dépasse « niveau du médium (1 à 6 kHz) − 50 dB », puis on vérifie que la chute est **nette** (au moins 25 dB entre juste en dessous et juste au-dessus) : une atténuation progressive (vieil enregistrement) n'est pas une coupure.
+- WAV, AIFF, FLAC, ALAC avec une coupure nette sous **20,5 kHz** : « suspect (faux sans perte) ».
+- MP3 ou AAC annoncé à 256 kbit/s ou plus, avec une coupure sous **17,5 kHz** : « suspect (gonflé) ».
+Aucune action automatique. Le spectrogramme est calculé à la demande (image de 600 × 256 points) et n'est pas gardé, pour ne pas alourdir la base.
+
+### D-307 · Fichiers abîmés ou tronqués
+Pendant la même lecture : un paquet audio impossible à décoder est compté (il était déjà sauté sans couper le son du lecteur) ; une fin de fichier inattendue, ou une durée lue inférieure de plus de 2 s et de 5 % à la durée annoncée, signale un fichier **tronqué**. Le contrôle qualité se lance à la demande (« Santé de la bibliothèque › Lancer le contrôle qualité ») ou pour un morceau (panneau de détail). Les résultats sont gardés en base et refaits seulement si le fichier change.
+
+### D-308 · Compteurs de santé
+Les compteurs sont calculés par le cœur et filtrent la bibliothèque avec exactement la même règle (test automatique : chaque compteur ouvre une liste du même nombre de morceaux). « Pochette trop petite » : moins de 500 px de large. « Débit faible » : MP3, AAC, OGG, Opus sous le seuil réglable (320 kbit/s par défaut ; un M4A sans perte ALAC n'est pas compté). « Chemins trop longs » : plus de 250 caractères avec le point de montage connu. « Caractères interdits » : `< > : " \ | ? *`, caractères de contrôle, espace ou point en fin de nom, noms réservés de Windows. « Noms non conformes » : le nom ne correspond pas au modèle de renommage actuel (un suffixe « (2) » est toléré ; un morceau aux tags insuffisants n'est pas compté).
+
+### D-309 · Corrections proposées
+Toujours avec aperçu ou validation : recherche en ligne (les cas incertains vont dans « À valider »), renommage (fenêtre de renommage habituelle), resynchronisation des WAV (liste des fichiers puis confirmation ; seule la partie RIFF INFO est réécrite d'après l'ID3 ; l'annulation ne recrée pas l'ancien désaccord, qui était une erreur), fichiers manquants retrouvés dans un dossier choisi.
+
+### D-310 · Fichiers manquants retrouvés
+Recherche dans le dossier choisi : même nom et même taille, sinon même son (hash du flux audio, pour un fichier dont les tags ont changé). Aperçu, puis la fiche d'origine est rattachée au nouvel emplacement (verrous, historique et résultats en ligne gardés). Si le fichier avait déjà été indexé à sa nouvelle place, cette fiche en double est retirée. Aucun fichier n'est déplacé.

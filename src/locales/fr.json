@@ -6,7 +6,8 @@
     "cancel": "Annuler",
     "undo": "Annuler",
     "close": "Fermer",
-    "ok": "Valider"
+    "ok": "Valider",
+    "selectAll": "Tout sélectionner"
   },
   "nav": {
     "library": "Bibliothèque",
@@ -97,7 +98,8 @@
     "folderAdded": "Dossier ajouté : indexation en cours",
     "notAFolder": "Ce n'est pas un dossier accessible.",
     "folderFilter": "Dossier : {{name}}",
-    "clearFolder": "Afficher toute la bibliothèque"
+    "clearFolder": "Afficher toute la bibliothèque",
+    "clearHealth": "Retirer ce filtre"
   },
   "table": {
     "label": "Morceaux",
@@ -219,7 +221,11 @@
       "cancelled": "Annulé",
       "error": "Erreur"
     },
-    "edit": "Écriture des tags"
+    "edit": "Écriture des tags",
+    "duplicates": "Recherche des doublons",
+    "duplicatesResolve": "Traitement des doublons",
+    "quality": "Contrôle qualité",
+    "relocate": "Recherche des fichiers manquants"
   },
   "player": {
     "nothing": "Aucun morceau en lecture",
@@ -272,7 +278,12 @@
     "export": "Exporter la base…",
     "import": "Importer une base…",
     "exported": "Base exportée",
-    "imported": "Base vérifiée : elle sera mise en place au prochain démarrage de l'application"
+    "imported": "Base vérifiée : elle sera mise en place au prochain démarrage de l'application",
+    "quality": "Doublons et qualité",
+    "qualityHint": "Comment choisir le fichier à garder parmi des doublons, et à partir de quand un débit est jugé faible.",
+    "duplicateOrder": "Ordre des formats sans perte",
+    "duplicateOrderHint": "Viennent ensuite les fichiers avec perte, du débit le plus élevé au plus faible. Un fichier suspect passe derrière un vrai MP3 320.",
+    "lowBitrate": "Débit jugé faible en dessous de"
   },
   "languages": {
     "fr": "Français",
@@ -302,7 +313,11 @@
     "mkdir": "la création du dossier",
     "moveDir": "le déplacement du dossier",
     "moveTracks": "le déplacement des morceaux",
-    "online": "la recherche en ligne"
+    "online": "la recherche en ligne",
+    "quarantine": "la mise en quarantaine",
+    "restore": "la restauration",
+    "duplicates": "le traitement des doublons",
+    "syncWav": "la resynchronisation des WAV"
   },
   "edit": {
     "saved_one": "Morceau modifié",
@@ -341,7 +356,10 @@
     "rename_io": "le fichier n'a pas pu être renommé ; il est resté à sa place.",
     "move_conflict": "un fichier du même nom existe déjà dans ce dossier.",
     "move_offline": "le disque est déconnecté.",
-    "move_other_disk": "le déplacement entre deux disques n'est pas encore possible."
+    "move_other_disk": "le déplacement entre deux disques n'est pas encore possible.",
+    "exists": "un fichier du même nom est déjà à cet endroit ; rien n'a été écrasé.",
+    "missing": "le fichier est introuvable.",
+    "trash": "le fichier n'a pas pu être envoyé à la corbeille ; il est resté en quarantaine."
   },
   "actions": {
     "clean": "Nettoyer les tags…",
@@ -349,7 +367,8 @@
     "swap": "Échanger artiste et titre",
     "copyTags": "Copier les tags",
     "pasteTags": "Coller les tags",
-    "reveal": "Afficher dans l'Explorateur ou le Finder"
+    "reveal": "Afficher dans l'Explorateur ou le Finder",
+    "quarantine": "Mettre en quarantaine"
   },
   "rename": {
     "title_one": "Renommer {{count}} fichier",
@@ -634,6 +653,168 @@
       "invalid_client_key": "clé d'application refusée : vérifiez-la sur acoustid.org (copiez-la sans espace)",
       "invalid_user_key": "clé utilisateur refusée : vérifiez-la sur acoustid.org/api-key",
       "invalid_fingerprint": "empreinte refusée par AcoustID (problème de l'application, merci de copier le rapport de diagnostic)"
+    }
+  },
+  "duplicates": {
+    "intro": "Copies exactes et même morceau dans un autre format ou une autre qualité (comparaison du son, sans internet). Deux versions différentes (Original Mix, Extended Mix, Radio Edit, remix) ne sont jamais regroupées.",
+    "search": "Rechercher les doublons",
+    "searching": "Recherche des doublons lancée. Vous pouvez continuer à travailler.",
+    "alreadySearching": "Une recherche des doublons est déjà en cours.",
+    "resolveAll_one": "Traiter le groupe…",
+    "resolveAll_other": "Traiter les {{count}} groupes…",
+    "none": "Aucun doublon trouvé. Lancez une recherche après avoir ajouté des morceaux.",
+    "group": "Groupe de doublons",
+    "kind": {
+      "exact": "Copie exacte",
+      "similar": "Même morceau, autre fichier"
+    },
+    "notDuplicates": "Ce ne sont pas des doublons",
+    "resolve": "Traiter…",
+    "keep": "À garder",
+    "makeKeeper": "Garder celui-ci",
+    "size": "Taille",
+    "tags": "Tags",
+    "path": "Emplacement",
+    "similarity": "Ressemblance",
+    "suspect": "Qualité suspecte : coupure des aigus à {{khz}} kHz.",
+    "suggested": "Fichier conseillé par le classement.",
+    "previewTitle_one": "Aperçu : {{count}} groupe",
+    "previewTitle_other": "Aperçu : {{count}} groupes",
+    "previewHint": "Le fichier gardé reçoit ce qui lui manque, puis les autres partent en quarantaine (rien n'est effacé, tout s'annule).",
+    "transfer": "Reporter la note, les tags et la pochette vers le fichier gardé",
+    "transferLine": "{{field}} : « {{value}} » (depuis {{from}})",
+    "toQuarantine": "{{name}} → quarantaine",
+    "confirm_one": "Mettre {{count}} fichier en quarantaine",
+    "confirm_other": "Mettre {{count}} fichiers en quarantaine",
+    "done_one": "{{count}} fichier mis en quarantaine.",
+    "done_other": "{{count}} fichiers mis en quarantaine."
+  },
+  "quarantine": {
+    "intro": "Les fichiers écartés sont rangés dans un dossier « _Quarantaine » sur le même disque, avec leur arborescence d'origine. Ils ne prennent pas de place en plus et reviennent à leur place en un clic.",
+    "restore_one": "Restaurer la sélection ({{count}})",
+    "restore_other": "Restaurer la sélection ({{count}})",
+    "restoreOne": "Restaurer",
+    "trashSelected_one": "Envoyer {{count}} fichier à la corbeille…",
+    "trashSelected_other": "Envoyer {{count}} fichiers à la corbeille…",
+    "empty": "Vider la quarantaine…",
+    "none": "La quarantaine est vide.",
+    "file": "Morceau",
+    "origin": "Emplacement d'origine",
+    "reason": "Raison",
+    "date": "Entré le",
+    "offline": "Disque déconnecté",
+    "gone": "Fichier absent du dossier de quarantaine",
+    "reasons": {
+      "duplicate": "Doublon",
+      "manual": "À la main",
+      "wav_to_aiff": "Converti en AIFF"
+    },
+    "confirmTitle": "Envoyer à la corbeille ?",
+    "confirmText_one": "{{count}} fichier ({{size}}) va partir dans la corbeille du système.",
+    "confirmText_other": "{{count}} fichiers ({{size}}) vont partir dans la corbeille du système.",
+    "confirmHint": "Vous pourrez encore les récupérer depuis la corbeille, mais plus depuis l'application.",
+    "confirmOffline_one": "{{count}} fichier sur un disque déconnecté sera laissé de côté.",
+    "confirmOffline_other": "{{count}} fichiers sur des disques déconnectés seront laissés de côté.",
+    "confirmButton_one": "Envoyer {{count}} fichier à la corbeille",
+    "confirmButton_other": "Envoyer {{count}} fichiers à la corbeille",
+    "restored_one": "{{count}} fichier remis à sa place.",
+    "restored_other": "{{count}} fichiers remis à leur place.",
+    "emptied_one": "{{count}} fichier envoyé à la corbeille.",
+    "emptied_other": "{{count}} fichiers envoyés à la corbeille.",
+    "done_one": "{{count}} morceau mis en quarantaine.",
+    "done_other": "{{count}} morceaux mis en quarantaine."
+  },
+  "quality": {
+    "title": "Contrôle qualité",
+    "verdict": {
+      "ok": "Correct",
+      "suspect": "Suspect",
+      "corrupt": "Abîmé"
+    },
+    "notAnalyzed": "Pas encore analysé",
+    "analyzeOne": "Analyser",
+    "spectrogram": "Spectrogramme",
+    "spectrogramTitle": "Spectrogramme — {{name}}",
+    "spectrogramHint": "Le temps va de gauche à droite, les aigus sont en haut. Une limite horizontale nette, au-dessus de laquelle tout est noir, trahit un fichier issu d'un MP3 ou d'un AAC.",
+    "computing": "Calcul en cours…",
+    "cutoff": "Coupure nette des aigus détectée à {{khz}} kHz.",
+    "detail": {
+      "ok": "aucune anomalie",
+      "fakeLossless": "coupure nette à {{khz}} kHz : probablement un MP3 ou un AAC converti (faux sans perte)",
+      "upscaled": "coupure à {{khz}} kHz pour {{kbps}} kbit/s annoncés : fichier probablement gonflé",
+      "truncated": "fichier tronqué : {{got}} s lisibles sur {{expected}} s",
+      "errors_one": "{{count}} passage abîmé dans le son",
+      "errors_other": "{{count}} passages abîmés dans le son",
+      "unreadable": "le son ne peut pas être décodé"
+    }
+  },
+  "health": {
+    "summary_one": "{{total}} morceaux · {{count}} point à vérifier.",
+    "summary_other": "{{total}} morceaux · {{count}} points à vérifier.",
+    "quarantined_one": "{{count}} fichier en quarantaine.",
+    "quarantined_other": "{{count}} fichiers en quarantaine.",
+    "analyze": "Lancer le contrôle qualité",
+    "analyzing": "Contrôle qualité lancé en tâche de fond. Les compteurs se mettent à jour au fur et à mesure.",
+    "alreadyAnalyzing": "Le contrôle qualité est déjà en cours.",
+    "notAnalyzed_one": "{{count}} morceau pas encore analysé.",
+    "notAnalyzed_other": "{{formatted}} morceaux pas encore analysés.",
+    "analyzeHint": "Le contrôle qualité lit chaque fichier en entier (son abîmé, fichier tronqué, faux sans perte). Il ne modifie rien. Comptez quelques secondes par morceau sur un disque USB.",
+    "allGood": "Rien à signaler : votre bibliothèque est en bonne santé.",
+    "openList": "Voir la liste de ces morceaux",
+    "keys": {
+      "no_cover": "Sans pochette",
+      "small_cover": "Pochette trop petite (moins de 500 px)",
+      "no_year": "Sans année",
+      "no_genre": "Sans genre",
+      "no_rating": "Sans note",
+      "review": "À valider",
+      "unidentified": "Non identifiés",
+      "duplicates": "Doublons",
+      "suspect": "Qualité suspecte",
+      "low_bitrate": "Débit faible",
+      "bad_names": "Noms non conformes au modèle",
+      "long_paths": "Chemins trop longs",
+      "bad_chars": "Caractères interdits dans le nom",
+      "wav_desync": "WAV désynchronisés",
+      "missing": "Fichiers manquants",
+      "unreadable": "Fichiers illisibles",
+      "corrupt": "Fichiers abîmés ou tronqués"
+    },
+    "fix": {
+      "online": "Rechercher en ligne",
+      "rename": "Renommer…",
+      "sync": "Resynchroniser…",
+      "relocate": "Retrouver dans un dossier…",
+      "review": "Ouvrir « À valider »",
+      "duplicates": "Ouvrir « Doublons »",
+      "analyze": "Analyser"
+    },
+    "onlineQueued_one": "{{count}} morceau ajouté à la recherche en ligne. Les cas incertains iront dans « À valider ».",
+    "onlineQueued_other": "{{count}} morceaux ajoutés à la recherche en ligne. Les cas incertains iront dans « À valider ».",
+    "syncTitle_one": "Resynchroniser {{count}} WAV",
+    "syncTitle_other": "Resynchroniser {{count}} WAV",
+    "syncHint": "Rekordbox ne lit que la partie RIFF INFO des WAV. Elle sera réécrite pour dire la même chose que les tags complets (ID3). Le son n'est pas touché.",
+    "syncConfirm_one": "Resynchroniser {{count}} fichier",
+    "syncConfirm_other": "Resynchroniser {{count}} fichiers",
+    "synced_one": "{{count}} WAV resynchronisé.",
+    "synced_other": "{{count}} WAV resynchronisés.",
+    "andMore_one": "et {{count}} autre",
+    "andMore_other": "et {{count}} autres",
+    "relocatePick": "Dossier où chercher les fichiers manquants",
+    "relocateNone": "Aucun des fichiers manquants n'a été retrouvé dans ce dossier.",
+    "relocateTitle_one": "{{count}} fichier retrouvé",
+    "relocateTitle_other": "{{count}} fichiers retrouvés",
+    "relocateHint": "Les fiches des morceaux (verrous, historique, résultats en ligne) seront rattachées à ces fichiers. Aucun fichier n'est déplacé.",
+    "relocateConfirm_one": "Rattacher {{count}} fichier",
+    "relocateConfirm_other": "Rattacher {{count}} fichiers",
+    "relocated_one": "{{count}} morceau retrouvé.",
+    "relocated_other": "{{count}} morceaux retrouvés.",
+    "oldPath": "Ancien emplacement",
+    "newPath": "Retrouvé ici",
+    "method": "Reconnu par",
+    "methods": {
+      "name_size": "nom et taille",
+      "hash": "le son lui-même"
     }
   }
 }

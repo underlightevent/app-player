@@ -1,5 +1,13 @@
 # Journal des versions
 
+## 0.4.0 — Phase 3 : doublons et qualité (à valider)
+
+- Doublons : copies exactes (même son) et même morceau dans un autre format ou une autre qualité (empreintes comparées sur l'ordinateur, durées à 2 s près). Deux versions différentes ne sont jamais regroupées.
+- Écran Doublons : fichiers côte à côte (format, qualité, durée, taille, emplacement, tags, pochette, écoute), badge « À garder », meilleure version proposée (WAV > AIFF > FLAC, puis débit ; un fichier suspect passe derrière un vrai MP3 320), « Ce ne sont pas des doublons » mémorisé, report de la note, des tags et de la pochette vers le fichier gardé, traitement en lot après aperçu, une seule annulation pour tout.
+- Quarantaine : fichiers déplacés (jamais copiés ni effacés) dans « _Quarantaine » sur le même disque, restauration en un clic, « Vider la quarantaine » vers la corbeille du système après confirmation (nombre et taille). Aussi disponible depuis le menu « … » pour la sélection.
+- Contrôle qualité : faux sans perte et fichiers gonflés (analyse spectrale, spectrogramme consultable), fichiers abîmés ou tronqués, débit faible (seuil réglable).
+- Santé de la bibliothèque : 17 compteurs cliquables (pochettes, année, genre, note, à valider, non identifiés, doublons, qualité, noms, chemins, caractères interdits, WAV désynchronisés, fichiers manquants ou illisibles) et boutons « Corriger » avec aperçu ; fichiers manquants retrouvés dans un dossier.
+
 ## 0.3.0 — Phase 2 : recherche en ligne et Inbox (validée sous Windows le 27 novembre 2026)
 
 - Empreintes audio calculées sur l'ordinateur ; AcoustID, MusicBrainz et Cover Art Archive (Deezer et iTunes disponibles mais désactivés par défaut, voir docs/SOURCES.md).
