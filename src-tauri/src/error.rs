@@ -39,6 +39,18 @@ pub enum AppError {
 
     #[error("opération annulée")]
     Cancelled,
+
+    #[error("compte {0} non lié ou connexion expirée : reconnectez-le dans les réglages")]
+    NotLinked(String),
+}
+
+impl From<crate::online::http::NetError> for AppError {
+    fn from(e: crate::online::http::NetError) -> Self {
+        match e {
+            crate::online::http::NetError::Offline => AppError::Offline,
+            other => AppError::Network(other.to_string()),
+        }
+    }
 }
 
 impl AppError {
@@ -55,6 +67,7 @@ impl AppError {
             AppError::Network(_) => "network",
             AppError::Poisoned => "internal",
             AppError::Cancelled => "cancelled",
+            AppError::NotLinked(_) => "not_linked",
         }
     }
 }

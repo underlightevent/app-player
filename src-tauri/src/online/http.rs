@@ -31,6 +31,7 @@ pub fn min_interval(source: &str) -> Duration {
         "acoustid" => Duration::from_millis(500),
         "deezer" => Duration::from_millis(250),
         "itunes" => Duration::from_millis(3100),
+        "spotify" => Duration::from_millis(200),
         _ => Duration::from_millis(1000),
     }
 }
@@ -102,9 +103,9 @@ impl Http {
         }
     }
 
-    fn cache_get(&self, key: &str) -> Option<Vec<u8>> {
+    fn cache_get(&self, key: &str, max_age_secs: i64) -> Option<Vec<u8>> {
         let c = self.conn()?;
-        let limit = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).ok()?.as_secs() as i64 - CACHE_DAYS * 86_400;
+        let limit = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).ok()?.as_secs() as i64 - max_age_secs;
         c.query_row("SELECT body FROM online_cache WHERE key = ?1 AND fetched_at >= ?2", params![key, limit], |r| r.get(0))
             .optional()
             .ok()
@@ -124,22 +125,53 @@ impl Http {
     /// GET avec cache, limite de débit et reprise après 429 / 503.
     /// `cache` : faux pour les sources dont les conditions interdisent la copie locale.
     pub fn get(&self, source: &str, url: &str, headers: &[(&str, &str)], cache: bool) -> Result<Vec<u8>, NetError> {
-        self.request(source, url, None, headers, cache)
+        self.request(source, "GET", url, None, headers, cache.then_some(CACHE_DAYS * 86_400))
+    }
+
+    /// GET JSON avec une durée de cache choisie (classements : quelques heures).
+    pub fn get_json_ttl(&self, source: &str, url: &str, headers: &[(&str, &str)], ttl_secs: i64) -> Result<serde_json::Value, NetError> {
+        let body = self.request(source, "GET", url, None, headers, Some(ttl_secs))?;
+        serde_json::from_slice(&body).map_err(|e| NetError::Bad(source.into(), e.to_string()))
+    }
+
+    /// Requête JSON sans cache (comptes liés : lecture et modification des playlists).
+    /// `body` : corps JSON (POST, PUT…). Réponse vide : `Value::Null`.
+    pub fn send_json(
+        &self,
+        source: &str,
+        method: &str,
+        url: &str,
+        headers: &[(&str, &str)],
+        body: Option<&serde_json::Value>,
+    ) -> Result<serde_json::Value, NetError> {
+        let text = body.map(|b| b.to_string());
+        let mut h: Vec<(&str, &str)> = headers.to_vec();
+        if text.is_some() {
+            h.push(("Content-Type", "application/json"));
+        }
+        let bytes = self.request(source, method, url, text.as_deref(), &h, None)?;
+        if bytes.iter().all(|b| b.is_ascii_whitespace()) {
+            return Ok(serde_json::Value::Null);
+        }
+        serde_json::from_slice(&bytes).map_err(|e| NetError::Bad(source.into(), e.to_string()))
     }
 
     /// POST d'un formulaire (AcoustID recommande POST pour les longues empreintes).
     pub fn post_form(&self, source: &str, url: &str, form: &[(&str, &str)], cache: bool) -> Result<Vec<u8>, NetError> {
         let body = form.iter().map(|(k, v)| format!("{}={}", encode(k), encode(v))).collect::<Vec<_>>().join("&");
-        self.request(source, url, Some(&body), &[], cache)
+        let headers = [("Content-Type", "application/x-www-form-urlencoded")];
+        self.request(source, "POST", url, Some(&body), &headers, cache.then_some(CACHE_DAYS * 86_400))
     }
 
-    fn request(&self, source: &str, url: &str, form: Option<&str>, headers: &[(&str, &str)], cache: bool) -> Result<Vec<u8>, NetError> {
+    /// `ttl` : durée de validité du cache en secondes (`None` : jamais de cache).
+    fn request(&self, source: &str, method: &str, url: &str, form: Option<&str>, headers: &[(&str, &str)], ttl: Option<i64>) -> Result<Vec<u8>, NetError> {
         let key = match form {
             Some(f) => format!("{source} {url} {}", blake3::hash(f.as_bytes()).to_hex()),
             None => format!("{source} {url}"),
         };
-        if cache {
-            if let Some(body) = self.cache_get(&key) {
+        let cache = ttl.is_some();
+        if let Some(max_age) = ttl {
+            if let Some(body) = self.cache_get(&key, max_age) {
                 self.log_call(source, 200, Instant::now(), true);
                 return Ok(body);
             }
@@ -149,20 +181,24 @@ impl Http {
         for attempt in 0..5 {
             self.throttle(source);
             let started = Instant::now();
-            let result = match form {
-                Some(body) => {
-                    let mut req = self
-                        .agent
-                        .post(url)
+            let result = match (method, form) {
+                ("PUT", body) | ("POST", body) => {
+                    let mut req = if method == "PUT" { self.agent.put(url) } else { self.agent.post(url) }
                         .header("User-Agent", &ua)
-                        .header("Accept", "application/json")
-                        .header("Content-Type", "application/x-www-form-urlencoded");
+                        .header("Accept", "application/json");
                     for (k, v) in headers {
                         req = req.header(*k, *v);
                     }
-                    req.send(body)
+                    req.send(body.unwrap_or(""))
                 }
-                None => {
+                ("DELETE", _) => {
+                    let mut req = self.agent.delete(url).header("User-Agent", &ua).header("Accept", "application/json");
+                    for (k, v) in headers {
+                        req = req.header(*k, *v);
+                    }
+                    req.call()
+                }
+                _ => {
                     let mut req = self.agent.get(url).header("User-Agent", &ua).header("Accept", "application/json");
                     for (k, v) in headers {
                         req = req.header(*k, *v);
@@ -181,7 +217,7 @@ impl Http {
             let status = resp.status().as_u16();
             self.log_call(source, status, started, false);
             match status {
-                200 => {
+                200 | 201 | 204 => {
                     let mut body = resp.into_body();
                     let bytes = body
                         .with_config()

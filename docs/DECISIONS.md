@@ -267,3 +267,21 @@ Constat (copies des fichiers de `E:\MUSICS\ALL`, originaux seulement lus) : beau
 Les fichiers déjà doublés se corrigent en relançant « Appliquer aux fichiers existants » (ou Ctrl+Z sur ce lot).
 Autre cas trouvé : certains MP3 (octets vides après l'ID3v2) ne pouvaient pas être enregistrés, lofty ne reconnaissant pas le type du fichier au moment d'enregistrer ; le tag ID3v2 du début est alors remplacé directement, puis le son vérifié comme toujours. Restent refusés par sécurité (environ 0,5 %) les fichiers dont un champ de date ID3 est mal formé (voir docs/IDEES.md).
 Sur un échantillon de 819 copies : 815 titres modifiés sans erreur, 4 refusés (dates mal formées).
+
+## Phase 5 — Veille musicale
+
+### D-501 · Sources choisies
+Gratuites et sans compte : Apple Music (seule source publique de classements **par pays**), Deezer (classements par genre), MusicBrainz (seule source gratuite permettant de chercher les sorties **par label** et **par pays** sur une période). Beatport, Shazam et Bandcamp n'ont pas d'accès public ; Discogs demanderait une clé et ne trie pas par date de sortie. Chaque source est désactivée par défaut (même règle que la recherche en ligne). Les classements Deezer ne sont jamais mis en cache (conditions de Deezer).
+
+### D-502 · Liste d'envies
+Table `wishlist` (migration 10). Rapprochement avec la bibliothèque par « artiste principal | titre » normalisés (sans accents, ponctuation, version, « feat. » ou « with ») : une Extended Mix achetée satisfait une envie repérée en Radio Edit. L'état « trouvé » est recalculé à chaque affichage de la liste et du badge (pas de tâche de fond). Retirer une envie la masque (`deleted = 1`) pour permettre « Annuler » ; ce n'est pas une donnée audio, l'historique général n'est pas utilisé.
+
+### D-503 · Liens vers les boutiques
+Liens de **recherche** (Beatport, Bandcamp, Juno Download, Traxsource) construits avec « artiste titre » : rien n'est envoyé tant que l'utilisateur ne clique pas. Le cœur n'ouvre que les adresses de ces boutiques, des sources et de Spotify.
+
+### D-504 · Compte Spotify
+OAuth 2 avec PKCE (RFC 7636, aucune clé secrète dans l'application) et identifiant client créé par l'utilisateur : depuis février 2026, chaque application Spotify en mode développement appartient à un compte Premium et accepte 5 comptes. Retour sur `http://127.0.0.1:43821/callback` (Spotify refuse « localhost » et accepte l'adresse de bouclage en http) : l'application écoute ce port seulement pendant la connexion (3 minutes au plus) et vérifie le paramètre `state`. Jeton de renouvellement dans le trousseau du système (comme la clé AcoustID), jeton d'accès en mémoire. Recherche par ISRC si connu, puis « track:… artist:… », puis texte libre ; le résultat retenu doit avoir le même titre et le même artiste principal, la version comptant en plus. L'utilisateur voit les correspondances et peut les décocher avant l'ajout. Points d'accès de février 2026 : `POST /me/playlists`, `POST /playlists/{id}/items` (100 titres par appel).
+Non vérifié faute de compte : la connexion et l'ajout réels (test de l'utilisateur).
+
+### D-505 · Tidal reporté
+Tidal propose une API récente (OAuth, écriture des playlists), mais ses conditions et son fonctionnement n'ont pas pu être vérifiés sur la documentation officielle pendant cette phase. Noté dans docs/IDEES.md.

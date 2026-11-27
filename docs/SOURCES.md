@@ -57,3 +57,16 @@ Résumé :
 1. **Contact du User-Agent MusicBrainz** : réglage « Contact » (Réglages › Recherche en ligne), vide par défaut. L'application n'envoie aucune information sur l'utilisateur ou le projet sans qu'il l'ait saisie. Proposition : l'adresse publique du dépôt GitHub du projet. Tant que le champ est vide, MusicBrainz reste utilisable mais peut ralentir ou refuser les requêtes.
 2. **Deezer et iTunes** : laisser désactivés (recommandé), ou les activer pour un usage strictement personnel en connaissance de cause. Sans eux, la musique électronique pointue sera moins souvent identifiée.
 3. **Clés AcoustID** : créer une clé d'application et une clé utilisateur (gratuites).
+
+## Veille musicale (phase 5)
+
+Toutes désactivées par défaut (Réglages › Veille musicale). Seuls le pays, le genre ou le nom du label recherchés sont envoyés.
+
+| Source | Usage | Accès | Cache | Remarques |
+| --- | --- | --- | --- | --- |
+| Apple Music (flux publics « Marketing Tools ») | classements par pays, morceaux et albums | sans clé : `rss.marketingtools.apple.com/api/v2/<pays>/music/most-played/<10 à 100>/songs.json` (ou `albums.json`) | 12 h | flux destinés à promouvoir Apple Music : l'application affiche les titres et renvoie vers la page Apple Music ; pas de flux public des nouveautés par pays (essai du 27/11/2026 : 404) |
+| Deezer | classements par genre, liste des genres | sans clé : `/chart/<genre>/tracks`, `/genre` | **aucun** | mêmes conditions que pour la recherche en ligne : pas de copie locale ni d'usage commercial ; pays déduit par Deezer de la connexion |
+| MusicBrainz | nouvelles sorties par label ou par pays | sans clé : `/ws/2/release?query=date:[…] AND label:"…"` ou `country:XX` | 24 h | 1 requête/s, même en-tête User-Agent que la recherche en ligne ; base bénévole, moins complète pour les petits labels |
+| Spotify (compte lié, optionnel) | ajouter des titres à une playlist du compte | OAuth 2 PKCE avec l'identifiant client de l'utilisateur ; `/search`, `/me/playlists`, `/playlists/<id>/items` | aucun | mode développement : propriétaire Premium, 5 comptes au plus (règles du 11/02/2026) ; seuls les titres choisis sont envoyés |
+
+Non pris en charge (vérifié le 27/11/2026) : Deezer pour les playlists (création d'applications fermée), Apple Music (MusicKit exige l'abonnement développeur payant), Beatport et Shazam (pas d'accès public), Tidal (API récente à étudier).

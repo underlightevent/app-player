@@ -1009,10 +1009,11 @@ dependencies = [
 
 [[package]]
 name = "dj-library-manager"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "base64 0.23.1",
  "blake3",
+ "getrandom 0.3.4",
  "image",
  "keyring",
  "libc",
@@ -1028,6 +1029,7 @@ dependencies = [
  "rusty-chromaprint",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "strsim",
  "symphonia",
  "tauri",

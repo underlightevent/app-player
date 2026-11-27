@@ -264,6 +264,26 @@ Rekordbox ne lit dans un WAV que 5 champs (titre, artiste, album, genre, comment
 
 Rien n'est jamais converti automatiquement.
 
+## Veille musicale
+
+L'écran **Veille** consulte des classements et des nouvelles sorties sur internet, et garde les titres repérés dans une **liste d'envies**. L'application ne télécharge jamais de musique : elle vous donne des liens vers les boutiques.
+
+**Activer les sources** : **Réglages › Veille musicale**, cochez Apple Music (classements par pays), Deezer (classements par genre) et/ou MusicBrainz (nouvelles sorties d'un label ou d'un pays). Seuls le pays, le genre ou le label recherchés sont envoyés.
+
+- **Classements** : choisissez la source, le pays (Apple Music) ou le genre (Deezer), morceaux ou albums. Le badge **Dans la bibliothèque** signale ce que vous avez déjà. **Liste d'envies** ajoute un titre ; **Ajouter tout ce qui manque** ajoute tous ceux que vous n'avez pas.
+- **Nouvelles sorties** : par **label** (tapez son nom, par exemple « Spinnin' Records ») ou par **pays**, sur 7, 30 ou 90 jours, puis **Rechercher**. MusicBrainz est une base libre tenue par des bénévoles : très complète pour les grands labels, parfois en retard pour les petits.
+- **Liste d'envies** : filtres **À trouver**, **Trouvé**, **Ignoré**. Quand un fichier du même artiste et du même titre arrive dans votre bibliothèque (Inbox ou indexation), le titre passe à **Trouvé** tout seul (une autre version compte aussi). Les liens **Beatport**, **Bandcamp**, **Juno**, **Traxsource** ouvrent la recherche dans votre navigateur. **Exporter (CSV)…** donne un tableau pour Excel. Cochez des titres pour les ignorer ou les retirer (**Annuler** juste après si besoin).
+
+### Lier un compte Spotify (optionnel)
+Un compte lié permet d'ajouter les titres de la liste d'envies à une playlist Spotify. Spotify exige que vous créiez une petite « application » gratuite à votre nom (votre compte doit être Premium).
+1. Allez sur **developer.spotify.com** (lien dans les réglages), connectez-vous et cliquez **Create app** ; nom et description au choix, cochez **Web API**.
+2. Dans **Redirect URIs**, ajoutez exactement `http://127.0.0.1:43821/callback` (bouton de copie dans les réglages), puis enregistrez.
+3. Copiez le **Client ID** de l'application et collez-le dans **Réglages › Veille musicale**.
+4. **Lier le compte** : votre navigateur s'ouvre sur Spotify, acceptez, revenez dans l'application.
+5. Dans **Veille › Liste d'envies**, **Ajouter à Spotify…** (tous les titres affichés, ou seulement ceux cochés) : l'application cherche chaque titre sur Spotify et montre les correspondances ; décochez celles qui ne conviennent pas, choisissez une playlist ou créez-en une, puis **Ajouter**.
+
+Aucun mot de passe n'est saisi dans l'application ; le jeton est rangé dans le trousseau de Windows ou du Mac. **Déconnecter** l'efface.
+
 ## Mises à jour
 
 Au démarrage, l'application demande à GitHub le numéro de la dernière version (rien d'autre n'est envoyé). Si une version plus récente existe, une notification propose **Télécharger** : la page de téléchargement s'ouvre dans votre navigateur, installez la nouvelle version par-dessus l'ancienne (votre bibliothèque, vos réglages et votre historique sont gardés). **Réglages › Mises à jour** : désactiver cette vérification, ou **Vérifier maintenant**.
@@ -289,5 +309,6 @@ Dans l'application, le titre, la version et l'artiste restent séparés : seul l
 - **Doublons et qualité** : ordre des formats sans perte pour choisir le fichier à garder, seuil du débit faible.
 - **Rekordbox** : import du XML, mode protégé, liste « À recharger », journal des chemins, export XML (voir [Rekordbox](#rekordbox)).
 - **Mises à jour** : vérification au démarrage, « Vérifier maintenant ».
+- **Veille musicale** : sources des classements et des nouvelles sorties, compte Spotify (voir [Veille musicale](#veille-musicale)).
 - **Base de données** : une copie est faite chaque jour (7 gardées). « Exporter la base… » pour en garder une copie où vous voulez ; « Importer une base… » la remettra en place au prochain démarrage.
 - **Signaler un problème** : copie un rapport à coller dans votre message.

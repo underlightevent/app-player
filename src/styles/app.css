@@ -2691,3 +2691,85 @@ body.is-dragging * {
 .text-input.full {
   width: 100%;
 }
+
+/* ---------- Veille musicale (phase 5) ---------- */
+.watch {
+  max-width: 1100px;
+}
+
+.watch-table {
+  width: 100%;
+}
+
+.watch-table td:nth-last-child(1) {
+  width: 1%;
+}
+
+.watch .segmented {
+  margin-bottom: var(--space-3);
+}
+
+.watch-controls {
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.watch-controls .text-input {
+  min-width: 260px;
+}
+
+.watch-table td {
+  vertical-align: middle;
+}
+
+.watch-cover-cell {
+  width: 48px;
+}
+
+.watch-cover {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  object-fit: cover;
+  background: var(--color-surface-hover);
+  color: var(--color-text-secondary);
+}
+
+.watch-title {
+  font-weight: 500;
+}
+
+.watch-actions {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.watch-actions > * + * {
+  margin-left: var(--space-2);
+}
+
+.watch-shops {
+  white-space: nowrap;
+}
+
+.watch-shops .link-btn + .link-btn {
+  margin-left: var(--space-2);
+}
+
+.link-btn {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.link-btn:hover {
+  text-decoration-thickness: 2px;
+}

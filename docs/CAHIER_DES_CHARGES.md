@@ -534,6 +534,34 @@ Livrables : import du XML Rekordbox, badges et mode protégé ; liste « À rech
 - [ ] Après conversion WAV vers AIFF, l'audio décodé est identique et la pochette s'affiche dans Rekordbox.
 - [ ] Le guide utilisateur explique chaque fonction, avec captures d'écran.
 
+### Phase 5 — Veille musicale et liste d'envies
+
+Ajoutée à la demande de l'utilisateur le 27/11/2026. Un écran « Veille » consulte des classements et des nouvelles sorties sur internet, et permet de garder les titres repérés dans une « liste d'envies ». L'application ne télécharge jamais de musique (voir « Hors périmètre ») : elle donne des liens vers les boutiques, et peut ajouter les titres à une playlist d'un compte de streaming lié.
+
+**Sources gratuites, sans compte** (chacune désactivée par défaut, activable dans les réglages, comme la recherche en ligne) :
+- **Classements par pays** : flux publics d'Apple Music (morceaux et albums les plus écoutés, par pays, mis à jour chaque jour).
+- **Classements par genre** : classements publics de Deezer (pays déduit par Deezer de la connexion).
+- **Nouvelles sorties par label et par pays** : recherche MusicBrainz (sorties d'un label ou d'un pays sur une période : 7, 30 ou 90 jours).
+- Les réponses sont gardées en cache 12 heures (classements Apple Music) ou 24 heures (sorties MusicBrainz) ; jamais pour Deezer, dont les conditions interdisent la copie locale. Seuls le pays, le genre ou le nom du label sont envoyés ; rien sur la bibliothèque ni sur l'utilisateur.
+
+**Liste d'envies** :
+- « Ajouter » depuis un classement ou une sortie : titre, artistes, version, label, date de sortie, pochette, source et lien.
+- États : à trouver, trouvé (dans la bibliothèque), ignoré. Un morceau de la liste qui arrive dans la bibliothèque (Inbox ou scan) est reconnu par artiste et titre et passe à « trouvé » tout seul.
+- Liens de recherche vers Beatport, Bandcamp, Juno Download, Traxsource et la page de la source (rien n'est acheté par l'application).
+- Export CSV (séparateur « ; », ouvrable dans Excel). Suppression avec annulation.
+- Le badge « dans la bibliothèque » s'affiche aussi sur les classements et les sorties.
+
+**Comptes liés (optionnels)** : un compte lié débloque « Ajouter à une playlist » de ce compte (playlist existante ou nouvelle), un titre ou toute la liste d'envies.
+- **Spotify** en premier : l'utilisateur crée gratuitement une « application » sur le site développeur de Spotify (abonnement Premium exigé par Spotify, 5 comptes au plus) et colle son identifiant client ; connexion par le navigateur (OAuth 2 avec PKCE, retour sur `http://127.0.0.1`, aucun mot de passe ni clé secrète dans l'application) ; le jeton est rangé dans le trousseau du système ; « Déconnecter » l'efface. Recherche du titre (ISRC si connu, sinon artiste et titre), aperçu des correspondances, puis ajout.
+- **Tidal** ensuite, si ses conditions d'accès le permettent (à vérifier pendant la phase). **Deezer** (création d'applications fermée), **Apple Music** (abonnement développeur payant), **Beatport** et **Shazam** (pas d'accès public) : non pris en charge ; l'aide l'explique.
+
+Critères de validation :
+- [ ] Le classement Apple Music de la France et d'un autre pays s'affiche ; un titre déjà dans la bibliothèque porte le badge.
+- [ ] Les nouvelles sorties d'un label choisi (30 derniers jours) s'affichent.
+- [ ] Un titre ajouté à la liste d'envies y reste après redémarrage ; quand son fichier arrive dans l'Inbox, il passe à « trouvé ».
+- [ ] Sans connexion, l'écran Veille l'indique et la liste d'envies reste utilisable.
+- [ ] Avec un compte Spotify lié, un titre de la liste d'envies est ajouté à une playlist Spotify choisie ; « Déconnecter » efface le jeton.
+
 ## Tests, qualité et documentation
 
 **Tests automatiques**, lancés par la CI à chaque modification :
@@ -569,7 +597,7 @@ Livrables : import du XML Rekordbox, badges et mode protégé ; liste « À rech
 - analyse du BPM, de la tonalité, des grilles de temps ou des cue points (Rekordbox s'en charge) ;
 - lecture ou écriture de la base interne de Rekordbox ;
 - mixage, effets, pré-écoute sur une sortie casque séparée ;
-- streaming (Beatport, Tidal…) et téléchargement de musique ;
+- streaming (Beatport, Tidal…) et téléchargement de musique (la phase 5 donne seulement des liens vers les boutiques et ajoute des titres aux playlists d'un compte lié) ;
 - synchronisation avec Serato, Traktor ou Engine DJ (envisageable plus tard) ;
 - version mobile.
 
@@ -601,3 +629,6 @@ Livrables : import du XML Rekordbox, badges et mode protégé ; liste « À rech
 - [Écriture ID3v2.3 avec lofty](https://docs.rs/crate/lofty/0.24.0/source/src/config/write_options.rs)
 - [rusty-chromaprint (licence MIT)](https://lib.rs/crates/rusty-chromaprint)
 - [Tauri 2.12](https://v2.tauri.app/release/tauri/v2.12.0/)
+- [Spotify : changements de février 2026 (mode développement)](https://developer.spotify.com/documentation/web-api/tutorials/february-2026-migration-guide)
+- [Spotify : connexion PKCE](https://developer.spotify.com/documentation/web-api/tutorials/code-pkce-flow)
+- [Spotify : adresses de retour (127.0.0.1 autorisé, localhost refusé)](https://developer.spotify.com/documentation/web-api/concepts/redirect_uri)

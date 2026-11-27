@@ -9,6 +9,7 @@ import {
   ListChecks,
   ListMusic,
   PanelLeftClose,
+  Radar,
   PanelLeftOpen,
   Settings,
   ShieldAlert,
@@ -23,6 +24,7 @@ export type ViewId =
   | "health"
   | "quarantine"
   | "playlists"
+  | "watch"
   | "folders"
   | "settings";
 
@@ -42,6 +44,7 @@ const TOOLS: NavEntry[] = [
   { id: "health", icon: HeartPulse },
   { id: "quarantine", icon: ShieldAlert },
   { id: "playlists", icon: ListMusic },
+  { id: "watch", icon: Radar },
   { id: "folders", icon: Folder },
 ];
 

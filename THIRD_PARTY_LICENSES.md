@@ -34,6 +34,8 @@ Uniquement des licences permissives (principe 12 du cahier des charges). La list
 | rustfft | analyse spectrale (faux sans perte, spectrogramme) | MIT ou Apache-2.0 |
 | trash | envoi à la corbeille du système (« Vider la quarantaine ») | MIT |
 | quick-xml | lecture et écriture du XML Rekordbox | MIT |
+| sha2 | connexion Spotify (défi PKCE) | MIT ou Apache-2.0 |
+| getrandom | connexion Spotify (valeurs aléatoires sûres) | MIT ou Apache-2.0 |
 | tempfile (tests uniquement) | dossiers temporaires | MIT ou Apache-2.0 |
 
 ## Interface (JavaScript)

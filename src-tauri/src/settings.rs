@@ -42,6 +42,10 @@ const KNOWN: &[(&str, &[&str], &str)] = &[
     // Rekordbox et mises à jour (phase 4)
     ("rekordbox_protected", &["true", "false"], "true"),
     ("update_check", &["true", "false"], "true"),
+    // Veille musicale (phase 5) : sources désactivées par défaut.
+    ("watch_apple", &["true", "false"], "false"),
+    ("watch_deezer", &["true", "false"], "false"),
+    ("watch_musicbrainz", &["true", "false"], "false"),
 ];
 
 /// Réglages en texte libre (modèles, règles), avec leur valeur par défaut.
@@ -52,6 +56,9 @@ const FREE_TEXT: &[(&str, &str)] = &[
     ("clean_rules", ""),
     ("online_contact", ""),
     ("inbox_last_target", ""),
+    ("spotify_client_id", ""),
+    ("spotify_user", ""),
+    ("watch_last", ""),
 ];
 const MAX_FREE_TEXT: usize = 20_000;
 

@@ -1,5 +1,11 @@
 # Journal des versions
 
+## 0.6.0 — Phase 5 : veille musicale (à valider, avec les phases 3 et 4)
+
+- Écran Veille : classements par pays (Apple Music) et par genre (Deezer), nouvelles sorties d'un label ou d'un pays (MusicBrainz). Sources désactivées par défaut.
+- Liste d'envies : ajout depuis les classements et les sorties, « trouvé » automatique quand le morceau arrive dans la bibliothèque, liens de recherche vers Beatport, Bandcamp, Juno et Traxsource, export CSV.
+- Compte Spotify lié (optionnel) : ajout des titres de la liste d'envies à une playlist Spotify, avec aperçu des correspondances.
+
 ## 0.5.0 — Phase 4 : Rekordbox et finitions (à valider, avec la phase 3)
 
 - Rekordbox, uniquement par le fichier XML officiel : import de la collection, badge « RB » sur les morceaux retrouvés, rappel si l'import a plus de 7 jours.

@@ -55,6 +55,8 @@ import { DuplicatesView } from "./components/DuplicatesView";
 import { QuarantineView } from "./components/QuarantineView";
 import { HealthView } from "./components/HealthView";
 import { duplicatesCount, quarantineTracks } from "./core/quality";
+import { wishlistCount } from "./core/watch";
+import { WatchView } from "./components/WatchView";
 import { PlaylistsView } from "./components/PlaylistsView";
 import { AddToPlaylistDialog, ConvertDialog } from "./components/Phase4Dialogs";
 import { Modal } from "./components/Modal";
@@ -394,6 +396,12 @@ export default function App() {
     refresh();
     return onEvent("library:changed", refresh);
   }, []);
+  const [wishCount, setWishCount] = useState(0);
+  const refreshWish = useCallback(() => void wishlistCount().then(setWishCount).catch(() => {}), []);
+  useEffect(() => {
+    refreshWish();
+    return onEvent("library:changed", refreshWish);
+  }, [refreshWish]);
   const [renameTemplate, setRenameTemplate] = useState(DEFAULT_TEMPLATE);
   const [savedTemplates, setSavedTemplates] = useState<SavedTemplate[]>([]);
   const [parsePattern, setParsePattern] = useState("");
@@ -731,7 +739,7 @@ export default function App() {
 
   return (
     <div className={`app ${platformClass} ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
-      <Sidebar current={view} onSelect={setView} collapsed={sidebarCollapsed} onToggleCollapsed={() => setSidebarCollapsed((c) => !c)} tree={folderTree} badges={{ inbox: online.inbox, review: online.review, duplicates: dupCount }} />
+      <Sidebar current={view} onSelect={setView} collapsed={sidebarCollapsed} onToggleCollapsed={() => setSidebarCollapsed((c) => !c)} tree={folderTree} badges={{ inbox: online.inbox, review: online.review, duplicates: dupCount, watch: wishCount }} />
       <TopBar
         onSearchOnline={() => void searchOnline()}
         onlineQueued={online.queued}
@@ -805,6 +813,14 @@ export default function App() {
                 setQuery({ ...emptyQuery, playlist: p.id });
                 setView("library");
               }}
+            />
+          ) : view === "watch" ? (
+            <WatchView
+              values={settingsValues}
+              onSettingChange={changeSetting}
+              onToast={toast.show}
+              onOpenSettings={() => setView("settings")}
+              onWishlistChanged={refreshWish}
             />
           ) : view === "quarantine" ? (
             <QuarantineView onDone={reportDone} />

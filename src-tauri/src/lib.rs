@@ -23,6 +23,7 @@ mod tags;
 mod tasks;
 mod update;
 mod util;
+mod watch;
 #[cfg(test)]
 mod testdata;
 
@@ -1080,6 +1081,185 @@ async fn open_release_page(app: tauri::AppHandle, url: String) -> Result<(), App
     app.opener().open_url(url, None::<&str>).map_err(|e| AppError::Io(std::io::Error::other(e.to_string())))
 }
 
+// ---------- Veille musicale (phase 5) ----------
+
+/// Vérifie que la source de veille est activée dans les réglages (désactivées par défaut).
+fn watch_enabled(conn: &rusqlite::Connection, source: &str) -> Result<(), AppError> {
+    let key = format!("watch_{source}");
+    if settings::get(conn, &key)?.as_deref() == Some("true") {
+        Ok(())
+    } else {
+        Err(AppError::InvalidSetting(format!("source désactivée : {source}")))
+    }
+}
+
+#[tauri::command]
+async fn watch_chart(state: State<'_, AppState>, source: String, country: String, genre: i64, kind: String, limit: u32) -> Result<Vec<watch::Item>, AppError> {
+    let lib = state.library()?.clone();
+    let online = state.online()?.clone();
+    blocking(move || {
+        let conn = db::open_worker(lib.db_path())?;
+        watch_enabled(&conn, &source)?;
+        let mut items = match source.as_str() {
+            "apple" => watch::sources::apple_chart(&online.http, &country, &kind, limit)?,
+            "deezer" => watch::sources::deezer_chart(&online.http, genre, &kind)?,
+            _ => return Err(AppError::InvalidSetting(source)),
+        };
+        watch::mark(&conn, &mut items)?;
+        Ok(items)
+    })
+    .await
+}
+
+#[tauri::command]
+async fn watch_genres(state: State<'_, AppState>) -> Result<Vec<watch::sources::Genre>, AppError> {
+    let lib = state.library()?.clone();
+    let online = state.online()?.clone();
+    blocking(move || {
+        watch_enabled(&db::open_worker(lib.db_path())?, "deezer")?;
+        Ok(watch::sources::deezer_genres(&online.http)?)
+    })
+    .await
+}
+
+#[tauri::command]
+async fn watch_releases(state: State<'_, AppState>, label: Option<String>, country: Option<String>, days: u32) -> Result<Vec<watch::Item>, AppError> {
+    let lib = state.library()?.clone();
+    let online = state.online()?.clone();
+    blocking(move || {
+        let conn = db::open_worker(lib.db_path())?;
+        watch_enabled(&conn, "musicbrainz")?;
+        let mut items = watch::sources::musicbrainz_releases(&online.http, label.as_deref(), country.as_deref(), days, &db::today())?;
+        watch::mark(&conn, &mut items)?;
+        Ok(items)
+    })
+    .await
+}
+
+#[tauri::command]
+async fn wishlist_list(state: State<'_, AppState>) -> Result<Vec<watch::WishItem>, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || watch::wishlist_list(&db::open_worker(lib.db_path())?)).await
+}
+
+#[tauri::command]
+async fn wishlist_count(state: State<'_, AppState>) -> Result<i64, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || watch::wishlist_count(&db::open_worker(lib.db_path())?)).await
+}
+
+#[tauri::command]
+async fn wishlist_add(state: State<'_, AppState>, items: Vec<watch::Item>) -> Result<usize, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || watch::wishlist_add(&db::open_worker(lib.db_path())?, &items)).await
+}
+
+#[tauri::command]
+async fn wishlist_set_ignored(state: State<'_, AppState>, ids: Vec<i64>, ignored: bool) -> Result<(), AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || watch::wishlist_set_ignored(&db::open_worker(lib.db_path())?, &ids, ignored)).await
+}
+
+/// Retire (`removed` vrai) ou remet (annulation) des envies.
+#[tauri::command]
+async fn wishlist_remove(state: State<'_, AppState>, ids: Vec<i64>, removed: bool) -> Result<(), AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || watch::wishlist_remove(&db::open_worker(lib.db_path())?, &ids, removed)).await
+}
+
+#[tauri::command]
+async fn wishlist_export_csv(state: State<'_, AppState>, path: String) -> Result<(), AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || write_export(&path, &watch::wishlist_csv(&db::open_worker(lib.db_path())?)?)).await
+}
+
+/// Ouvre une page (boutique, source, Spotify) dans le navigateur : adresses connues seulement.
+#[tauri::command]
+async fn watch_open_url(app: tauri::AppHandle, url: String) -> Result<(), AppError> {
+    use tauri_plugin_opener::OpenerExt;
+    if !watch::allowed_url(&url) {
+        return Err(AppError::InvalidSetting("adresse refusée".into()));
+    }
+    app.opener().open_url(url, None::<&str>).map_err(|e| AppError::Io(std::io::Error::other(e.to_string())))
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SpotifyStatus {
+    client_id: String,
+    user: String,
+    redirect: &'static str,
+}
+
+#[tauri::command]
+async fn spotify_status(state: State<'_, AppState>) -> Result<SpotifyStatus, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        let conn = db::open_worker(lib.db_path())?;
+        let linked = online::key_get("spotify_refresh").is_some();
+        Ok(SpotifyStatus {
+            client_id: settings::get(&conn, "spotify_client_id")?.unwrap_or_default(),
+            user: if linked { settings::get(&conn, "spotify_user")?.unwrap_or_default() } else { String::new() },
+            redirect: watch::spotify::REDIRECT,
+        })
+    })
+    .await
+}
+
+/// Lie le compte Spotify : ouvre la page de connexion dans le navigateur et attend le retour.
+#[tauri::command]
+async fn spotify_connect(app: tauri::AppHandle, state: State<'_, AppState>) -> Result<String, AppError> {
+    use tauri_plugin_opener::OpenerExt;
+    let lib = state.library()?.clone();
+    let online = state.online()?.clone();
+    blocking(move || {
+        let conn = db::open_worker(lib.db_path())?;
+        watch::spotify::connect(&online.http, &conn, |url| app.opener().open_url(url, None::<&str>).map_err(|e| e.to_string()))
+    })
+    .await
+}
+
+#[tauri::command]
+async fn spotify_disconnect(state: State<'_, AppState>) -> Result<(), AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || watch::spotify::disconnect(&db::open_worker(lib.db_path())?)).await
+}
+
+#[tauri::command]
+async fn spotify_playlists(state: State<'_, AppState>) -> Result<Vec<watch::spotify::Playlist>, AppError> {
+    let lib = state.library()?.clone();
+    let online = state.online()?.clone();
+    blocking(move || watch::spotify::playlists(&online.http, &db::open_worker(lib.db_path())?)).await
+}
+
+#[tauri::command]
+async fn spotify_create_playlist(state: State<'_, AppState>, name: String) -> Result<watch::spotify::Playlist, AppError> {
+    let lib = state.library()?.clone();
+    let online = state.online()?.clone();
+    blocking(move || watch::spotify::create_playlist(&online.http, &db::open_worker(lib.db_path())?, &name)).await
+}
+
+/// Cherche les envies `ids` sur Spotify (aperçu avant ajout).
+#[tauri::command]
+async fn spotify_find(state: State<'_, AppState>, ids: Vec<i64>) -> Result<Vec<watch::spotify::Match>, AppError> {
+    let lib = state.library()?.clone();
+    let online = state.online()?.clone();
+    blocking(move || {
+        let conn = db::open_worker(lib.db_path())?;
+        let wishes: Vec<(i64, watch::Item)> =
+            watch::wishlist_list(&conn)?.into_iter().filter(|w| ids.contains(&w.id)).map(|w| (w.id, w.item)).collect();
+        watch::spotify::find(&online.http, &conn, &wishes)
+    })
+    .await
+}
+
+#[tauri::command]
+async fn spotify_add(state: State<'_, AppState>, playlist_id: String, uris: Vec<String>) -> Result<usize, AppError> {
+    let lib = state.library()?.clone();
+    let online = state.online()?.clone();
+    blocking(move || watch::spotify::add(&online.http, &db::open_worker(lib.db_path())?, &playlist_id, &uris)).await
+}
+
 #[tauri::command]
 async fn update_check() -> Result<update::UpdateInfo, AppError> {
     blocking(update::check).await
@@ -1285,6 +1465,23 @@ pub fn run() {
             convert_apply,
             update_check,
             open_release_page,
+            watch_chart,
+            watch_genres,
+            watch_releases,
+            wishlist_list,
+            wishlist_count,
+            wishlist_add,
+            wishlist_set_ignored,
+            wishlist_remove,
+            wishlist_export_csv,
+            watch_open_url,
+            spotify_status,
+            spotify_connect,
+            spotify_disconnect,
+            spotify_playlists,
+            spotify_create_playlist,
+            spotify_find,
+            spotify_add,
             tasks_list,
             task_cancel
         ])

@@ -277,6 +277,26 @@ const MIGRATIONS: &[&str] = &[
     // Les champs verrouillés ne sont jamais remplacés par une relecture.
     "ALTER TABLE tracks ADD COLUMN reread INTEGER NOT NULL DEFAULT 0;
     UPDATE tracks SET reread = 1;",
+    // 10 — Veille musicale : liste d'envies (phase 5).
+    "CREATE TABLE wishlist (
+        id           INTEGER PRIMARY KEY,
+        title        TEXT NOT NULL,
+        artists      TEXT NOT NULL DEFAULT '',
+        version      TEXT,
+        label        TEXT,
+        release_date TEXT,
+        isrc         TEXT,
+        cover_url    TEXT,
+        source       TEXT NOT NULL,
+        source_url   TEXT,
+        kind         TEXT NOT NULL DEFAULT 'track',
+        status       TEXT NOT NULL DEFAULT 'wanted',
+        track_id     INTEGER REFERENCES tracks(id) ON DELETE SET NULL,
+        match_key    TEXT NOT NULL,
+        added_at     INTEGER NOT NULL DEFAULT (unixepoch()),
+        deleted      INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE INDEX wishlist_key ON wishlist(match_key);",
 ];
 
 /// Ouvre une connexion supplémentaire (tâches de fond). La base doit déjà exister et être migrée.
