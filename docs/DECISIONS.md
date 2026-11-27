@@ -204,3 +204,32 @@ Toujours avec aperçu ou validation : recherche en ligne (les cas incertains von
 
 ### D-310 · Fichiers manquants retrouvés
 Recherche dans le dossier choisi : même nom et même taille, sinon même son (hash du flux audio, pour un fichier dont les tags ont changé). Aperçu, puis la fiche d'origine est rattachée au nouvel emplacement (verrous, historique et résultats en ligne gardés). Si le fichier avait déjà été indexé à sa nouvelle place, cette fiche en double est retirée. Aucun fichier n'est déplacé.
+
+## Phase 4 — Rekordbox et finitions
+
+### D-401 · Reconnaissance des morceaux du XML Rekordbox
+L'attribut `Location` (`file://localhost/…`, caractères spéciaux encodés) est décodé puis comparé au chemin complet des fichiers indexés (sans tenir compte des majuscules). Si le disque a changé de lettre ou de point de montage depuis l'export, le chemin relatif au disque est comparé (avec le nom du disque sous macOS, `/Volumes/NOM/…`) ; si plusieurs morceaux pourraient correspondre, aucun n'est choisi (on ne devine pas). Un nouvel import remplace entièrement les badges. Le fichier XML n'est jamais modifié. Bibliothèque `quick-xml` (licence MIT), déjà utilisée par Tauri.
+
+### D-402 · Mode protégé
+Réglage `rekordbox_protected`, activé par défaut. Il empêche le renommage automatique de l'Inbox pour un morceau badgé (seule automatisation qui renomme ; aucune ne déplace). Les aperçus de renommage, de déplacement, de traitement des doublons, de mise en quarantaine et de conversion affichent une alerte quand un morceau badgé est concerné. L'alerte s'affiche même si le mode protégé est désactivé : elle informe sans bloquer.
+
+### D-403 · Journal des chemins
+Chaque renommage, déplacement (de morceaux ou de dossier), mise en quarantaine et restauration inscrit (ancien chemin complet ; nouveau chemin complet ; présent dans Rekordbox ; date) dans la table `path_journal`, y compris les annulations. Export CSV : séparateur « ; » et BOM UTF-8 pour qu'Excel en français l'ouvre correctement ; option « seulement les morceaux présents dans Rekordbox » (cochée par défaut).
+
+### D-404 · « À recharger »
+Toute écriture de tags réussie (y compris une annulation) sur un morceau badgé l'inscrit dans `rekordbox_reload`. Export en M3U8 (UTF-8, `#EXTINF` avec durée, artistes et titre, chemins complets). Les morceaux d'un disque débranché sont laissés de côté et comptés. Le cahier des charges demande de vérifier le comportement de « Reload Tag » sur une copie de bibliothèque Rekordbox : **je n'ai pas pu le faire** (Rekordbox n'est pas disponible ici) ; c'est un test du rapport de phase.
+
+### D-405 · Export XML vers Rekordbox
+Format `DJ_PLAYLISTS` 1.0.0 : `COLLECTION` (TrackID = identifiant interne, Name = titre écrit comme dans les fichiers selon le réglage « version dans le titre », Artist = artistes séparés par « , », Mix = version, Tonality = notation musicale « Am », Rating 0 / 51 / 102 / 153 / 204 / 255, Location encodée, Kind, Size, TotalTime, BitRate, SampleRate, Year, AverageBpm, Remixer, Label, DateAdded = jour de l'export) puis `PLAYLISTS` (ROOT › dossier « DJ Library Manager » › une playlist par playlist ou filtre intelligent, filtres exportés avec leurs morceaux du moment). Fichier écrit dans un fichier temporaire puis renommé. Comportement de Rekordbox pour les morceaux déjà présents dans sa collection (mise à jour de la note ?) : **non vérifié** (pas de Rekordbox ici), à tester par l'utilisateur après sauvegarde ; l'aide le dit.
+
+### D-406 · Mises à jour
+« Mise à jour automatique » : l'application demande au démarrage à l'API publique de GitHub la dernière version publiée (aucune donnée de l'utilisateur envoyée), la compare à la sienne et, si elle est plus récente, propose « Télécharger » qui ouvre la page de la version dans le navigateur. Désactivable (réglage `update_check`, activé par défaut parce que le cahier des charges demande les mises à jour automatiques ; c'est un accès réseau en plus des sources de recherche, signalé dans le README). L'installation entièrement automatique (module « updater » de Tauri) exige une clé de signature des mises à jour à créer et à garder secrète : elle est préparée dans `docs/SIGNATURE.md` et reste inactive. L'ouverture de page passe par le cœur, qui n'accepte que les adresses du dépôt du projet.
+
+### D-407 · Playlists et filtres intelligents
+Tables `playlists` et `playlist_tracks`. Une playlist garde l'ordre d'ajout et refuse les doublons. Un filtre intelligent est un ensemble de règles (champ, condition, valeur ; « toutes » ou « au moins une ») traduit en SQL à partir d'une **liste fermée** de champs et de conditions (aucune injection possible ; règle invalide refusée à l'enregistrement). « contient » ne distingue pas majuscules et minuscules pour les lettres sans accent (limite de SQLite). Supprimer une playlist ne touche ni aux morceaux ni aux fichiers. Les morceaux en quarantaine n'apparaissent dans aucune playlist.
+
+### D-408 · Conversion WAV → AIFF
+Seulement les WAV PCM entiers (8, 16, 24, 32 bits, y compris WAVE_FORMAT_EXTENSIBLE) : un WAV en virgule flottante demanderait un AIFF-C, moins bien lu ; il est refusé et signalé. Les échantillons sont recopiés en changeant l'ordre des octets (8 bits : non signé → signé, même valeur). Le tag ID3 du WAV (avec les données Serato, Rekordbox, etc.) est recopié tel quel, puis tous les champs (RIFF INFO compris) et la pochette sont réécrits par l'écriture sûre habituelle (ID3v2.4 dans l'AIFF). Vérification : les deux fichiers sont décodés et comparés échantillon par échantillon ; au moindre écart, le fichier temporaire est supprimé et le WAV reste intact. L'AIFF reprend les cadenas et les playlists du WAV ; le WAV part en quarantaine. Annulation : l'AIFF part en quarantaine (jamais effacé) et le WAV revient. Un AIFF du même nom déjà présent bloque la conversion de ce fichier.
+
+### D-409 · Captures d'écran du guide
+Prises avec Microsoft Edge sans fenêtre (`--headless`, 1 400 × 900) sur l'aperçu de l'interface avec des données de démonstration (`?demo`, `?view=…`, `?theme=dark`, options qui n'existent que dans l'aperçu navigateur, jamais dans l'application installée). Elles montrent donc l'interface réelle avec des morceaux fictifs.

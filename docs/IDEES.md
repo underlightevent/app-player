@@ -13,3 +13,10 @@ Idées notées en chemin, à discuter avant de les réaliser.
 - Phase 2 : règle « Après validation, déplacer vers [dossier] » pour l'Inbox (désactivée par défaut selon le cahier des charges).
 - Phase 2 : recherche par ISRC quand le fichier en contient déjà un.
 - Phase 2 : glisser une image depuis un navigateur web vers la pochette (aujourd'hui : fichier, presse-papiers, Explorateur / Finder).
+- Phase 3 : contrôle qualité automatique des nouveaux morceaux (Inbox), en option.
+- Phase 3 : réglage de la taille minimale d'une pochette correcte (aujourd'hui 500 px).
+- Phase 3 : recherche des doublons sans métadonnées (comparer toutes les empreintes entre elles, plus long).
+- Phase 4 : installation automatique des mises à jour (module « updater » de Tauri ; demande une clé de signature des mises à jour, voir docs/SIGNATURE.md).
+- Phase 4 : glisser des morceaux sur une playlist ; réordonner les morceaux d'une playlist.
+- Phase 4 : filtres intelligents sur la date d'ajout et sur le résultat du contrôle qualité.
+- Phase 4 : export XML qui recrée les filtres intelligents comme « playlists intelligentes » de Rekordbox (format partiellement documenté).

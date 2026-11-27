@@ -1,5 +1,17 @@
 # Journal des versions
 
+## 0.5.0 — Phase 4 : Rekordbox et finitions (à valider, avec la phase 3)
+
+- Rekordbox, uniquement par le fichier XML officiel : import de la collection, badge « RB » sur les morceaux retrouvés, rappel si l'import a plus de 7 jours.
+- Mode protégé (activé par défaut) : pas de renommage automatique d'un morceau présent dans Rekordbox ; alerte avant tout renommage, déplacement, mise en quarantaine ou conversion manuel.
+- Liste « À recharger dans Rekordbox » (tags modifiés) et export M3U8 pour « Reload Tag ».
+- Journal des chemins (ancien ; nouveau) exportable en CSV.
+- Export XML vers Rekordbox : notes, tags, version, tonalité, label, remixeur et playlists.
+- Playlists et filtres intelligents (règles sur genre, note, BPM, année, format, présence dans Rekordbox…), export M3U.
+- Conversion WAV vers AIFF à la demande : son identique vérifié échantillon par échantillon, tags et pochette recopiés, WAV d'origine en quarantaine, annulation en une fois.
+- Vérification des mises à jour au démarrage (désactivable) avec lien de téléchargement.
+- Guide utilisateur complet, avec captures d'écran.
+
 ## 0.4.0 — Phase 3 : doublons et qualité (à valider)
 
 - Doublons : copies exactes (même son) et même morceau dans un autre format ou une autre qualité (empreintes comparées sur l'ordinateur, durées à 2 s près). Deux versions différentes ne sont jamais regroupées.

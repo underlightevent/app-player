@@ -2,7 +2,7 @@
 
 Application de bureau (Windows et macOS) pour organiser une bibliothèque audio de DJ : tags, pochettes, noms de fichiers, notes, doublons, écoute et dossiers. Nom provisoire.
 
-> **État actuel : Phase 2 (recherche en ligne et Inbox), version 0.3.0 à valider.** L'application indexe votre musique, modifie les tags et les pochettes, renomme les fichiers, gère les dossiers, lit les morceaux, et complète les informations en ligne (MusicBrainz, AcoustID, Cover Art Archive) avec une file « À valider » pour les cas incertains. Tout le reste fonctionne sans internet.
+> **État actuel : Phases 3 et 4 (doublons, qualité, Rekordbox et finitions), version 0.5.0 à valider.** L'application indexe votre musique, modifie les tags et les pochettes, renomme les fichiers, gère les dossiers, lit les morceaux, complète les informations en ligne, repère les doublons et les fichiers de mauvaise qualité, met les fichiers écartés en quarantaine restaurable, gère des playlists et des filtres intelligents, et travaille avec Rekordbox par son fichier XML officiel (badges, mode protégé, export des notes et des playlists). Tout fonctionne sans internet, sauf la recherche en ligne et la vérification des mises à jour.
 >
 > **Testez d'abord sur une copie de quelques dizaines de morceaux, jamais sur votre vraie bibliothèque, tant que la phase n'est pas validée.** Mode d'emploi complet : [docs/GUIDE_UTILISATEUR.md](docs/GUIDE_UTILISATEUR.md).
 
@@ -64,7 +64,7 @@ Le journal de l'application se trouve ici :
 
 ## Vie privée
 
-Aucune télémétrie. L'application ne se connecte à internet que pour les sources de recherche que vous activez (à partir de la Phase 2).
+Aucune télémétrie. L'application ne se connecte à internet que pour les sources de recherche que vous activez, et au démarrage pour demander à GitHub le numéro de la dernière version (désactivable dans Réglages › Mises à jour).
 
 ## Pour les développeurs
 
