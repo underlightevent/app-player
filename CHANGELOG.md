@@ -1,5 +1,9 @@
 # Journal des versions
 
+## 0.6.1 — Correction de la compilation (à valider)
+
+- Même contenu que la 0.6.0. Un test de la quarantaine comparait les chemins comme du texte et échouait sur les machines de compilation de GitHub (lien /var sous macOS, nom court sous Windows). L'application n'était pas en cause.
+
 ## 0.6.0 — Phase 5 : veille musicale (à valider, avec les phases 3 et 4)
 
 - Écran Sorties : classements par pays (Apple Music) et par genre (Deezer), nouvelles sorties d'un label ou d'un pays (MusicBrainz). Sources désactivées par défaut.

@@ -385,7 +385,15 @@ mod tests {
         let qpath = std::path::PathBuf::from(list[0].path.clone().unwrap());
         assert!(qpath.exists());
         assert!(list[0].quar_rel.ends_with("musique/_Quarantaine/Techno/a.wav"), "arborescence gardée : {}", list[0].quar_rel);
-        assert!(qpath.starts_with(&music), "la quarantaine reste dans le dossier de bibliothèque, sur le même disque");
+        // Chemins réels : sous macOS /var est un lien vers /private/var, et sous Windows le
+        // dossier temporaire peut s'écrire en nom court (RUNNER~1).
+        let real = |p: &std::path::Path| std::fs::canonicalize(p).unwrap();
+        assert!(
+            real(&qpath).starts_with(real(&music)),
+            "la quarantaine reste dans le dossier de bibliothèque, sur le même disque : {} / {}",
+            qpath.display(),
+            music.display()
+        );
         // Caché de la bibliothèque, jamais marqué manquant par une nouvelle indexation.
         let visible = crate::library::query::ids(&conn, &Default::default()).unwrap();
         assert!(!visible.contains(&wav));
