@@ -40,6 +40,7 @@ export interface ResolvePlan {
   transfers: Transfer[];
   discard: [number, string][];
   blockers: string[];
+  inRekordbox: string[];
 }
 
 export interface QuarantineItem {
@@ -246,6 +247,7 @@ export async function duplicatesPlan(requests: ResolveRequest[]): Promise<Resolv
         transfers: keeper.track.coverCount === 0 && others.some((o) => o.track.coverCount > 0) && r.transfer !== false ? [{ field: "cover", value: "1000 px", fromFile: others[0].track.fileName }] : [],
         discard: others.map((o) => [o.track.id, o.track.fileName] as [number, string]),
         blockers: [],
+        inRekordbox: others.filter((o) => o.track.inRekordbox).map((o) => o.track.fileName),
       };
     });
   }

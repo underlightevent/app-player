@@ -38,6 +38,7 @@ function Badges({ row, ctx }: { row: TrackRow; ctx: RenderCtx }) {
   if (row.status === "missing") out.push(<span key="m" className="badge badge-error" title={t("badges.missing")}>{t("badges.missingShort")}</span>);
   if (row.status === "unreadable") out.push(<span key="u" className="badge badge-error" title={row.error ?? t("badges.unreadable")}><AlertTriangle size={12} aria-hidden />{t("badges.unreadableShort")}</span>);
   if (row.locked.length > 0) out.push(<span key="l" className="badge" title={t("badges.locked", { fields: row.locked.map((f) => t(`fields.${f}`, { defaultValue: f })).join(", ") })}><Lock size={12} aria-hidden /></span>);
+  if (row.inRekordbox) out.push(<span key="rb" className="badge badge-rekordbox" title={row.reload ? t("rekordbox.badgeReload") : t("rekordbox.badge")}>RB{row.reload ? " ↻" : ""}</span>);
   if (row.format === "wav") out.push(<span key="w" className="badge badge-info" title={t("badges.wav")}>WAV</span>);
   if (row.wavDesync) out.push(<span key="d" className="badge badge-warning" title={t("badges.desync")}>{t("badges.desyncShort")}</span>);
   return <span className="badges">{out}</span>;

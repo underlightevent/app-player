@@ -17,6 +17,8 @@ export interface PlanItem {
   status: "ok" | "same" | "conflict" | "reserved" | "empty" | "offline" | "missing";
   suffixed: boolean;
   longPath: boolean;
+  /** Le morceau est dans Rekordbox : il y apparaîtra comme manquant. */
+  inRekordbox: boolean;
 }
 
 export interface TagValues {
@@ -84,6 +86,7 @@ export async function renamePreview(ids: number[], template: string, onConflict:
       status: id % 17 === 0 ? "conflict" : "ok",
       suffixed: false,
       longPath: false,
+      inRekordbox: id % 3 === 0,
     }));
   }
   return invoke<PlanItem[]>("rename_preview", { ids, template, onConflict });

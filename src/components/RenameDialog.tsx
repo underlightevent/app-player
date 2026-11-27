@@ -64,9 +64,10 @@ export function RenameDialog({ ids, template: initial, saved, onSaveTemplates, o
   }, [template, onConflict, ids]);
 
   const counts = useMemo(() => {
-    const c = { ok: 0, same: 0, problem: 0, long: 0 };
+    const c = { ok: 0, same: 0, problem: 0, long: 0, rekordbox: 0 };
     for (const p of plan) {
       if (p.status === "ok") c.ok++;
+      if (p.status === "ok" && p.inRekordbox) c.rekordbox++;
       else if (p.status === "same") c.same++;
       else c.problem++;
       if (p.longPath) c.long++;
@@ -147,6 +148,9 @@ export function RenameDialog({ ids, template: initial, saved, onSaveTemplates, o
         <label><input type="radio" checked={onConflict === "suffix"} onChange={() => setOnConflict("suffix")} /> {t("rename.conflictSuffix")}</label>
         <label><input type="radio" checked={onConflict === "skip"} onChange={() => setOnConflict("skip")} /> {t("rename.conflictSkip")}</label>
       </fieldset>
+      {counts.rekordbox > 0 && (
+        <p className="rekordbox-alert" role="alert"><AlertTriangle size={16} aria-hidden /> {t("rekordbox.renameAlert", { count: counts.rekordbox })}</p>
+      )}
       {counts.long > 0 && <p className="text-warning small"><AlertTriangle size={14} aria-hidden /> {t("rename.longPaths", { count: counts.long })}</p>}
 
       <div className="preview-list" aria-busy={loading}>
@@ -160,6 +164,7 @@ export function RenameDialog({ ids, template: initial, saved, onSaveTemplates, o
               {p.suffixed && <span className="badge badge-warning">{t("rename.suffixed")}</span>}
               {p.status !== "ok" && <span className="badge badge-error">{t(`rename.status.${p.status}`)}</span>}
               {p.longPath && <span className="badge badge-warning">{t("rename.long")}</span>}
+              {p.inRekordbox && p.status === "ok" && <span className="badge badge-rekordbox">Rekordbox</span>}
             </span>
           </div>
         ))}

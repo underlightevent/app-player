@@ -5,6 +5,7 @@ import { diagnosticReport, logMessage } from "../core/api";
 import type { ThemeSetting } from "../core/theme";
 import { LANGUAGES, type Language } from "../i18n";
 import { OnlineSettings } from "./OnlineSettings";
+import { RekordboxSettings } from "./RekordboxSettings";
 
 export interface SettingsProps {
   theme: ThemeSetting;
@@ -19,7 +20,10 @@ export interface SettingsProps {
   onExport: () => Promise<void>;
   onImport: () => Promise<void>;
   version: string;
-  onToast: (msg: string) => void;
+  onToast: (msg: string, action?: { label: string; run: () => void }, kind?: "error") => void;
+  /** Ouvre la bibliothèque filtrée sur les morceaux Rekordbox (« in ») ou à recharger (« reload »). */
+  onOpenRekordboxList: (kind: "in" | "reload") => void;
+  selection: number[];
 }
 
 async function copyText(text: string) {
@@ -190,6 +194,8 @@ export function SettingsView(p: SettingsProps) {
           options={["128", "160", "192", "256", "320"].map((s) => ({ id: s as "320", label: `${s} kbit/s` }))}
         />
       </section>
+
+      <RekordboxSettings values={p.values} onSettingChange={p.onSettingChange} onToast={p.onToast} onOpenList={p.onOpenRekordboxList} selection={p.selection} />
 
       <section>
         <h2>{t("settings.database")}</h2>

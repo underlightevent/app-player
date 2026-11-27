@@ -221,6 +221,11 @@ export function DuplicatesView({ playingId, playing, onPlay, onToggle, onDone, o
                     <li key={id}>{t("duplicates.toQuarantine", { name })}</li>
                   ))}
                 </ul>
+                {p.inRekordbox.length > 0 && (
+                  <p className="rekordbox-alert" role="alert">
+                    <TriangleAlert size={14} aria-hidden /> {t("rekordbox.quarantineAlert", { count: p.inRekordbox.length, names: p.inRekordbox.join(", ") })}
+                  </p>
+                )}
                 {p.blockers.map((b) => (
                   <p key={b} className="dup-warn"><TriangleAlert size={14} aria-hidden /> {b}</p>
                 ))}

@@ -6,6 +6,8 @@ import { TrackTable } from "./table/TrackTable";
 const FORMATS = ["wav", "mp3", "flac", "aiff", "m4a"];
 
 interface Props {
+  /** Nom de la playlist affichée (filtre « playlist »). */
+  playlistName: string | null;
   query: LibraryQuery;
   onQueryChange: (q: LibraryQuery) => void;
   ids: number[];
@@ -63,6 +65,16 @@ export function LibraryView(p: Props) {
       ))}
 
       <div className="filter-bar" role="toolbar" aria-label={t("library.filters")}>
+        {query.playlist != null && (
+          <button className="chip" aria-pressed onClick={() => set({ playlist: null })} title={t("library.clearHealth")}>
+            {t("library.playlistFilter", { name: p.playlistName ?? "…" })} ×
+          </button>
+        )}
+        {query.rekordbox && (
+          <button className="chip" aria-pressed onClick={() => set({ rekordbox: null })} title={t("library.clearHealth")}>
+            {t(`library.rekordboxFilter.${query.rekordbox}`)} ×
+          </button>
+        )}
         {query.health && (
           <button className="chip" aria-pressed onClick={() => set({ health: null })} title={t("library.clearHealth")}>
             {t(`health.keys.${query.health}`)} ×

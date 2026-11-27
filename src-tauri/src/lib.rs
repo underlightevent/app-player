@@ -1028,6 +1028,16 @@ async fn convert_apply(state: State<'_, AppState>, ids: Vec<i64>) -> Result<Edit
     .await
 }
 
+/// Ouvre la page de téléchargement dans le navigateur (seulement les pages du projet).
+#[tauri::command]
+async fn open_release_page(app: tauri::AppHandle, url: String) -> Result<(), AppError> {
+    use tauri_plugin_opener::OpenerExt;
+    if !url.starts_with("https://github.com/underlightevent/app-player/") {
+        return Err(AppError::InvalidSetting("adresse refusée".into()));
+    }
+    app.opener().open_url(url, None::<&str>).map_err(|e| AppError::Io(std::io::Error::other(e.to_string())))
+}
+
 #[tauri::command]
 async fn update_check() -> Result<update::UpdateInfo, AppError> {
     blocking(update::check).await
@@ -1230,6 +1240,7 @@ pub fn run() {
             convert_preview,
             convert_apply,
             update_check,
+            open_release_page,
             tasks_list,
             task_cancel
         ])

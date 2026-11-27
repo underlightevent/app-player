@@ -33,7 +33,7 @@ export async function folderMove(volumeId: number, from: string, to: string): Pr
 }
 
 export async function tracksMovePreview(ids: number[], volumeId: number, target: string): Promise<PlanItem[]> {
-  if (!inTauri) return ids.map((id) => ({ id, folder: "Musique", oldName: `piste_${id}.wav`, newName: `${target}/piste_${id}.wav`, status: "ok", suffixed: false, longPath: false }));
+  if (!inTauri) return ids.map((id) => ({ id, folder: "Musique", oldName: `piste_${id}.wav`, newName: `${target}/piste_${id}.wav`, status: "ok", suffixed: false, longPath: false, inRekordbox: id % 3 === 0 }));
   return invoke<PlanItem[]>("tracks_move_preview", { ids, volumeId, target });
 }
 

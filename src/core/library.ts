@@ -22,6 +22,10 @@ export interface LibraryQuery {
   folder: [number, string] | null;
   /** Compteur du tableau de bord « Santé de la bibliothèque ». */
   health: string | null;
+  /** Playlist ou filtre intelligent. */
+  playlist: number | null;
+  /** « in » : dans Rekordbox ; « reload » : à recharger dans Rekordbox. */
+  rekordbox: string | null;
   sort: SortKey[];
 }
 
@@ -34,6 +38,8 @@ export const emptyQuery: LibraryQuery = {
   rootId: null,
   folder: null,
   health: null,
+  playlist: null,
+  rekordbox: null,
   sort: [],
 };
 
@@ -69,6 +75,10 @@ export interface TrackRow {
   coverWidth: number | null;
   wavDesync: boolean;
   locked: string[];
+  /** Présent dans la collection Rekordbox importée. */
+  inRekordbox: boolean;
+  /** Tags modifiés depuis : à recharger dans Rekordbox. */
+  reload: boolean;
 }
 
 export interface RootInfo {
@@ -134,6 +144,8 @@ const previewRows: TrackRow[] = Array.from({ length: previewCount }, (_, i) => (
   coverWidth: 1000,
   wavDesync: false,
   locked: [],
+  inRekordbox: i % 3 !== 2,
+  reload: i % 40 === 0,
 }));
 
 export async function libraryQuery(query: LibraryQuery): Promise<number[]> {

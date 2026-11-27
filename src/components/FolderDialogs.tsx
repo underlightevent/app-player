@@ -44,6 +44,11 @@ export function MoveDialog({ ids, target, onClose, onDone }: { ids: number[]; ta
       }
     >
       <p className="hint">{t("move.hint")}</p>
+      {(plan?.filter((p) => p.status === "ok" && p.inRekordbox).length ?? 0) > 0 && (
+        <p className="rekordbox-alert" role="alert">
+          <AlertTriangle size={16} aria-hidden /> {t("rekordbox.renameAlert", { count: plan!.filter((p) => p.status === "ok" && p.inRekordbox).length })}
+        </p>
+      )}
       {problems.length > 0 && (
         <p className="text-warning small">
           <AlertTriangle size={14} aria-hidden /> {t("move.problems", { count: problems.length })}
@@ -57,6 +62,7 @@ export function MoveDialog({ ids, target, onClose, onDone }: { ids: number[]; ta
             <span className="preview-new" title={p.newName ?? ""}>
               {p.newName}
               {p.status !== "ok" && <span className="badge badge-error">{t(`move.status.${p.status}`)}</span>}
+              {p.inRekordbox && p.status === "ok" && <span className="badge badge-rekordbox">Rekordbox</span>}
             </span>
           </div>
         ))}

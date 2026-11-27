@@ -55,6 +55,10 @@ import { DuplicatesView } from "./components/DuplicatesView";
 import { QuarantineView } from "./components/QuarantineView";
 import { HealthView } from "./components/HealthView";
 import { duplicatesCount, quarantineTracks } from "./core/quality";
+import { PlaylistsView } from "./components/PlaylistsView";
+import { AddToPlaylistDialog, ConvertDialog } from "./components/Phase4Dialogs";
+import { Modal } from "./components/Modal";
+import { exportM3u, openReleasePage, pickSave, playlistRemove, rekordboxStatus, updateCheck, type Playlist } from "./core/rekordbox";
 
 function isLanguage(v: unknown): v is Language {
   return LANGUAGES.includes(v as Language);
@@ -68,7 +72,8 @@ export default function App() {
   const [language, setLanguageState] = useState<Language>("fr");
   const [density, setDensity] = useState<"compact" | "comfortable">("compact");
   const [keyNotation, setKeyNotation] = useState<"camelot" | "musical">("camelot");
-  const [view, setView] = useState<ViewId>("library");
+  // Aperçu navigateur : « ?view=duplicates » ouvre directement un écran (captures du guide).
+  const [view, setView] = useState<ViewId>(() => (!inTauri && new URLSearchParams(location.search).get("view")) as ViewId || "library");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [detailOpen, setDetailOpen] = useState(true);
   const [query, setQuery] = useState<LibraryQuery>(emptyQuery);
@@ -361,6 +366,28 @@ export default function App() {
   const [dialog, setDialog] = useState<null | "rename" | "clean" | "parse">(null);
   /** Renommage demandé depuis « Santé de la bibliothèque » (morceaux hors sélection). */
   const [renameIds, setRenameIds] = useState<number[] | null>(null);
+  const [playlistDialog, setPlaylistDialog] = useState<number[] | null>(null);
+  const [convertIds, setConvertIds] = useState<number[] | null>(null);
+  const [quarantineAsk, setQuarantineAsk] = useState<{ ids: number[]; inRekordbox: number } | null>(null);
+  const [openPlaylist, setOpenPlaylist] = useState<Playlist | null>(null);
+  // Au démarrage : export Rekordbox trop ancien, nouvelle version disponible (si activé).
+  useEffect(() => {
+    if (!inTauri) return;
+    void rekordboxStatus()
+      .then((s) => {
+        if (s.stale) toast.show(t("rekordbox.staleToast"), { label: t("rekordbox.reimport"), run: () => setView("settings") });
+      })
+      .catch(() => {});
+    void getSettings().then((s) => {
+      if (s.update_check === "false") return;
+      void updateCheck()
+        .then((u) => {
+          if (u.newer) toast.show(t("update.available", { version: u.latest }), { label: t("update.download"), run: () => void openReleasePage(u.url) });
+        })
+        .catch(() => {});
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [dupCount, setDupCount] = useState(0);
   useEffect(() => {
     const refresh = () => void duplicatesCount().then(setDupCount).catch(() => {});
@@ -429,10 +456,44 @@ export default function App() {
       disabled: selection.size === 0,
       run: async () => {
         const ids = [...selection];
+        // Alerte avant de déplacer un morceau présent dans Rekordbox.
+        const inRekordbox = selectedRows.filter((r) => r.inRekordbox).length;
+        if (inRekordbox > 0) return setQuarantineAsk({ ids, inRekordbox });
         const r = await quarantineTracks(ids);
         setSelection(new Set());
         reportDone(r, "quarantine.done");
       },
+    },
+    { id: "playlist-add", label: t("actions.addToPlaylist"), disabled: selection.size === 0, run: () => setPlaylistDialog([...selection]) },
+    ...(openPlaylist?.kind === "static" && query.playlist === openPlaylist.id
+      ? [
+          {
+            id: "playlist-remove",
+            label: t("actions.removeFromPlaylist", { name: openPlaylist.name }),
+            disabled: selection.size === 0,
+            run: async () => {
+              await playlistRemove(openPlaylist.id, [...selection]);
+              setSelection(new Set());
+            },
+          },
+        ]
+      : []),
+    {
+      id: "export-m3u",
+      label: t("actions.exportM3u"),
+      disabled: selection.size === 0,
+      run: async () => {
+        const path = await pickSave(t("playlists.exportM3u"), "selection.m3u8", "m3u8", "M3U8");
+        if (!path) return;
+        const [n] = await exportM3u([...selection], path);
+        toast.show(t("playlists.exported", { count: n }));
+      },
+    },
+    {
+      id: "convert",
+      label: t("actions.convertAiff"),
+      disabled: !selectedRows.some((r) => r.format === "wav"),
+      run: () => setConvertIds(selectedRows.filter((r) => r.format === "wav").map((r) => r.id)),
     },
   ];
 
@@ -704,6 +765,7 @@ export default function App() {
           )}
           {view === "library" ? (
             <LibraryView
+              playlistName={query.playlist != null && openPlaylist?.id === query.playlist ? openPlaylist.name : null}
               query={query}
               onQueryChange={setQuery}
               ids={lib.ids}
@@ -733,6 +795,16 @@ export default function App() {
               onToggle={togglePlay}
               onDone={reportDone}
               onToast={(text) => toast.show(text)}
+            />
+          ) : view === "playlists" ? (
+            <PlaylistsView
+              selection={selectedIdList}
+              onToast={toast.show}
+              onOpen={(p) => {
+                setOpenPlaylist(p);
+                setQuery({ ...emptyQuery, playlist: p.id });
+                setView("library");
+              }}
             />
           ) : view === "quarantine" ? (
             <QuarantineView onDone={reportDone} />
@@ -794,6 +866,11 @@ export default function App() {
                 },
                 version: status?.version ?? "",
                 onToast: toast.show,
+                selection: selectedIdList,
+                onOpenRekordboxList: (kind) => {
+                  setQuery({ ...emptyQuery, rekordbox: kind });
+                  setView("library");
+                },
               }}
             />
           )}
@@ -913,6 +990,33 @@ export default function App() {
       />
       {moreActions.length > 0 && moveRequest && (
         <MoveDialog ids={moveRequest.ids} target={moveRequest.target} onClose={() => setMoveRequest(null)} onDone={(r) => folderDone(r, "move.done")} />
+      )}
+      {playlistDialog && <AddToPlaylistDialog ids={playlistDialog} onClose={() => setPlaylistDialog(null)} onDone={(text) => toast.show(text)} />}
+      {convertIds && <ConvertDialog ids={convertIds} onClose={() => setConvertIds(null)} onDone={(r) => reportDone(r, "convert.done")} />}
+      {quarantineAsk && (
+        <Modal
+          title={t("rekordbox.quarantineTitle")}
+          onClose={() => setQuarantineAsk(null)}
+          footer={
+            <>
+              <button className="btn" onClick={() => setQuarantineAsk(null)}>{t("common.cancel")}</button>
+              <button
+                className="btn btn-primary"
+                onClick={async () => {
+                  const ids = quarantineAsk.ids;
+                  setQuarantineAsk(null);
+                  const r = await quarantineTracks(ids);
+                  setSelection(new Set());
+                  reportDone(r, "quarantine.done");
+                }}
+              >
+                {t("actions.quarantine")}
+              </button>
+            </>
+          }
+        >
+          <p className="rekordbox-alert" role="alert">{t("rekordbox.quarantineAlertSelection", { count: quarantineAsk.inRekordbox })}</p>
+        </Modal>
       )}
       {nameRequest && <NameDialog title={nameRequest.title} initial={nameRequest.initial} onClose={() => setNameRequest(null)} onSubmit={nameRequest.submit} />}
       {onboarding && (

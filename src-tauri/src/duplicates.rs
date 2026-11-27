@@ -568,6 +568,8 @@ pub struct ResolvePlan {
     pub discard: Vec<(i64, String)>,
     /// Problèmes empêchant le traitement (disque débranché…).
     pub blockers: Vec<String>,
+    /// Fichiers écartés présents dans Rekordbox (alerte avant le déplacement).
+    pub in_rekordbox: Vec<String>,
     #[serde(skip)]
     changes: Changes,
     #[serde(skip)]
@@ -660,6 +662,7 @@ pub fn plan(conn: &Connection, mounts: &HashMap<i64, std::path::PathBuf>, req: &
         keeper_file: k.file_name.clone(),
         transfers,
         discard: others.iter().map(|o| (o.track.id, o.track.file_name.clone())).collect(),
+        in_rekordbox: others.iter().filter(|o| o.track.in_rekordbox).map(|o| o.track.file_name.clone()).collect(),
         blockers,
         changes: c,
         cover_from,
