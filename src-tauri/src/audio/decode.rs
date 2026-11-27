@@ -25,6 +25,16 @@ impl Decoder {
     pub fn open(path: &Path) -> Result<Decoder, String> {
         // Ouverture standard : sous Windows, le fichier reste remplaçable pendant la lecture.
         let (mss, hint) = super::source::open(path).map_err(|e| e.to_string())?;
+        Self::open_stream(mss, hint)
+    }
+
+    /// Son gardé en mémoire (extrait de 30 s de l'écran Sorties : jamais écrit sur le disque).
+    pub fn open_bytes(bytes: Vec<u8>, ext: &str) -> Result<Decoder, String> {
+        let (mss, hint) = super::source::open_bytes(bytes, ext);
+        Self::open_stream(mss, hint)
+    }
+
+    fn open_stream(mss: symphonia::core::io::MediaSourceStream<'static>, hint: symphonia::core::formats::probe::Hint) -> Result<Decoder, String> {
         let format = symphonia::default::get_probe()
             .probe(&hint, mss, FormatOptions::default(), MetadataOptions::default())
             .map_err(|e| e.to_string())?;

@@ -18,7 +18,7 @@ interface Props {
 }
 
 /** Forme d'onde cliquable, dessinée sur un canevas (rapide, même sur des écrans larges). */
-function Waveform({ trackId, position, duration, onSeek }: { trackId: number | null; position: number; duration: number; onSeek: (ms: number) => void }) {
+function Waveform({ trackId, seekable, position, duration, onSeek }: { trackId: number | null; seekable: boolean; position: number; duration: number; onSeek: (ms: number) => void }) {
   const { t } = useTranslation();
   const canvas = useRef<HTMLCanvasElement>(null);
   const [peaks, setPeaks] = useState<number[] | null>(null);
@@ -83,13 +83,13 @@ function Waveform({ trackId, position, duration, onSeek }: { trackId: number | n
       ref={canvas}
       className="waveform-canvas"
       role="slider"
-      tabIndex={trackId == null ? -1 : 0}
+      tabIndex={seekable ? 0 : -1}
       aria-label={t("player.position")}
       aria-valuemin={0}
       aria-valuemax={Math.round(duration / 1000)}
       aria-valuenow={Math.round(position / 1000)}
       aria-valuetext={`${formatDuration(position)} / ${formatDuration(duration)}`}
-      onClick={(e) => trackId != null && duration > 0 && onSeek(ratioAt(e) * duration)}
+      onClick={(e) => seekable && duration > 0 && onSeek(ratioAt(e) * duration)}
       onMouseMove={(e) => setHover(ratioAt(e))}
       onMouseLeave={() => setHover(null)}
       onKeyDown={onKey}
@@ -112,14 +112,26 @@ export function PlayerBar({ state, track, onToggle, onPrev, onNext, onSeek, onVo
   }, [track?.id, track?.coverCount]);
 
   const VolIcon = state.volume === 0 ? VolumeX : state.volume < 0.5 ? Volume1 : Volume2;
-  const has = state.trackId != null;
+  const ext = state.external ?? null;
+  const has = state.trackId != null || ext != null;
+  const shownCover = ext ? ext.coverUrl : cover;
   return (
     <footer className="player" aria-label={t("player.label")}>
       <div className="player-cover" aria-hidden>
-        {cover ? <img src={cover} alt="" /> : <Music size={20} />}
+        {shownCover ? <img src={shownCover} alt="" /> : <Music size={20} />}
       </div>
       <div className="player-info">
-        {track ? (
+        {ext ? (
+          <>
+            <div className="player-title" title={ext.title}>
+              {ext.title}
+              {ext.version && <span className="muted"> ({ext.version})</span>}
+            </div>
+            <div className="player-artist muted">
+              {ext.artists.join(", ")} · {t("player.preview", { service: t(`watch.sites.${ext.service}`, { defaultValue: ext.service }) })}
+            </div>
+          </>
+        ) : track ? (
           <>
             <div className="player-title" title={track.title ?? track.fileName}>
               {track.title ?? track.fileName}
@@ -144,7 +156,7 @@ export function PlayerBar({ state, track, onToggle, onPrev, onNext, onSeek, onVo
       </div>
       <div className="waveform">
         <span className="time tabular">{formatDuration(state.positionMs)}</span>
-        <Waveform trackId={state.trackId} position={state.positionMs} duration={state.durationMs} onSeek={onSeek} />
+        <Waveform trackId={ext ? null : state.trackId} seekable={has} position={state.positionMs} duration={state.durationMs} onSeek={onSeek} />
         <span className="time tabular">{formatDuration(state.durationMs)}</span>
       </div>
       <div className="popover-anchor volume">

@@ -84,6 +84,13 @@ pub fn id3v2_end(f: &mut File) -> io::Result<u64> {
     Ok(end)
 }
 
+/// Flux en mémoire (extrait téléchargé pour l'écoute, jamais écrit sur le disque).
+pub fn open_bytes(bytes: Vec<u8>, ext: &str) -> (MediaSourceStream<'static>, Hint) {
+    let mut hint = Hint::new();
+    hint.with_extension(ext);
+    (MediaSourceStream::new(Box::new(std::io::Cursor::new(bytes)), Default::default()), hint)
+}
+
 /// Flux prêt pour la sonde de Symphonia, avec l'indice d'extension.
 pub fn open(path: &Path) -> io::Result<(MediaSourceStream<'static>, Hint)> {
     let mut f = File::open(path)?;

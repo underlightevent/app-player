@@ -25,7 +25,7 @@
     "sectionTools": "Outils",
     "toHandle_one": "{{count}} élément à traiter",
     "toHandle_other": "{{count}} éléments à traiter",
-    "watch": "Veille"
+    "watch": "Sorties"
   },
   "topbar": {
     "searchPlaceholder": "Rechercher dans la bibliothèque",
@@ -259,7 +259,8 @@
       "unreadable": "Ce fichier ne peut pas être lu.",
       "offline": "Lecture impossible : disque déconnecté ou fichier introuvable.",
       "audio_output": "Aucune sortie son disponible. Vérifiez vos haut-parleurs ou votre casque."
-    }
+    },
+    "preview": "Extrait {{service}}"
   },
   "settings": {
     "title": "Réglages",
@@ -321,7 +322,7 @@
     "keyring": "Le trousseau du système n'est pas accessible.",
     "network": "La recherche en ligne a échoué.",
     "artwork": "Cette image n'a pas pu être utilisée.",
-    "not_linked": "Le compte n'est plus lié. Reconnectez-le dans Réglages › Veille musicale."
+    "not_linked": "Le compte n'est plus lié. Reconnectez-le dans Réglages › Sorties."
   },
   "history": {
     "editTags": "la modification des tags",
@@ -1022,7 +1023,7 @@
   "watch": {
     "tabs": {
       "charts": "Classements",
-      "releases": "Nouvelles sorties",
+      "releases": "Nouveautés",
       "wishlist": "Liste d'envies"
     },
     "sources": {
@@ -1030,7 +1031,7 @@
       "deezer": "Deezer",
       "musicbrainz": "MusicBrainz"
     },
-    "noSource": "Aucune source de veille n'est activée. Activez-en une dans les réglages : seuls le pays, le genre ou le label recherchés sont envoyés.",
+    "noSource": "Aucune source n'est activée. Activez-en une dans les réglages : seuls le pays, le genre ou le label recherchés sont envoyés.",
     "openSettings": "Ouvrir les réglages",
     "chartsDisabled": "Les classements utilisent Apple Music ou Deezer, désactivés pour l'instant.",
     "releasesDisabled": "Les nouvelles sorties utilisent MusicBrainz, désactivé pour l'instant.",
@@ -1103,8 +1104,8 @@
     "errors": {
       "offline": "Pas de connexion internet. La liste d'envies reste utilisable.",
       "network": "Le service n'a pas répondu correctement. Réessayez plus tard.",
-      "invalid_setting": "Cette source est désactivée ou un réglage manque (Réglages › Veille musicale).",
-      "not_linked": "Le compte Spotify n'est plus lié (connexion expirée ou révoquée). Reconnectez-le dans Réglages › Veille musicale.",
+      "invalid_setting": "Cette source est désactivée ou un réglage manque (Réglages › Sorties).",
+      "not_linked": "Le compte Spotify n'est plus lié (connexion expirée ou révoquée). Reconnectez-le dans Réglages › Sorties.",
       "keyring": "Le trousseau du système n'est pas accessible : le compte ne peut pas être lié."
     },
     "spotify": {
@@ -1130,8 +1131,8 @@
       "copied": "Adresse copiée."
     },
     "settings": {
-      "title": "Veille musicale",
-      "hint": "L'écran Veille consulte des classements et des nouvelles sorties. Chaque source est désactivée tant que vous ne l'activez pas. Seuls le pays, le genre ou le nom du label recherchés sont envoyés, jamais d'information sur vous ni sur votre bibliothèque.",
+      "title": "Sorties",
+      "hint": "L'écran Sorties consulte des classements et des nouvelles sorties. Chaque source est désactivée tant que vous ne l'activez pas. Seuls le pays, le genre ou le nom du label recherchés sont envoyés, jamais d'information sur vous ni sur votre bibliothèque.",
       "apple": "classements par pays (morceaux et albums les plus écoutés, mis à jour chaque jour).",
       "deezer": "classements par genre (pays déduit par Deezer de votre connexion).",
       "musicbrainz": "nouvelles sorties d'un label ou d'un pays (base libre).",
@@ -1173,8 +1174,22 @@
       "position": "Position dans l'extrait",
       "from": "Extrait de 30 secondes · {{service}}",
       "searching": "Recherche de l'extrait…",
-      "none": "Aucun extrait trouvé pour ce titre.",
+      "none": "Aucun extrait trouvé pour ce titre, ni sur Deezer ni sur Apple Music.",
       "failed": "L'extrait n'a pas pu être lu (connexion ou format)."
+    },
+    "labels": {
+      "title": "Labels",
+      "hint": "Une liste des grands labels est proposée dans l'onglet Nouveautés. Cliquez sur ☆ pour mettre un label en favori : « Tous mes favoris » cherche les sorties de tous vos favoris en une seule fois. Ajoutez les labels qui manquent ci-dessous.",
+      "favs": "Mes favoris",
+      "all": "Tous les labels",
+      "allFavs_one": "★ Tous mes favoris ({{count}})",
+      "allFavs_other": "★ Tous mes favoris ({{count}})",
+      "other": "Autre label…",
+      "fav": "Mettre en favori",
+      "unfav": "Retirer des favoris",
+      "add": "Ajouter",
+      "addPlaceholder": "Ajouter un label (nom exact)",
+      "remove": "Retirer « {{label}} »"
     }
   }
 }

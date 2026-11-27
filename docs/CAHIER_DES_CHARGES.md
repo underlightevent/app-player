@@ -536,15 +536,15 @@ Livrables : import du XML Rekordbox, badges et mode protégé ; liste « À rech
 
 ### Phase 5 — Veille musicale et liste d'envies
 
-Ajoutée à la demande de l'utilisateur le 27/11/2026. Un écran « Veille » consulte des classements et des nouvelles sorties sur internet, et permet de garder les titres repérés dans une « liste d'envies ». L'application ne télécharge jamais de musique (voir « Hors périmètre ») : elle donne des liens vers les boutiques, et peut ajouter les titres à une playlist d'un compte de streaming lié.
+Ajoutée à la demande de l'utilisateur le 27/11/2026. Un écran « Sorties » (d'abord appelé « Veille ») consulte des classements et des nouvelles sorties sur internet, et permet de garder les titres repérés dans une « liste d'envies ». L'application ne télécharge jamais de musique (voir « Hors périmètre ») : elle donne des liens vers les boutiques, et peut ajouter les titres à une playlist d'un compte de streaming lié.
 
 **Sources gratuites, sans compte** (chacune désactivée par défaut, activable dans les réglages, comme la recherche en ligne) :
 - **Classements par pays** : flux publics d'Apple Music (morceaux et albums les plus écoutés, par pays, mis à jour chaque jour).
 - **Classements par genre** : classements publics de Deezer (pays déduit par Deezer de la connexion).
-- **Nouvelles sorties par label et par pays** : recherche MusicBrainz (sorties d'un label ou d'un pays sur une période : 7, 30 ou 90 jours).
+- **Nouvelles sorties par label et par pays** : recherche MusicBrainz (sorties d'un label ou d'un pays sur une période : 7, 30 ou 90 jours). Liste des grands labels proposée par défaut ; labels favoris et labels ajoutés dans les réglages ; « Tous mes favoris » cherche tous les favoris en une seule requête.
 - Les réponses sont gardées en cache 12 heures (classements Apple Music) ou 24 heures (sorties MusicBrainz) ; jamais pour Deezer, dont les conditions interdisent la copie locale. Seuls le pays, le genre ou le nom du label sont envoyés ; rien sur la bibliothèque ni sur l'utilisateur.
 
-**Écoute et ouverture** (ajoutées à la demande de l'utilisateur) : bouton ▶ qui joue un extrait de 30 secondes (Deezer ou Apple Music, réglable, rien n'est gardé) ; bouton ↗ qui ouvre le titre sur le site choisi dans les réglages (source, Apple Music, Deezer, Spotify, YouTube, YouTube Music, SoundCloud, Beatport).
+**Écoute et ouverture** (ajoutées à la demande de l'utilisateur) : bouton ▶ sur la pochette qui joue un extrait de 30 secondes dans le lecteur du bas de l'application (précédent, suivant, enchaînement dans la liste affichée) ; recherche de l'extrait sur Deezer et Apple Music (le service choisi d'abord, puis l'autre) ; extrait gardé en mémoire seulement ; bouton ↗ qui ouvre le titre sur le site choisi dans les réglages (source, Apple Music, Deezer, Spotify, YouTube, YouTube Music, SoundCloud, Beatport).
 
 **Liste d'envies** :
 - « Ajouter » depuis un classement ou une sortie : titre, artistes, version, label, date de sortie, pochette, source et lien.

@@ -1,15 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, ExternalLink, EyeOff, FileDown, Heart, Info, ListPlus, LoaderCircle, Music2, Pause, Play, RefreshCw, Search, Trash2, WifiOff, X } from "lucide-react";
+import { Check, ExternalLink, EyeOff, FileDown, Heart, Info, ListPlus, LoaderCircle, Music2, Pause, Play, RefreshCw, Search, Trash2, Star, WifiOff } from "lucide-react";
 import { isCoreError } from "../core/api";
 import { onEvent } from "../core/library";
-import { playerCommand } from "../core/player";
 import { pickSave } from "../core/rekordbox";
 import {
   COUNTRIES,
+  DEFAULT_LABELS,
+  readList,
   openTarget,
   shopLinks,
-  watchPreview,
   spotifyStatus,
   watchChart,
   watchGenres,
@@ -37,6 +37,12 @@ interface Props {
   onOpenSettings: () => void;
   /** Le nombre d'envies a changé (badge de la barre latérale). */
   onWishlistChanged: () => void;
+  /** Extrait en cours dans le lecteur du bas (clé de la ligne), et son état. */
+  playingKey: string | null;
+  playing: boolean;
+  /** Lance l'extrait `index` de la liste dans le lecteur du bas. */
+  onPlayPreview: (items: WatchItem[], keys: string[], index: number) => Promise<boolean>;
+  onTogglePlay: () => void;
 }
 
 interface Last {
@@ -46,7 +52,9 @@ interface Last {
   genre: number;
   kind: "songs" | "albums";
   relMode: "label" | "country";
+  /** Label choisi, « __fav__ » (tous les favoris) ou « __other__ » (saisi à la main). */
   label: string;
+  labelOther: string;
   relCountry: string;
   days: number;
 }
@@ -59,6 +67,7 @@ const DEFAULT_LAST: Last = {
   kind: "songs",
   relMode: "label",
   label: "",
+  labelOther: "",
   relCountry: "fr",
   days: 30,
 };
@@ -72,7 +81,7 @@ function readLast(raw: string | undefined): Last {
 }
 
 /** Écran Veille : classements, nouvelles sorties et liste d'envies (phase 5). */
-export function WatchView({ values, onSettingChange, onToast, onOpenSettings, onWishlistChanged }: Props) {
+export function WatchView({ values, onSettingChange, onToast, onOpenSettings, onWishlistChanged, playingKey, playing, onPlayPreview, onTogglePlay }: Props) {
   const { t, i18n } = useTranslation();
   const [last, setLastState] = useState<Last>(() => readLast(values.watch_last));
   const setLast = (patch: Partial<Last>) =>
@@ -142,8 +151,22 @@ export function WatchView({ values, onSettingChange, onToast, onOpenSettings, on
   };
 
   const loadChart = () => void run(() => watchChart(chartSource, last.country, last.genre, last.kind, 100));
+  // Labels : grands labels par défaut + ceux ajoutés dans les réglages ; favoris en tête.
+  const favs = readList(values.watch_labels_fav);
+  const custom = readList(values.watch_labels_custom);
+  const allLabels = useMemo(
+    () => [...new Set([...DEFAULT_LABELS, ...custom])].sort((a, b) => a.localeCompare(b, i18n.language, { sensitivity: "base" })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [values.watch_labels_custom, i18n.language],
+  );
+  const labelChoice = last.label || (favs.length ? "__fav__" : "Spinnin' Records");
+  const chosenLabels = (): string[] =>
+    labelChoice === "__fav__" ? favs : labelChoice === "__other__" ? [last.labelOther.trim()].filter(Boolean) : [labelChoice];
+  const isFav = (l: string) => favs.some((x) => x.toLowerCase() === l.toLowerCase());
+  const toggleFav = (l: string) =>
+    onSettingChange("watch_labels_fav", JSON.stringify(isFav(l) ? favs.filter((x) => x.toLowerCase() !== l.toLowerCase()) : [...favs, l]));
   const loadReleases = () =>
-    void run(() => watchReleases(last.relMode === "label" ? last.label : null, last.relMode === "country" ? last.relCountry : null, last.days));
+    void run(() => watchReleases(last.relMode === "label" ? chosenLabels() : [], last.relMode === "country" ? last.relCountry : null, last.days));
 
   // Classement chargé à l'ouverture et à chaque changement de pays, genre ou type.
   useEffect(() => {
@@ -200,86 +223,74 @@ export function WatchView({ values, onSettingChange, onToast, onOpenSettings, on
 
   const open = (url: string) => void watchOpenUrl(url).catch((e) => onToast(errorText(e), undefined, "error"));
 
-  // ---------- Écoute des extraits (30 s, lus depuis le service, rien n'est gardé) ----------
-  type PreviewState = { key: string; state: "loading" | "playing" | "paused"; title: string; artists: string[]; service: string; pos: number; dur: number };
-  const audio = useRef<HTMLAudioElement | null>(null);
-  const [preview, setPreview] = useState<PreviewState | null>(null);
+  // ---------- Écoute des extraits : lecteur du bas de l'application ----------
   const previewOff = values.watch_preview === "off";
-  useEffect(() => {
-    const a = new Audio();
-    a.preload = "none";
-    const update = () => setPreview((p) => (p ? { ...p, pos: a.currentTime, dur: Number.isFinite(a.duration) ? a.duration : 30 } : p));
-    a.addEventListener("timeupdate", update);
-    a.addEventListener("playing", () => setPreview((p) => (p ? { ...p, state: "playing" } : p)));
-    a.addEventListener("pause", () => setPreview((p) => (p && p.state !== "loading" ? { ...p, state: "paused" } : p)));
-    a.addEventListener("ended", () => setPreview((p) => (p ? { ...p, state: "paused", pos: 0 } : p)));
-    audio.current = a;
-    return () => {
-      a.pause();
-      a.removeAttribute("src");
-    };
-  }, []);
+  const [loadingKey, setLoadingKey] = useState<string | null>(null);
 
-  const stopPreview = () => {
-    audio.current?.pause();
-    setPreview(null);
-  };
-
-  const togglePreview = async (key: string, item: WatchItem) => {
-    const a = audio.current;
-    if (!a) return;
-    if (preview?.key === key && preview.state !== "loading") {
-      if (a.paused) void a.play();
-      else a.pause();
+  /** ▶ sur une pochette : lance l'extrait (ou pause / reprend si c'est celui en cours). */
+  const play = async (list: WatchItem[], keys: string[], index: number) => {
+    const key = keys[index];
+    if (playingKey === key) {
+      onTogglePlay();
       return;
     }
-    a.pause();
-    const base = { key, title: item.title, artists: item.artists, pos: 0, dur: 30 };
-    setPreview({ ...base, state: "loading", service: "" });
+    setLoadingKey(key);
     try {
-      const p = await watchPreview(item);
-      if (!p) {
-        setPreview(null);
-        onToast(t("watch.preview.none"));
-        return;
-      }
-      playerCommand("pause"); // le lecteur de la bibliothèque se met en pause
-      a.src = p.url;
-      setPreview({ ...base, state: "loading", service: p.service });
-      await a.play();
-    } catch (e) {
-      setPreview(null);
-      onToast(e instanceof DOMException ? t("watch.preview.failed") : errorText(e), undefined, "error");
+      await onPlayPreview(list, keys, index);
+    } finally {
+      setLoadingKey(null);
     }
+  };
+
+  const coverCell = (item: WatchItem, list: WatchItem[], keys: string[], index: number) => {
+    const key = keys[index];
+    const mine = playingKey === key;
+    const icon =
+      loadingKey === key ? <LoaderCircle size={18} className="spin" aria-hidden /> : mine && playing ? <Pause size={18} aria-hidden /> : <Play size={18} aria-hidden />;
+    const img = item.coverUrl ? (
+      <img className="watch-cover" src={item.coverUrl} alt="" loading="lazy" onError={(e) => (e.currentTarget.style.visibility = "hidden")} />
+    ) : (
+      <span className="watch-cover placeholder"><Music2 size={16} aria-hidden /></span>
+    );
+    return (
+      <td className="watch-cover-cell">
+        {previewOff ? (
+          img
+        ) : (
+          <button
+            className={`watch-cover-play${mine ? " active" : ""}${loadingKey === key ? " loading" : ""}`}
+            title={mine && playing ? t("player.pause") : t("watch.preview.play")}
+            aria-label={`${mine && playing ? t("player.pause") : t("watch.preview.play")} : ${item.title}`}
+            onClick={() => void play(list, keys, index)}
+          >
+            {img}
+            <span className="watch-cover-icon">{icon}</span>
+          </button>
+        )}
+      </td>
+    );
   };
 
   const openWith = values.watch_open_with || "source";
   const siteLabel = (s: string) => t(`watch.sites.${s}`, { defaultValue: s });
-  const rowButtons = (key: string, item: WatchItem) => {
+  const rowButtons = (item: WatchItem) => {
     const target = openTarget(item, openWith);
-    const mine = preview?.key === key ? preview : null;
     return (
-      <>
-        {!previewOff && (
-          <button className={`icon-btn${mine ? " active" : ""}`} title={t("watch.preview.play")} aria-label={t("watch.preview.play")} onClick={() => void togglePreview(key, item)}>
-            {mine?.state === "loading" ? <LoaderCircle size={16} className="spin" aria-hidden /> : mine?.state === "playing" ? <Pause size={16} aria-hidden /> : <Play size={16} aria-hidden />}
-          </button>
-        )}
-        {target && (
-          <button
-            className="icon-btn"
-            title={t("watch.openSource", { source: siteLabel(target.site) })}
-            aria-label={t("watch.openSource", { source: siteLabel(target.site) })}
-            onClick={() => open(target.url)}
-          >
-            <ExternalLink size={16} aria-hidden />
-          </button>
-        )}
-      </>
+      target && (
+        <button
+          className="icon-btn"
+          title={t("watch.openSource", { source: siteLabel(target.site) })}
+          aria-label={t("watch.openSource", { source: siteLabel(target.site) })}
+          onClick={() => open(target.url)}
+        >
+          <ExternalLink size={16} aria-hidden />
+        </button>
+      )
     );
   };
 
   const shown = (wish ?? []).filter((w) => filter === "all" || w.status === filter);
+  const shownKeys = shown.map((w) => `w-${w.id}`);
   const counts = {
     all: wish?.length ?? 0,
     wanted: wish?.filter((w) => w.status === "wanted").length ?? 0,
@@ -301,7 +312,9 @@ export function WatchView({ values, onSettingChange, onToast, onOpenSettings, on
 
   const sourceLabel = (s: string) => t(`watch.sources.${s}`, { defaultValue: s });
 
-  const resultRows = (list: WatchItem[]) => (
+  const resultRows = (list: WatchItem[]) => {
+    const keys = list.map((it, i) => `${last.tab}-${i}-${it.artists[0] ?? ""}-${it.title}`);
+    return (
     <table className="plain-table watch-table">
       <thead>
         <tr>
@@ -317,13 +330,7 @@ export function WatchView({ values, onSettingChange, onToast, onOpenSettings, on
         {list.map((it, i) => (
           <tr key={`${it.title}-${i}`}>
             {last.tab === "charts" && <td className="num tabular">{it.rank}</td>}
-            <td className="watch-cover-cell">
-              {it.coverUrl ? (
-                <img className="watch-cover" src={it.coverUrl} alt="" loading="lazy" onError={(e) => (e.currentTarget.style.visibility = "hidden")} />
-              ) : (
-                <span className="watch-cover placeholder"><Music2 size={16} aria-hidden /></span>
-              )}
-            </td>
+            {coverCell(it, list, keys, i)}
             <td>
               <div className="watch-title">
                 {it.title}
@@ -342,13 +349,14 @@ export function WatchView({ values, onSettingChange, onToast, onOpenSettings, on
                   <ListPlus size={14} aria-hidden /> {t("watch.add")}
                 </button>
               )}
-              {rowButtons(`r-${i}-${it.title}`, it)}
+              {rowButtons(it)}
             </td>
           </tr>
         ))}
       </tbody>
     </table>
-  );
+    );
+  };
 
   return (
     <div className="settings watch">
@@ -360,43 +368,6 @@ export function WatchView({ values, onSettingChange, onToast, onOpenSettings, on
           </button>
         ))}
       </div>
-
-      {preview && (
-        <div className="watch-preview" role="status">
-          <button
-            className="icon-btn"
-            aria-label={t("watch.preview.play")}
-            onClick={() => {
-              const a = audio.current;
-              if (a && preview.state !== "loading") void (a.paused ? a.play() : a.pause());
-            }}
-          >
-            {preview.state === "loading" ? <LoaderCircle size={18} className="spin" aria-hidden /> : preview.state === "playing" ? <Pause size={18} aria-hidden /> : <Play size={18} aria-hidden />}
-          </button>
-          <div className="watch-preview-text">
-            <strong>{preview.title}</strong> <span className="muted">{preview.artists.join(", ")}</span>
-            <div className="muted small">{preview.service ? t("watch.preview.from", { service: siteLabel(preview.service) }) : t("watch.preview.searching")}</div>
-          </div>
-          <input
-            type="range"
-            className="watch-preview-seek"
-            min={0}
-            max={preview.dur || 30}
-            step={0.1}
-            value={preview.pos}
-            aria-label={t("watch.preview.position")}
-            onChange={(e) => {
-              if (audio.current) audio.current.currentTime = Number(e.target.value);
-            }}
-          />
-          <span className="tabular small muted">
-            {Math.floor(preview.pos)} / {Math.round(preview.dur || 30)} s
-          </span>
-          <button className="icon-btn" aria-label={t("watch.preview.stop")} title={t("watch.preview.stop")} onClick={stopPreview}>
-            <X size={16} aria-hidden />
-          </button>
-        </div>
-      )}
 
       {last.tab !== "wishlist" && !anyEnabled && (
         <div className="empty small-empty">
@@ -477,13 +448,49 @@ export function WatchView({ values, onSettingChange, onToast, onOpenSettings, on
                 <button type="button" aria-pressed={last.relMode === "country"} onClick={() => setLast({ relMode: "country" })}>{t("watch.byCountry")}</button>
               </div>
               {last.relMode === "label" ? (
-                <input
-                  className="text-input"
-                  value={last.label}
-                  placeholder={t("watch.labelPlaceholder")}
-                  aria-label={t("watch.col.label")}
-                  onChange={(e) => setLast({ label: e.target.value })}
-                />
+                <>
+                  <label className="chip-select">
+                    {t("watch.col.label")}
+                    <select value={labelChoice} onChange={(e) => setLast({ label: e.target.value })}>
+                      <option value="__fav__" disabled={favs.length === 0}>
+                        {t("watch.labels.allFavs", { count: favs.length })}
+                      </option>
+                      {favs.length > 0 && (
+                        <optgroup label={t("watch.labels.favs")}>
+                          {favs.map((l) => (
+                            <option key={`f-${l}`} value={l}>★ {l}</option>
+                          ))}
+                        </optgroup>
+                      )}
+                      <optgroup label={t("watch.labels.all")}>
+                        {allLabels.filter((l) => !isFav(l)).map((l) => (
+                          <option key={l} value={l}>{l}</option>
+                        ))}
+                      </optgroup>
+                      <option value="__other__">{t("watch.labels.other")}</option>
+                    </select>
+                  </label>
+                  {labelChoice === "__other__" && (
+                    <input
+                      className="text-input"
+                      value={last.labelOther}
+                      placeholder={t("watch.labelPlaceholder")}
+                      aria-label={t("watch.labels.other")}
+                      onChange={(e) => setLast({ labelOther: e.target.value })}
+                    />
+                  )}
+                  {labelChoice !== "__fav__" && chosenLabels()[0] && (
+                    <button
+                      type="button"
+                      className={`icon-btn${isFav(chosenLabels()[0]) ? " active" : ""}`}
+                      title={isFav(chosenLabels()[0]) ? t("watch.labels.unfav") : t("watch.labels.fav")}
+                      aria-label={isFav(chosenLabels()[0]) ? t("watch.labels.unfav") : t("watch.labels.fav")}
+                      onClick={() => toggleFav(chosenLabels()[0])}
+                    >
+                      <Star size={16} fill={isFav(chosenLabels()[0]) ? "currentColor" : "none"} aria-hidden />
+                    </button>
+                  )}
+                </>
               ) : (
                 <label className="chip-select">
                   {t("watch.country")}
@@ -502,7 +509,7 @@ export function WatchView({ values, onSettingChange, onToast, onOpenSettings, on
                   ))}
                 </select>
               </label>
-              <button className="btn btn-primary btn-small" type="submit" disabled={loading || (last.relMode === "label" && !last.label.trim())}>
+              <button className="btn btn-primary btn-small" type="submit" disabled={loading || (last.relMode === "label" && chosenLabels().length === 0)}>
                 <Search size={14} aria-hidden /> {t("watch.search")}
               </button>
             </form>
@@ -601,13 +608,7 @@ export function WatchView({ values, onSettingChange, onToast, onOpenSettings, on
                         }}
                       />
                     </td>
-                    <td className="watch-cover-cell">
-                      {w.coverUrl ? (
-                        <img className="watch-cover" src={w.coverUrl} alt="" loading="lazy" onError={(e) => (e.currentTarget.style.visibility = "hidden")} />
-                      ) : (
-                        <span className="watch-cover placeholder"><Music2 size={16} aria-hidden /></span>
-                      )}
-                    </td>
+                    {coverCell(w, shown, shownKeys, shown.indexOf(w))}
                     <td>
                       <div className="watch-title">
                         {w.title}
@@ -630,7 +631,7 @@ export function WatchView({ values, onSettingChange, onToast, onOpenSettings, on
                       ))}
                     </td>
                     <td className="watch-actions">
-                      {rowButtons(`w-${w.id}`, w)}
+                      {rowButtons(w)}
                       <button className="icon-btn" title={t("watch.remove")} aria-label={t("watch.remove")} onClick={() => void remove([w.id])}>
                         <Trash2 size={16} aria-hidden />
                       </button>

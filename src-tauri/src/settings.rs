@@ -66,6 +66,9 @@ const FREE_TEXT: &[(&str, &str)] = &[
     ("spotify_client_id", ""),
     ("spotify_user", ""),
     ("watch_last", ""),
+    // Labels favoris (liste JSON) et labels ajoutés par l'utilisateur.
+    ("watch_labels_fav", "[]"),
+    ("watch_labels_custom", "[]"),
 ];
 const MAX_FREE_TEXT: usize = 20_000;
 

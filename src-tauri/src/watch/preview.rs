@@ -99,19 +99,53 @@ pub fn find(http: &Http, item: &Item, service: &str) -> Result<Option<Preview>, 
             return Ok(Some(Preview { url: u.to_string(), title: item.title.clone(), artists: item.artists.clone(), service: "deezer".into() }));
         }
     }
-    let q = encode(&query(item));
-    match service {
-        "apple" => {
-            let url = format!("https://itunes.apple.com/search?term={q}&entity=song&limit=10&country=fr");
-            let v = http.get_json("itunes", &url, &[], false)?;
-            Ok(best(item, parse_itunes_search(&v), "apple"))
-        }
-        _ => {
-            let url = format!("https://api.deezer.com/search?q={q}&limit=10");
-            let v = http.get_json("deezer", &url, &[], false)?;
-            Ok(best(item, parse_deezer_search(&v), "deezer"))
+    // Le titre sans « (feat. X) » : les services l'écrivent chacun à leur façon.
+    let clean = Item { title: super::strip_featuring(&item.title), ..item.clone() };
+    let artist = clean.artists.first().cloned().unwrap_or_default();
+    // Plusieurs formulations, de la plus précise à la plus large.
+    let mut queries = vec![query(&clean)];
+    if clean.version.is_some() {
+        queries.push(format!("{artist} {}", clean.title).trim().to_string());
+    }
+    // Plusieurs services : celui choisi d'abord, puis l'autre ; Apple : France puis États-Unis.
+    let order: &[&str] = if service == "apple" { &["apple", "apple-us", "deezer"] } else { &["deezer", "apple", "apple-us"] };
+    let mut last_err = None;
+    for svc in order {
+        for q in &queries {
+            let found = match *svc {
+                "deezer" => http
+                    .get_json("deezer", &format!("https://api.deezer.com/search?q={}&limit=10", encode(q)), &[], false)
+                    .map(|v| best(&clean, parse_deezer_search(&v), "deezer")),
+                other => {
+                    let country = if other == "apple-us" { "us" } else { "fr" };
+                    let url = format!("https://itunes.apple.com/search?term={}&entity=song&limit=10&country={country}", encode(q));
+                    http.get_json("itunes", &url, &[], false).map(|v| best(&clean, parse_itunes_search(&v), "apple"))
+                }
+            };
+            match found {
+                Ok(Some(p)) => return Ok(Some(p)),
+                Ok(None) => {}
+                // Sans connexion : inutile d'essayer les autres services.
+                Err(NetError::Offline) => return Err(NetError::Offline),
+                Err(e) => last_err = Some(e),
+            }
         }
     }
+    match last_err {
+        Some(e) => Err(e),
+        None => Ok(None),
+    }
+}
+
+/// Télécharge l'extrait **en mémoire** (jamais sur le disque) pour le lecteur. Renvoie le son
+/// et son extension (« mp3 » pour Deezer, « m4a » pour Apple).
+pub fn download(http: &Http, p: &Preview) -> Result<(Vec<u8>, &'static str), NetError> {
+    if !allowed_preview(&p.url) {
+        return Err(NetError::NotFound);
+    }
+    let bytes = http.get("preview", &p.url, &[], false)?;
+    let ext = if p.url.split('?').next().unwrap_or("").ends_with(".mp3") { "mp3" } else { "m4a" };
+    Ok((bytes, ext))
 }
 
 #[cfg(test)]
@@ -167,6 +201,26 @@ mod en_ligne {
         for svc in ["deezer", "apple"] {
             let p = super::find(&http, &it, svc).unwrap();
             println!("EXTRAIT {svc} : {:?}", p.map(|p| (p.title, p.url.chars().take(60).collect::<String>())));
+        }
+    }
+}
+
+#[cfg(test)]
+mod decodage_en_ligne {
+    #[test]
+    #[ignore]
+    fn extraits_decodables() {
+        let dir = tempfile::tempdir().unwrap();
+        let (_c, db) = crate::db::open(dir.path()).unwrap();
+        let http = crate::online::http::Http::new(db);
+        let it = super::Item { title: "Soon (feat. Gaëtan Roussel)".into(), artists: vec!["Mosimann".into()], ..Default::default() };
+        for svc in ["deezer", "apple"] {
+            let p = super::find(&http, &it, svc).unwrap().expect("extrait");
+            let (bytes, ext) = super::download(&http, &p).unwrap();
+            let mut d = crate::audio::decode::Decoder::open_bytes(bytes.clone(), ext).unwrap();
+            let mut buf = Vec::new(); let mut n = 0usize;
+            while d.next_block(&mut buf).unwrap() { n += buf.len(); }
+            println!("DECODE {svc} via {} : {} octets {ext}, {} Hz, {} canaux, {:.1} s", p.service, bytes.len(), d.sample_rate, d.channels, n as f64 / d.channels as f64 / d.sample_rate as f64);
         }
     }
 }

@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ClipboardCopy, ExternalLink, Link2, Unlink } from "lucide-react";
+import { ClipboardCopy, ExternalLink, Link2, Plus, Star, Unlink } from "lucide-react";
 import { isCoreError } from "../core/api";
-import { OPEN_PLATFORMS, spotifyConnect, spotifyDisconnect, spotifyStatus, watchOpenUrl, type SpotifyStatus } from "../core/watch";
+import { DEFAULT_LABELS, OPEN_PLATFORMS, readList, spotifyConnect, spotifyDisconnect, spotifyStatus, watchOpenUrl, type SpotifyStatus } from "../core/watch";
 
 interface Props {
   values: Record<string, string>;
@@ -70,6 +70,29 @@ export function WatchSettings({ values, onSettingChange, onToast }: Props) {
 
   const redirect = status?.redirect ?? "http://127.0.0.1:43821/callback";
 
+  // Labels : liste par défaut + labels ajoutés ; favoris (étoile).
+  const favs = readList(values.watch_labels_fav);
+  const custom = readList(values.watch_labels_custom);
+  const [newLabel, setNewLabel] = useState("");
+  const allLabels = [...new Set([...DEFAULT_LABELS, ...custom])].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+  const toggleFav = (l: string) => {
+    const on = favs.some((x) => x.toLowerCase() === l.toLowerCase());
+    onSettingChange("watch_labels_fav", JSON.stringify(on ? favs.filter((x) => x.toLowerCase() !== l.toLowerCase()) : [...favs, l]));
+  };
+  const addCustom = () => {
+    const l = newLabel.trim();
+    if (!l) return;
+    const exists = allLabels.find((x) => x.toLowerCase() === l.toLowerCase());
+    if (!exists) onSettingChange("watch_labels_custom", JSON.stringify([...custom, l]));
+    // Un label ajouté devient favori (c'est la raison habituelle de l'ajouter).
+    if (!favs.some((x) => x.toLowerCase() === l.toLowerCase())) onSettingChange("watch_labels_fav", JSON.stringify([...favs, exists ?? l]));
+    setNewLabel("");
+  };
+  const removeCustom = (l: string) => {
+    onSettingChange("watch_labels_custom", JSON.stringify(custom.filter((x) => x !== l)));
+    onSettingChange("watch_labels_fav", JSON.stringify(favs.filter((x) => x !== l)));
+  };
+
   return (
     <section>
       <h2>{t("watch.settings.title")}</h2>
@@ -106,6 +129,39 @@ export function WatchSettings({ values, onSettingChange, onToast }: Props) {
           ))}
         </select>
       </label>
+
+      <h3 className="form-label">{t("watch.labels.title")}</h3>
+      <p className="hint">{t("watch.labels.hint")}</p>
+      <div className="label-list" role="group" aria-label={t("watch.labels.title")}>
+        {allLabels.map((l) => {
+          const fav = favs.some((x) => x.toLowerCase() === l.toLowerCase());
+          const mine = custom.includes(l);
+          return (
+            <span key={l} className={`label-chip${fav ? " fav" : ""}`}>
+              <button className="label-star" aria-pressed={fav} title={fav ? t("watch.labels.unfav") : t("watch.labels.fav")} onClick={() => toggleFav(l)}>
+                <Star size={13} fill={fav ? "currentColor" : "none"} aria-hidden /> {l}
+              </button>
+              {mine && (
+                <button className="label-remove" aria-label={t("watch.labels.remove", { label: l })} title={t("watch.labels.remove", { label: l })} onClick={() => removeCustom(l)}>
+                  ×
+                </button>
+              )}
+            </span>
+          );
+        })}
+      </div>
+      <form
+        className="folder-actions"
+        onSubmit={(e) => {
+          e.preventDefault();
+          addCustom();
+        }}
+      >
+        <input className="text-input" value={newLabel} placeholder={t("watch.labels.addPlaceholder")} aria-label={t("watch.labels.addPlaceholder")} onChange={(e) => setNewLabel(e.target.value)} />
+        <button className="btn btn-small" type="submit" disabled={!newLabel.trim()}>
+          <Plus size={14} aria-hidden /> {t("watch.labels.add")}
+        </button>
+      </form>
 
       <h3 className="form-label">{t("watch.settings.spotify")}</h3>
       <p className="hint">{t("watch.settings.spotifyHint")}</p>

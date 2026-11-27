@@ -10,6 +10,17 @@ export interface PlayerState {
   volume: number;
   ended: boolean;
   error: string | null;
+  /** Extrait d'un titre de l'écran Sorties (pas un fichier de la bibliothèque). */
+  external?: ExternalTrack | null;
+}
+
+export interface ExternalTrack {
+  key: string;
+  title: string;
+  version: string | null;
+  artists: string[];
+  coverUrl: string | null;
+  service: string;
 }
 
 export const initialPlayerState: PlayerState = {

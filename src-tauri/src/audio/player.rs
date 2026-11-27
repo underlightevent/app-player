@@ -86,10 +86,32 @@ pub struct PlayerState {
     /// Le morceau vient de se terminer (l'interface passe au suivant).
     pub ended: bool,
     pub error: Option<String>,
+    /// Extrait d'un titre de l'écran Sorties (pas un fichier de la bibliothèque).
+    pub external: Option<External>,
+}
+
+/// Ce que la barre du lecteur affiche pour un extrait.
+#[derive(Debug, Clone, Default, Serialize, serde::Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase", default)]
+pub struct External {
+    /// Identifiant choisi par l'interface (position dans la liste affichée).
+    pub key: String,
+    pub title: String,
+    pub version: Option<String>,
+    pub artists: Vec<String>,
+    pub cover_url: Option<String>,
+    /// « deezer » ou « apple »
+    pub service: String,
+}
+
+/// Ce qu'il faut lire : un fichier, ou un son gardé en mémoire (avec son extension).
+pub enum Src {
+    Path(PathBuf),
+    Bytes(Vec<u8>, String),
 }
 
 enum Cmd {
-    Load { track_id: i64, path: PathBuf, duration_ms: u64, autoplay: bool },
+    Load { track_id: Option<i64>, src: Src, duration_ms: u64, autoplay: bool, external: Option<External> },
     Play,
     Pause,
     Seek(u64),
@@ -116,7 +138,17 @@ impl PlayerHandle {
     }
 
     pub fn load(&self, track_id: i64, path: PathBuf, duration_ms: u64, autoplay: bool) {
-        let _ = self.tx.send(Cmd::Load { track_id, path, duration_ms, autoplay });
+        let _ = self.tx.send(Cmd::Load { track_id: Some(track_id), src: Src::Path(path), duration_ms, autoplay, external: None });
+    }
+    /// Extrait gardé en mémoire (`ext` : « mp3 » ou « m4a »).
+    pub fn load_bytes(&self, bytes: Vec<u8>, ext: &str, external: External, autoplay: bool) {
+        let _ = self.tx.send(Cmd::Load {
+            track_id: None,
+            src: Src::Bytes(bytes, ext.to_string()),
+            duration_ms: 30_000,
+            autoplay,
+            external: Some(external),
+        });
     }
     pub fn play(&self) {
         let _ = self.tx.send(Cmd::Play);
@@ -156,7 +188,7 @@ fn run(rx: Receiver<Cmd>, state: Arc<Mutex<PlayerState>>, app: Option<AppHandle>
         let timeout = if playing { Duration::from_millis(200) } else { Duration::from_secs(3600) };
         match rx.recv_timeout(timeout) {
             Ok(cmd) => match cmd {
-                Cmd::Load { track_id, path, duration_ms, autoplay } => {
+                Cmd::Load { track_id, src, duration_ms, autoplay, external } => {
                     if output.is_none() {
                         match rodio::DeviceSinkBuilder::open_default_sink() {
                             Ok(mut o) => {
@@ -175,9 +207,13 @@ fn run(rx: Receiver<Cmd>, state: Arc<Mutex<PlayerState>>, app: Option<AppHandle>
                     }
                     let p = player.as_ref().expect("lecteur prêt");
                     p.clear();
-                    match Decoder::open(&path) {
+                    let (opened, what) = match src {
+                        Src::Path(path) => (Decoder::open(&path), path.display().to_string()),
+                        Src::Bytes(bytes, ext) => (Decoder::open_bytes(bytes, &ext), "extrait".to_string()),
+                    };
+                    match opened {
                         Ok(dec) => {
-                            let dur = dec.duration_ms.unwrap_or(duration_ms);
+                            let dur = dec.duration_ms.filter(|d| *d > 0).unwrap_or(duration_ms);
                             p.append(FileSource { dec, buf: Vec::new(), pos: 0, done: false });
                             if autoplay {
                                 p.play();
@@ -185,7 +221,8 @@ fn run(rx: Receiver<Cmd>, state: Arc<Mutex<PlayerState>>, app: Option<AppHandle>
                                 p.pause();
                             }
                             emit(&set(&|s| {
-                                s.track_id = Some(track_id);
+                                s.track_id = track_id;
+                                s.external = external.clone();
                                 s.playing = autoplay;
                                 s.position_ms = 0;
                                 s.duration_ms = dur;
@@ -194,9 +231,10 @@ fn run(rx: Receiver<Cmd>, state: Arc<Mutex<PlayerState>>, app: Option<AppHandle>
                             }));
                         }
                         Err(e) => {
-                            log::warn!("Lecture impossible de {} : {e}", path.display());
+                            log::warn!("Lecture impossible de {what} : {e}");
                             emit(&set(&|s| {
-                                s.track_id = Some(track_id);
+                                s.track_id = track_id;
+                                s.external = external.clone();
                                 s.playing = false;
                                 s.error = Some("unreadable".into());
                             }));
@@ -243,6 +281,7 @@ fn run(rx: Receiver<Cmd>, state: Arc<Mutex<PlayerState>>, app: Option<AppHandle>
                     emit(&set(&|s| {
                         s.playing = false;
                         s.track_id = None;
+                        s.external = None;
                         s.position_ms = 0;
                     }));
                 }

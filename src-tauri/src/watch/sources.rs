@@ -111,21 +111,36 @@ pub fn parse_deezer(v: &Value, what: &str) -> Vec<Item> {
 
 /// Nouvelles sorties sur les `days` derniers jours, pour un label (nom) ou un pays (code ISO).
 /// `today` : date du jour « AAAA-MM-JJ » (passée pour les tests).
-pub fn musicbrainz_releases(http: &Http, label: Option<&str>, country: Option<&str>, days: u32, today: &str) -> Result<Vec<Item>, NetError> {
-    let from = days_before(today, days.clamp(1, 365));
-    let mut q = format!("date:[{from} TO {today}]");
-    if let Some(l) = label.map(str::trim).filter(|l| !l.is_empty()) {
-        q.push_str(&format!(" AND label:\"{}\"", l.replace(['"', '\\'], " ")));
-    }
-    if let Some(c) = country.map(str::trim).filter(|c| c.len() == 2) {
-        q.push_str(&format!(" AND country:{}", c.to_ascii_uppercase()));
-    }
-    if label.map(str::trim).unwrap_or("").is_empty() && country.map(str::trim).unwrap_or("").is_empty() {
-        return Ok(vec![]);
-    }
+/// `labels` : un ou plusieurs labels (une seule requête pour tous les favoris).
+pub fn musicbrainz_releases(http: &Http, labels: &[String], country: Option<&str>, days: u32, today: &str) -> Result<Vec<Item>, NetError> {
+    let Some(q) = releases_query(labels, country, days, today) else { return Ok(vec![]) };
     let url = format!("https://musicbrainz.org/ws/2/release?query={}&fmt=json&limit=100", encode(&q));
     let v = http.get_json_ttl("musicbrainz", &url, &[], RELEASES_TTL)?;
     Ok(parse_musicbrainz(&v))
+}
+
+/// Requête MusicBrainz (syntaxe Lucene) ; `None` sans label ni pays.
+pub fn releases_query(labels: &[String], country: Option<&str>, days: u32, today: &str) -> Option<String> {
+    let from = days_before(today, days.clamp(1, 365));
+    let mut q = format!("date:[{from} TO {today}]");
+    let labels: Vec<String> = labels
+        .iter()
+        .map(|l| l.replace(['"', '\\'], " ").trim().to_string())
+        .filter(|l| !l.is_empty())
+        .take(40)
+        .map(|l| format!("\"{l}\""))
+        .collect();
+    let country = country.map(str::trim).filter(|c| c.len() == 2);
+    if labels.is_empty() && country.is_none() {
+        return None;
+    }
+    if !labels.is_empty() {
+        q.push_str(&format!(" AND label:({})", labels.join(" OR ")));
+    }
+    if let Some(c) = country {
+        q.push_str(&format!(" AND country:{}", c.to_ascii_uppercase()));
+    }
+    Some(q)
 }
 
 pub fn parse_musicbrainz(v: &Value) -> Vec<Item> {
@@ -245,6 +260,14 @@ mod tests {
     }
 
     #[test]
+    fn requete_labels() {
+        let q = releases_query(&["Spinnin' Records".into(), "Armada \"Music\"".into(), " ".into()], None, 30, "2026-11-27").unwrap();
+        assert_eq!(q, "date:[2026-10-28 TO 2026-11-27] AND label:(\"Spinnin' Records\" OR \"Armada  Music\")");
+        assert_eq!(releases_query(&[], Some("fr"), 7, "2026-11-27").unwrap(), "date:[2026-11-20 TO 2026-11-27] AND country:FR");
+        assert!(releases_query(&[], None, 7, "2026-11-27").is_none());
+    }
+
+    #[test]
     fn dates() {
         assert_eq!(days_before("2026-11-27", 30), "2026-10-28");
         assert_eq!(days_before("2026-03-01", 1), "2026-02-28");
@@ -272,9 +295,9 @@ mod en_ligne {
         let d = super::deezer_chart(&http, 113, "tracks").unwrap();
         println!("DEEZER dance {} : {:?}", d.len(), d.iter().take(3).map(|i| format!("{} - {} {:?}", i.artists.join(", "), i.title, i.version)).collect::<Vec<_>>());
         let today = crate::db::today();
-        let m = super::musicbrainz_releases(&http, Some("Spinnin' Records"), None, 60, &today).unwrap();
+        let m = super::musicbrainz_releases(&http, &["Spinnin' Records".into(), "Armada Music".into()], None, 60, &today).unwrap();
         println!("MB label {} : {:?}", m.len(), m.iter().take(3).map(|i| format!("{} - {} ({:?})", i.artists.join(", "), i.title, i.release_date)).collect::<Vec<_>>());
-        let m = super::musicbrainz_releases(&http, None, Some("fr"), 7, &today).unwrap();
+        let m = super::musicbrainz_releases(&http, &[], Some("fr"), 7, &today).unwrap();
         println!("MB FR {} : {:?}", m.len(), m.iter().take(3).map(|i| format!("{} - {}", i.artists.join(", "), i.title)).collect::<Vec<_>>());
     }
 }

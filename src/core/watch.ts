@@ -111,9 +111,37 @@ export async function watchGenres(): Promise<Genre[]> {
   return invoke<Genre[]>("watch_genres");
 }
 
-export async function watchReleases(label: string | null, country: string | null, days: number): Promise<WatchItem[]> {
+export async function watchReleases(labels: string[], country: string | null, days: number): Promise<WatchItem[]> {
   if (!inTauri) return demo(12, "musicbrainz");
-  return invoke<WatchItem[]>("watch_releases", { label, country, days });
+  return invoke<WatchItem[]>("watch_releases", { labels, country, days });
+}
+
+/** Grands labels proposés par défaut (l'utilisateur peut en ajouter et choisir ses favoris). */
+export const DEFAULT_LABELS = [
+  // Électro, house, techno
+  "Spinnin' Records", "Armada Music", "Revealed Recordings", "Musical Freedom", "STMPD RCRDS", "Protocol Recordings",
+  "Defected Records", "Toolroom", "Glitterbox", "Hot Creations", "Dirtybird", "Repopulate Mars", "Solid Grooves",
+  "Drumcode", "Afterlife", "Diynamic", "Innervisions", "Kompakt", "Cercle Records", "Anjunabeats", "Anjunadeep",
+  "Positiva", "Ministry of Sound", "Ultra Records", "Big Beat Records", "Insomniac Records", "Monstercat",
+  "Mad Decent", "OWSLA", "Ninja Tune", "Warp Records", "Ed Banger Records", "Kitsuné", "Because Music",
+  // Majors et grandes maisons internationales
+  "Sony Music", "Universal Music", "Warner Records", "Atlantic Records", "Columbia", "RCA Records", "Epic Records", "Interscope Records", "Republic Records",
+  "Island Records", "Capitol Records", "Def Jam Recordings", "Parlophone", "Polydor", "Virgin", "Elektra",
+  "XL Recordings", "Island Def Jam",
+  // France, rap, afro, latino
+  "Rec. 118", "Capitol Music France", "Polydor France", "Def Jam France", "Universal Music France", "Sony Music France",
+  "Warner Music France", "92i", "Millenium", "Believe", "Mavin Records", "YBNL Nation", "Rich Music", "Dale Play Records",
+  "Sony Music Latin", "Universal Music Latino",
+];
+
+/** Lit une liste JSON enregistrée dans les réglages (labels favoris ou ajoutés). */
+export function readList(raw: string | undefined): string[] {
+  try {
+    const v = JSON.parse(raw || "[]");
+    return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && x.trim() !== "") : [];
+  } catch {
+    return [];
+  }
 }
 
 export async function wishlistList(): Promise<WishItem[]> {
@@ -194,10 +222,11 @@ export interface Preview {
   service: "deezer" | "apple";
 }
 
-/** Adresse de l'extrait d'un titre (demandée au clic sur ▶ ; rien n'est gardé). */
-export async function watchPreview(item: WatchItem): Promise<Preview | null> {
+/** Cherche l'extrait d'un titre (plusieurs services) et le lance dans le lecteur du bas.
+ * `key` identifie la ligne qui joue. `null` : aucun extrait trouvé. */
+export async function watchPreview(item: WatchItem, key: string): Promise<Preview | null> {
   if (!inTauri) return null;
-  return invoke<Preview | null>("watch_preview", { item });
+  return invoke<Preview | null>("watch_preview", { item, key });
 }
 
 /** Sites proposés pour ouvrir un titre (réglage « watch_open_with »). */

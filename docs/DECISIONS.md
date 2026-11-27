@@ -292,3 +292,14 @@ La règle de sécurité de l'interface (CSP) n'autorisait aucune image ni aucun 
 
 ### D-507 · Site d'ouverture des titres
 Réglage `watch_open_with` : page de la source (par défaut), Apple Music, Deezer, Spotify, YouTube, YouTube Music, SoundCloud ou Beatport. Si le titre vient du site choisi, sa page s'ouvre directement ; sinon une recherche « artiste titre » est ouverte sur le site choisi. Rien n'est envoyé avant le clic ; le cœur n'ouvre que les adresses de ces sites.
+
+### D-508 · Extraits dans le lecteur du bas
+Les extraits ne sont plus lus par l'interface mais par le lecteur de l'application (même moteur que les fichiers) : l'extrait (≈ 0,5 Mo en MP3 pour Deezer, ≈ 1 Mo en AAC pour Apple) est téléchargé **en mémoire** au clic, décodé par Symphonia depuis la mémoire et joué ; il n'est jamais écrit sur le disque et disparaît à l'extrait suivant. La barre du bas affiche pochette, titre, artistes et « Extrait Deezer / Apple Music » ; précédent / suivant et l'enchaînement de fin parcourent la liste affichée (un titre sans extrait est sauté, 6 essais au plus). Vérifié : extraits Deezer (MP3) et Apple (AAC) décodés entièrement (30,0 s).
+Recherche de l'extrait sur plusieurs plateformes : service choisi, puis l'autre ; Apple en France puis aux États-Unis ; titre sans « (feat. …) » ; avec puis sans la version. Sans connexion, la recherche s'arrête tout de suite.
+Le bouton ▶ est sur la pochette (toujours visible, plus marqué au survol et pendant la lecture).
+
+### D-509 · Labels par défaut et favoris
+Liste d'environ 70 grands labels dans l'interface (électro, majors, rap français, afro, latino), complétée par les labels ajoutés (réglage `watch_labels_custom`) ; favoris dans `watch_labels_fav` (listes JSON). « Tous mes favoris » envoie une seule requête MusicBrainz `label:("A" OR "B" …)` (40 labels au plus), au lieu d'une requête par label (1 par seconde). Un label ajouté devient favori.
+
+### D-510 · « Veille » renommé « Sorties »
+À la demande de l'utilisateur. L'onglet « Nouvelles sorties » devient « Nouveautés » pour éviter « Sorties › Nouvelles sorties ». Les noms internes (`watch_…`) ne changent pas, pour garder les réglages déjà enregistrés.

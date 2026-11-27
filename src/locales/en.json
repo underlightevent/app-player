@@ -25,7 +25,7 @@
     "sectionTools": "Tools",
     "toHandle_one": "{{count}} item to handle",
     "toHandle_other": "{{count}} items to handle",
-    "watch": "Discover"
+    "watch": "Releases"
   },
   "topbar": {
     "searchPlaceholder": "Search the library",
@@ -259,7 +259,8 @@
       "unreadable": "This file cannot be played.",
       "offline": "Cannot play: drive disconnected or file not found.",
       "audio_output": "No audio output available. Check your speakers or headphones."
-    }
+    },
+    "preview": "{{service}} preview"
   },
   "settings": {
     "title": "Settings",
@@ -321,7 +322,7 @@
     "keyring": "The system keychain is not accessible.",
     "network": "The online search failed.",
     "artwork": "This image could not be used.",
-    "not_linked": "The account is no longer linked. Reconnect it in Settings › Music discovery."
+    "not_linked": "The account is no longer linked. Reconnect it in Settings › Releases."
   },
   "history": {
     "editTags": "the tag change",
@@ -1030,7 +1031,7 @@
       "deezer": "Deezer",
       "musicbrainz": "MusicBrainz"
     },
-    "noSource": "No discovery source is enabled. Enable one in settings: only the country, genre or label you look for is sent.",
+    "noSource": "No source is enabled. Enable one in settings: only the country, genre or label you look for is sent.",
     "openSettings": "Open settings",
     "chartsDisabled": "Charts use Apple Music or Deezer, currently disabled.",
     "releasesDisabled": "New releases use MusicBrainz, currently disabled.",
@@ -1103,8 +1104,8 @@
     "errors": {
       "offline": "No internet connection. The wishlist remains usable.",
       "network": "The service did not answer correctly. Try again later.",
-      "invalid_setting": "This source is disabled or a setting is missing (Settings › Music discovery).",
-      "not_linked": "The Spotify account is no longer linked (expired or revoked). Reconnect it in Settings › Music discovery.",
+      "invalid_setting": "This source is disabled or a setting is missing (Settings › Releases).",
+      "not_linked": "The Spotify account is no longer linked (expired or revoked). Reconnect it in Settings › Releases.",
       "keyring": "The system keychain is not accessible: the account cannot be linked."
     },
     "spotify": {
@@ -1130,8 +1131,8 @@
       "copied": "Address copied."
     },
     "settings": {
-      "title": "Music discovery",
-      "hint": "The Discover screen looks up charts and new releases. Each source stays disabled until you enable it. Only the country, genre or label you look for is sent, never anything about you or your library.",
+      "title": "Releases",
+      "hint": "The Releases screen looks up charts and new releases. Each source stays disabled until you enable it. Only the country, genre or label you look for is sent, never anything about you or your library.",
       "apple": "charts by country (most played songs and albums, updated daily).",
       "deezer": "charts by genre (country inferred by Deezer from your connection).",
       "musicbrainz": "new releases of a label or a country (free database).",
@@ -1173,8 +1174,22 @@
       "position": "Position in the preview",
       "from": "30-second preview · {{service}}",
       "searching": "Looking for a preview…",
-      "none": "No preview found for this title.",
+      "none": "No preview found for this title, neither on Deezer nor on Apple Music.",
       "failed": "The preview could not be played (connection or format)."
+    },
+    "labels": {
+      "title": "Labels",
+      "hint": "A list of major labels is offered in the New releases tab. Click ☆ to make a label a favorite: “All my favorites” searches the releases of all your favorites at once. Add missing labels below.",
+      "favs": "My favorites",
+      "all": "All labels",
+      "allFavs_one": "★ All my favorites ({{count}})",
+      "allFavs_other": "★ All my favorites ({{count}})",
+      "other": "Other label…",
+      "fav": "Add to favorites",
+      "unfav": "Remove from favorites",
+      "add": "Add",
+      "addPlaceholder": "Add a label (exact name)",
+      "remove": "Remove “{{label}}”"
     }
   }
 }

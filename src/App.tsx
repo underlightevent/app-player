@@ -55,7 +55,7 @@ import { DuplicatesView } from "./components/DuplicatesView";
 import { QuarantineView } from "./components/QuarantineView";
 import { HealthView } from "./components/HealthView";
 import { duplicatesCount, quarantineTracks } from "./core/quality";
-import { wishlistCount } from "./core/watch";
+import { watchPreview, wishlistCount, type WatchItem } from "./core/watch";
 import { WatchView } from "./components/WatchView";
 import { PlaylistsView } from "./components/PlaylistsView";
 import { AddToPlaylistDialog, ConvertDialog } from "./components/Phase4Dialogs";
@@ -614,26 +614,67 @@ export default function App() {
     [player.trackId, selection, lib.ids],
   );
 
+  // ---------- Extraits de l'écran Sorties, lus dans le même lecteur ----------
+  const previewQueue = useRef<{ items: WatchItem[]; keys: string[] }>({ items: [], keys: [] });
+  /** Lance l'extrait `index` de la liste affichée. `auto` : passe aux suivants (sens `dir`) si
+   * un titre n'a pas d'extrait (enchaînement, précédent / suivant). */
+  const playPreview = useCallback(
+    async (items: WatchItem[], keys: string[], index: number, auto = false, dir = 1): Promise<boolean> => {
+      previewQueue.current = { items, keys };
+      for (let i = index, tries = 0; i >= 0 && i < items.length && tries < 6; i += dir, tries++) {
+        try {
+          if (await watchPreview(items[i], keys[i])) return true;
+        } catch (e) {
+          toast.show(isCoreError(e) ? t(`watch.errors.${e.code}`, { defaultValue: e.detail }) : t("errors.internal"), undefined, "error");
+          return false;
+        }
+        if (!auto) {
+          toast.show(t("watch.preview.none"));
+          return false;
+        }
+      }
+      return false;
+    },
+    [toast, t],
+  );
+  const stepPreview = useCallback(
+    (delta: number) => {
+      const q = previewQueue.current;
+      const i = player.external ? q.keys.indexOf(player.external.key) : -1;
+      if (i >= 0) void playPreview(q.items, q.keys, i + delta, true, delta < 0 ? -1 : 1);
+    },
+    [player.external, playPreview],
+  );
+
   const togglePlay = useCallback(() => {
-    if (player.trackId == null) {
+    if (player.trackId == null && !player.external) {
       const first = [...selection][0];
       if (first != null) void playTrack(first);
       return;
     }
     playerCommand(player.playing ? "pause" : "play");
-  }, [player.trackId, player.playing, selection, playTrack]);
+  }, [player.trackId, player.external, player.playing, selection, playTrack]);
 
-  // Fin du morceau : on enchaîne sur le suivant du tableau.
+  /** Précédent / suivant : dans la liste des extraits, sinon dans le tableau. */
+  const step = useCallback(
+    (delta: number) => {
+      if (player.external) return stepPreview(delta);
+      const id = neighbour(delta);
+      if (id != null) void playTrack(id);
+    },
+    [player.external, stepPreview, neighbour, playTrack],
+  );
+
+  // Fin du morceau : on enchaîne sur le suivant du tableau (ou de la liste des extraits).
   const endedRef = useRef(false);
   useEffect(() => {
     if (player.ended && !endedRef.current) {
       endedRef.current = true;
-      const next = neighbour(1);
-      if (next != null) void playTrack(next);
+      step(1);
     } else if (!player.ended) {
       endedRef.current = false;
     }
-  }, [player.ended, neighbour, playTrack]);
+  }, [player.ended, step]);
 
   // Raccourcis du lecteur.
   useEffect(() => {
@@ -646,9 +687,8 @@ export default function App() {
         togglePlay();
       } else if (e.shiftKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
         e.preventDefault();
-        const id = neighbour(e.key === "ArrowLeft" ? -1 : 1);
-        if (id != null) void playTrack(id);
-      } else if (!e.shiftKey && !e.ctrlKey && !e.metaKey && (e.key === "ArrowLeft" || e.key === "ArrowRight") && player.trackId != null) {
+        step(e.key === "ArrowLeft" ? -1 : 1);
+      } else if (!e.shiftKey && !e.ctrlKey && !e.metaKey && (e.key === "ArrowLeft" || e.key === "ArrowRight") && (player.trackId != null || player.external)) {
         e.preventDefault();
         const ms = player.positionMs + (e.key === "ArrowLeft" ? -10_000 : 10_000);
         playerCommand("seek", Math.min(Math.max(0, ms), player.durationMs));
@@ -656,7 +696,7 @@ export default function App() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [togglePlay, neighbour, playTrack, player.trackId, player.positionMs, player.durationMs, dialog]);
+  }, [togglePlay, step, player.trackId, player.external, player.positionMs, player.durationMs, dialog]);
 
   // ---------- Palette de commandes ----------
   const go = (v: ViewId) => () => setView(v);
@@ -821,6 +861,10 @@ export default function App() {
               onToast={toast.show}
               onOpenSettings={() => setView("settings")}
               onWishlistChanged={refreshWish}
+              playingKey={player.external?.key ?? null}
+              playing={player.playing}
+              onPlayPreview={(items, keys, index) => playPreview(items, keys, index)}
+              onTogglePlay={togglePlay}
             />
           ) : view === "quarantine" ? (
             <QuarantineView onDone={reportDone} />
@@ -992,15 +1036,9 @@ export default function App() {
         onPrev={() => {
           // Comme sur les lecteurs habituels : après 3 s, « précédent » revient au début.
           if (player.positionMs > 3000) playerCommand("seek", 0);
-          else {
-            const id = neighbour(-1);
-            if (id != null) void playTrack(id);
-          }
+          else step(-1);
         }}
-        onNext={() => {
-          const id = neighbour(1);
-          if (id != null) void playTrack(id);
-        }}
+        onNext={() => step(1)}
         onSeek={(ms) => playerCommand("seek", ms)}
         onVolume={(v) => playerCommand("volume", v)}
       />

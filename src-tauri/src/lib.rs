@@ -1123,13 +1123,13 @@ async fn watch_genres(state: State<'_, AppState>) -> Result<Vec<watch::sources::
 }
 
 #[tauri::command]
-async fn watch_releases(state: State<'_, AppState>, label: Option<String>, country: Option<String>, days: u32) -> Result<Vec<watch::Item>, AppError> {
+async fn watch_releases(state: State<'_, AppState>, labels: Vec<String>, country: Option<String>, days: u32) -> Result<Vec<watch::Item>, AppError> {
     let lib = state.library()?.clone();
     let online = state.online()?.clone();
     blocking(move || {
         let conn = db::open_worker(lib.db_path())?;
         watch_enabled(&conn, "musicbrainz")?;
-        let mut items = watch::sources::musicbrainz_releases(&online.http, label.as_deref(), country.as_deref(), days, &db::today())?;
+        let mut items = watch::sources::musicbrainz_releases(&online.http, &labels, country.as_deref(), days, &db::today())?;
         watch::mark(&conn, &mut items)?;
         Ok(items)
     })
@@ -1138,16 +1138,33 @@ async fn watch_releases(state: State<'_, AppState>, label: Option<String>, count
 
 /// Adresse d'un extrait de 30 s pour écouter un titre (au clic sur ▶ seulement).
 #[tauri::command]
-async fn watch_preview(state: State<'_, AppState>, item: watch::Item) -> Result<Option<watch::preview::Preview>, AppError> {
+async fn watch_preview(state: State<'_, AppState>, item: watch::Item, key: String) -> Result<Option<watch::preview::Preview>, AppError> {
     let lib = state.library()?.clone();
     let online = state.online()?.clone();
+    let player = state.player.clone();
     blocking(move || {
         let conn = db::open_worker(lib.db_path())?;
         let service = settings::get(&conn, "watch_preview")?.unwrap_or_else(|| "deezer".into());
         if service == "off" {
             return Err(AppError::InvalidSetting("extraits désactivés".into()));
         }
-        Ok(watch::preview::find(&online.http, &item, &service)?)
+        let Some(p) = watch::preview::find(&online.http, &item, &service)? else { return Ok(None) };
+        // Lecture dans le lecteur de l'application : le son reste en mémoire, jamais sur le disque.
+        let (bytes, ext) = watch::preview::download(&online.http, &p)?;
+        player.load_bytes(
+            bytes,
+            ext,
+            audio::player::External {
+                key,
+                title: item.title.clone(),
+                version: item.version.clone(),
+                artists: item.artists.clone(),
+                cover_url: item.cover_url.clone(),
+                service: p.service.clone(),
+            },
+            true,
+        );
+        Ok(Some(p))
     })
     .await
 }

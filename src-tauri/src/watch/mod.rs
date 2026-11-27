@@ -62,7 +62,7 @@ pub fn match_key(artists: &[String], title: &str) -> String {
 }
 
 /// Retire « (feat. X) », « [with X] », « ft. X » d'un titre (les classements les y mettent).
-fn strip_featuring(title: &str) -> String {
+pub(crate) fn strip_featuring(title: &str) -> String {
     let lower = title.to_lowercase();
     for marker in ["(feat", "[feat", "(ft.", "[ft.", "(with ", "[with ", " feat. ", " ft. "] {
         if let Some(pos) = lower.find(marker) {

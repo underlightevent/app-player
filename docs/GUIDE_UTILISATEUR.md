@@ -264,27 +264,27 @@ Rekordbox ne lit dans un WAV que 5 champs (titre, artiste, album, genre, comment
 
 Rien n'est jamais converti automatiquement.
 
-## Veille musicale
+## Sorties
 
-L'écran **Veille** consulte des classements et des nouvelles sorties sur internet, et garde les titres repérés dans une **liste d'envies**. L'application ne télécharge jamais de musique : elle vous donne des liens vers les boutiques.
+L'écran **Sorties** consulte des classements et des nouvelles sorties sur internet, et garde les titres repérés dans une **liste d'envies**. L'application ne télécharge jamais de musique : elle vous donne des liens vers les boutiques.
 
-**Activer les sources** : **Réglages › Veille musicale**, cochez Apple Music (classements par pays), Deezer (classements par genre) et/ou MusicBrainz (nouvelles sorties d'un label ou d'un pays). Seuls le pays, le genre ou le label recherchés sont envoyés.
+**Activer les sources** : **Réglages › Sorties**, cochez Apple Music (classements par pays), Deezer (classements par genre) et/ou MusicBrainz (nouvelles sorties d'un label ou d'un pays). Seuls le pays, le genre ou le label recherchés sont envoyés.
 
 - **Classements** : choisissez la source, le pays (Apple Music) ou le genre (Deezer), morceaux ou albums. Le badge **Dans la bibliothèque** signale ce que vous avez déjà. **Liste d'envies** ajoute un titre ; **Ajouter tout ce qui manque** ajoute tous ceux que vous n'avez pas.
-- **Nouvelles sorties** : par **label** (tapez son nom, par exemple « Spinnin' Records ») ou par **pays**, sur 7, 30 ou 90 jours, puis **Rechercher**. MusicBrainz est une base libre tenue par des bénévoles : très complète pour les grands labels, parfois en retard pour les petits.
+- **Nouveautés** : par **label** ou par **pays**, sur 7, 30 ou 90 jours, puis **Rechercher**. Le menu des labels propose les grands labels (électro, majors, rap français, afro, latino), vos **favoris** en tête, **★ Tous mes favoris** pour chercher tous vos favoris en une fois, et **Autre label…** pour en taper un. L'étoile à côté du menu met le label choisi en favori. La liste se gère dans **Réglages › Sorties › Labels** : étoile pour les favoris, ajout de vos propres labels. MusicBrainz est une base libre tenue par des bénévoles : très complète pour les grands labels, parfois en retard pour les petits.
 - **Liste d'envies** : filtres **À trouver**, **Trouvé**, **Ignoré**. Quand un fichier du même artiste et du même titre arrive dans votre bibliothèque (Inbox ou indexation), le titre passe à **Trouvé** tout seul (une autre version compte aussi). Les liens **Beatport**, **Bandcamp**, **Juno**, **Traxsource** ouvrent la recherche dans votre navigateur. **Exporter (CSV)…** donne un tableau pour Excel. Cochez des titres pour les ignorer ou les retirer (**Annuler** juste après si besoin).
 
-**Écouter un extrait** : le bouton ▶ de chaque titre joue 30 secondes de Deezer ou d'Apple Music, au choix dans **Réglages › Veille musicale › Écoute des extraits** (ou désactivés). Une barre en haut de l'écran permet de mettre en pause, d'avancer dans l'extrait et de l'arrêter. Le lecteur de votre bibliothèque se met en pause pendant l'extrait. Rien n'est téléchargé : le son vient directement du service.
+**Écouter un extrait** : cliquez sur la **pochette** (bouton ▶) : 30 secondes du titre se jouent dans le **lecteur en bas de l'application**, comme vos morceaux (pause, avance, volume, précédent / suivant dans la liste affichée ; à la fin, l'extrait suivant s'enchaîne). Le service choisi dans **Réglages › Sorties › Écoute des extraits** (Deezer ou Apple Music) est essayé d'abord, puis l'autre automatiquement si le titre n'y est pas. L'extrait est gardé en mémoire le temps de l'écoute, jamais enregistré sur l'ordinateur.
 
-**Ouvrir un titre sur le site de votre choix** : le bouton ↗ ouvre le titre dans votre navigateur. Choisissez le site dans **Réglages › Veille musicale › Ouvrir les titres sur** : page de la source, Apple Music, Deezer, Spotify, YouTube, YouTube Music, SoundCloud ou Beatport.
+**Ouvrir un titre sur le site de votre choix** : le bouton ↗ ouvre le titre dans votre navigateur. Choisissez le site dans **Réglages › Sorties › Ouvrir les titres sur** : page de la source, Apple Music, Deezer, Spotify, YouTube, YouTube Music, SoundCloud ou Beatport.
 
 ### Lier un compte Spotify (optionnel)
 Un compte lié permet d'ajouter les titres de la liste d'envies à une playlist Spotify. Spotify exige que vous créiez une petite « application » gratuite à votre nom (votre compte doit être Premium).
 1. Allez sur **developer.spotify.com** (lien dans les réglages), connectez-vous et cliquez **Create app** ; nom et description au choix, cochez **Web API**.
 2. Dans **Redirect URIs**, ajoutez exactement `http://127.0.0.1:43821/callback` (bouton de copie dans les réglages), puis enregistrez.
-3. Copiez le **Client ID** de l'application et collez-le dans **Réglages › Veille musicale**.
+3. Copiez le **Client ID** de l'application et collez-le dans **Réglages › Sorties**.
 4. **Lier le compte** : votre navigateur s'ouvre sur Spotify, acceptez, revenez dans l'application.
-5. Dans **Veille › Liste d'envies**, **Ajouter à Spotify…** (tous les titres affichés, ou seulement ceux cochés) : l'application cherche chaque titre sur Spotify et montre les correspondances ; décochez celles qui ne conviennent pas, choisissez une playlist ou créez-en une, puis **Ajouter**.
+5. Dans **Sorties › Liste d'envies**, **Ajouter à Spotify…** (tous les titres affichés, ou seulement ceux cochés) : l'application cherche chaque titre sur Spotify et montre les correspondances ; décochez celles qui ne conviennent pas, choisissez une playlist ou créez-en une, puis **Ajouter**.
 
 Aucun mot de passe n'est saisi dans l'application ; le jeton est rangé dans le trousseau de Windows ou du Mac. **Déconnecter** l'efface.
 
@@ -313,6 +313,6 @@ Dans l'application, le titre, la version et l'artiste restent séparés : seul l
 - **Doublons et qualité** : ordre des formats sans perte pour choisir le fichier à garder, seuil du débit faible.
 - **Rekordbox** : import du XML, mode protégé, liste « À recharger », journal des chemins, export XML (voir [Rekordbox](#rekordbox)).
 - **Mises à jour** : vérification au démarrage, « Vérifier maintenant ».
-- **Veille musicale** : sources des classements et des nouvelles sorties, compte Spotify (voir [Veille musicale](#veille-musicale)).
+- **Sorties** : sources des classements et des nouveautés, extraits, site d'ouverture, labels favoris, compte Spotify (voir [Sorties](#sorties)).
 - **Base de données** : une copie est faite chaque jour (7 gardées). « Exporter la base… » pour en garder une copie où vous voulez ; « Importer une base… » la remettra en place au prochain démarrage.
 - **Signaler un problème** : copie un rapport à coller dans votre message.
