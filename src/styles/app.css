@@ -3168,7 +3168,7 @@ body.is-dragging * {
 
 .rm-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: 1fr;
   gap: var(--space-4);
   margin: var(--space-4) 0;
 }
@@ -3193,7 +3193,8 @@ body.is-dragging * {
 
 .rm-slider {
   display: grid;
-  grid-template-columns: 140px 1fr 64px 34px;
+  grid-template-columns: minmax(130px, 200px) 1fr 84px 42px;
+  gap: var(--space-3);
   gap: var(--space-2);
   align-items: center;
   padding: 3px 0;
@@ -3216,8 +3217,8 @@ body.is-dragging * {
 .rm-spectrum {
   display: block;
   width: 100%;
-  max-width: 720px;
   height: auto;
+  cursor: crosshair;
 }
 
 .rm-spec-before {
@@ -3318,3 +3319,167 @@ body.is-dragging * {
   color: var(--color-accent);
   background: var(--color-accent-soft, var(--color-surface-hover));
 }
+
+/* Remaster : réglages en pleine largeur, spectre en direct */
+.rm-slider input[type="range"] {
+  height: 22px;
+}
+
+.rm-band {
+  padding: 2px 0 6px;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 4px;
+}
+
+.rm-band:last-of-type {
+  border-bottom: none;
+}
+
+.rm-slider.rm-sub .rm-slider-label {
+  padding-left: var(--space-4);
+  color: var(--color-text-secondary);
+}
+
+.rm-spectrum-card {
+  margin: var(--space-4) 0;
+  background: var(--color-bg);
+}
+
+.rm-spectrum-card.pinned {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  box-shadow: 0 6px 12px -10px rgba(0, 0, 0, 0.35);
+}
+
+
+.rm-spec-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.rm-spec-head h2 {
+  margin: 0;
+}
+
+.rm-spec-body > p {
+  margin: var(--space-1) 0 0;
+}
+
+.rm-spec-chart {
+  position: relative;
+}
+
+.rm-compare-card {
+  margin: 0 0 var(--space-4);
+}
+
+.rm-compare {
+  width: 100%;
+  max-width: 760px;
+  border-collapse: collapse;
+}
+
+.rm-compare th,
+.rm-compare td {
+  padding: 3px 6px;
+  text-align: right;
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.rm-compare tbody th {
+  text-align: left;
+  font-weight: 500;
+}
+
+.rm-compare thead th {
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.rm-compare .strong {
+  font-weight: 600;
+}
+
+.rm-zone-bar {
+  position: relative;
+  display: block;
+  min-width: 200px;
+  height: 8px;
+  background: var(--color-surface-hover);
+  border-radius: 4px;
+}
+
+.rm-zone-bar::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -2px;
+  bottom: -2px;
+  width: 1px;
+  background: var(--color-text-secondary);
+}
+
+.rm-zone-bar span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 4px;
+}
+
+.rm-zone-bar .up {
+  background: var(--color-accent);
+}
+
+.rm-zone-bar .down {
+  background: var(--color-warning);
+}
+
+.rm-grid-line {
+  stroke: var(--color-border);
+  stroke-width: 1;
+}
+
+.rm-grid-zero {
+  stroke: var(--color-text-secondary);
+  stroke-width: 1.2;
+}
+
+.rm-spec-before-area {
+  fill: var(--color-text-secondary);
+  opacity: 0.14;
+}
+
+.rm-bar-up {
+  fill: var(--color-accent);
+}
+
+.rm-bar-down {
+  fill: var(--color-warning);
+}
+
+.rm-hover-line {
+  stroke: var(--color-text);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.rm-spec-tip {
+  position: absolute;
+  top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface);
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 1;
+}
+

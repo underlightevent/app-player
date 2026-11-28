@@ -47,6 +47,26 @@ export interface Prepared {
   afterPeakDb: number;
 }
 
+/** Mesures d'une version sur l'extrait comparé. */
+export interface Analysis {
+  bands: number[];
+  side: number[];
+  lufs: number;
+  peakDb: number;
+  rmsDb: number;
+  widthPct: number;
+}
+
+/** Original et résultat sur le même extrait (45 s au milieu de la partie gardée). */
+export interface Compare {
+  freqs: number[];
+  before: Analysis;
+  after: Analysis;
+  gainDb: number;
+  fromS: number;
+  secs: number;
+}
+
 export interface ExportResult {
   trackId: number;
   fileName: string;
@@ -94,7 +114,6 @@ export function parseUserPresets(raw: string | undefined): UserPreset[] {
 }
 
 // ---------- Aperçu navigateur ----------
-const demoSpectrum = (tilt: number) => Array.from({ length: 24 }, (_, i) => -20 - i * 1.6 + tilt * (i / 23) + Math.sin(i / 2) * 2);
 
 export async function remasterGet(id: number): Promise<RemasterSettings | null> {
   if (!inTauri) return null;
@@ -114,9 +133,21 @@ export async function remasterAuto(id: number, preset: string): Promise<Remaster
   return invoke<RemasterSettings>("remaster_auto", { id, preset });
 }
 
-export async function remasterSpectrum(id: number, settings: RemasterSettings | null, gainDb: number): Promise<number[]> {
-  if (!inTauri) return demoSpectrum(settings ? settings.bands[4].gainDb * 2 + 4 : 0).map((v) => v + (settings ? gainDb / 2 : 0));
-  return invoke<number[]>("remaster_spectrum", { id, settings, gainDb });
+export async function remasterSpectrum(id: number, settings: RemasterSettings): Promise<Compare> {
+  if (!inTauri) {
+    await new Promise((r) => setTimeout(r, 300));
+    const freqs = Array.from({ length: 48 }, (_, i) => Math.sqrt(30 * 600 ** (i / 48) * 30 * 600 ** ((i + 1) / 48)));
+    const base = freqs.map((f, i) => -18 - i * 0.8 + Math.sin(i / 3) * 2 - (f < 40 ? 6 : 0));
+    // Aperçu : effet approximatif de l'égaliseur (cloche large autour de chaque bande).
+    const eq = (f: number) =>
+      settings.eqOn ? settings.bands.reduce((a, b) => a + b.gainDb * Math.exp(-((Math.log2(f / b.freq) / (b.kind === "peak" ? 1 : 2)) ** 2)), 0) : 0;
+    const after = freqs.map((f, i) => base[i] + eq(f) + (settings.highpassHz && f < settings.highpassHz ? -12 : 0) + 2);
+    const side = (v: number[], w: number) => v.map((d, i) => d - 12 + (freqs[i] < settings.monoBassHz ? -30 : 0) + 20 * Math.log10(Math.max(w, 0.01)));
+    const a = { bands: base, side: side(base, 1), lufs: -11.4, peakDb: -0.2, rmsDb: -12.5, widthPct: 42 };
+    const b = { bands: after, side: side(after, settings.width), lufs: settings.targetLufs ?? -9.6, peakDb: settings.ceilingDb, rmsDb: -10.8, widthPct: 42 * settings.width };
+    return { freqs, before: a, after: b, gainDb: 2, fromS: settings.startS + 60, secs: 45 };
+  }
+  return invoke<Compare>("remaster_spectrum", { id, settings });
 }
 
 export async function remasterLevel(id: number, settings: RemasterSettings): Promise<Prepared> {

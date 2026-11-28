@@ -291,12 +291,20 @@ L'écran **Remaster** améliore le son d'un morceau et l'exporte dans un **nouve
    - **Coupe et fondus** : début et fin du morceau gardés, au dixième de seconde, et fondu d'entrée / de sortie en secondes (0 = aucun). Tout s'entend à l'écoute.
 
    Pour être précis : chaque curseur a une case chiffrée. Cliquez dedans, tapez la valeur (virgule acceptée) puis **Entrée**, ou utilisez les flèches **↑ ↓** du clavier (**Maj** + flèche = pas plus grand). La fréquence de chaque bande de l'égaliseur se règle aussi.
-5. **Comparer le spectre** montre l'équilibre avant / après.
+5. **Comparaison original / résultat** (en haut, mise à jour en direct à chaque réglage) :
+   - **Spectre** : l'original en gris, le résultat en couleur. Passez la souris sur le graphique pour lire les valeurs exactes d'une fréquence ;
+   - **Écart** : des barres montrent ce que vos réglages ajoutent (au-dessus de 0) ou retirent (en dessous) ;
+   - **Stéréo** : la largeur stéréo par fréquence (avec « graves en mono », la courbe plonge dans les graves) ;
+   - **Même volume** (conseillé) : compare l'équilibre, pas le volume ;
+   - le tableau en dessous donne le volume, la crête, la dynamique, la largeur stéréo et l'écart par zone (infra-graves, graves, bas-médiums, médiums, aigus) ;
+   - l'**épingle** garde le graphique visible en haut pendant que vous descendez dans les réglages. La mesure porte sur 45 secondes au milieu de la partie gardée du morceau.
 6. **Exporter en WAV** : « … (Remaster).wav » (24 bits) est créé à côté de l'original, avec les tags et la pochette, et ajouté à la bibliothèque. **Ctrl+Z** l'envoie en quarantaine.
 
 Plusieurs morceaux sélectionnés : **Remaster automatique de N morceaux** applique le préréglage choisi à chacun, en tâche de fond.
 
 **Vos préréglages** : réglez le son, puis **Enregistrer comme préréglage** et donnez un nom (un nom déjà pris est remplacé). Il apparaît dans la liste sous « Mes préréglages » : choisissez-le puis **Appliquer** (pas d'analyse : vos réglages tels quels), ou **Supprimer** (annulable). Un préréglage garde le son et les fondus, mais pas la coupe, propre à chaque morceau. Il marche aussi en lot.
+
+Sur un morceau déjà très fort, le volume cible peut ne pas être atteint : Remaster refuse d'écraser le son pour gagner un demi-point de volume et affiche le volume réellement obtenu.
 
 Ce que Remaster ne fait pas : recréer les aigus perdus d'un MP3 de basse qualité. Comparez toujours avant / après.
 

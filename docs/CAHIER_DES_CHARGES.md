@@ -607,6 +607,8 @@ Demandée par l'utilisateur le 28/11/2026. Améliorer le son d'un titre (volume,
 
 **Ajouts du 28/11/2026 (version 0.8.1)** : curseurs plus précis avec saisie chiffrée ; **préréglages personnels** enregistrés (son + fondus, sans la coupe), utilisables en lot ; **coupe du début et de la fin** au dixième de seconde et **fondus d'entrée et de sortie** optionnels en secondes, entendus à l'écoute et appliqués à l'export.
 
+**Ajouts du 28/11/2026 (version 0.8.2)** : réglages les uns sous les autres en pleine largeur (saisie chiffrée gardée) ; comparaison original / résultat recalculée en direct (spectre, écart, stéréo par fréquence, tableau volume / crête / dynamique / largeur / zones), à même volume perçu ; le gain poussé dans le limiteur est plafonné pour ne jamais écraser le son.
+
 **Limites, dites dans l'aide** : on ne recrée pas les aigus perdus d'un MP3 basse qualité ; l'outil améliore le volume, l'équilibre, la densité et l'image stéréo. Pas de restauration par IA.
 
 Critères de validation :

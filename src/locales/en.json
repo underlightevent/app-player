@@ -1468,10 +1468,10 @@
     "limiter": "Limiter (prevents any clipping)",
     "ceiling": "Peak ceiling",
     "loudnessHint": "Guide: −7 to −8 LUFS for club, −9 to −10 for a more dynamic sound, −14 for streaming. The limiter always keeps peaks under the ceiling.",
-    "spectrum": "Spectrum before / after",
+    "spectrum": "Original / result comparison",
     "compare": "Compare spectrum",
     "computing": "Computing…",
-    "spectrumHint": "Shows the low / mid / high balance of the original and of the result (one minute in the middle of the track).",
+    "spectrumHint": "Click “Refresh” to compare the original and the result.",
     "export": "Export as WAV",
     "exporting": "Exporting…",
     "exported": "“{{name}}” created: {{lufs}} LUFS, peak {{peak}} dB. Ctrl+Z moves it to quarantine.",
@@ -1504,6 +1504,43 @@
     "fadeOut": "Fade out",
     "toEnd": "the end",
     "kept": "Kept: from {{from}} to {{to}} (length {{len}})",
-    "trimHint": "To a tenth of a second. Start 0 = from the beginning; end at maximum = to the end. Fade 0 = none. Trim and fades are heard while listening and applied to the exported file; the original is never touched."
+    "trimHint": "To a tenth of a second. Start 0 = from the beginning; end at maximum = to the end. Fade 0 = none. Trim and fades are heard while listening and applied to the exported file; the original is never touched.",
+    "specView": "View",
+    "specMode": {
+      "curves": "Spectrum",
+      "diff": "Difference",
+      "stereo": "Stereo"
+    },
+    "sameLoudness": "Same loudness",
+    "live": "Live",
+    "refresh": "Refresh",
+    "pin": "Keep visible at the top while adjusting",
+    "unpin": "Stop keeping visible at the top",
+    "original": "Original",
+    "result": "Result",
+    "diff": "Difference",
+    "diffHint": "Bars: what your settings add (above 0) or remove (below), frequency by frequency, at equal loudness.",
+    "matchedHint": "both curves are set to the same perceived loudness: you compare balance, not volume.",
+    "realHint": "real levels: the result looks louder if its volume was raised.",
+    "stereoViewHint": "stereo width per frequency (0 dB = as much stereo as centre; very low = mono).",
+    "excerpt": "Measured on the excerpt {{from}} → {{to}} (middle of the kept part), recomputed on every change.",
+    "zonesMatched": "Zone differences at equal loudness.",
+    "rows": {
+      "loudnessRow": "Loudness",
+      "loudnessRowHint": "Perceived loudness (LUFS) of the excerpt.",
+      "peakRow": "Peak",
+      "peakRowHint": "Highest level reached (0 dB = digital maximum).",
+      "dynamicsRow": "Dynamics",
+      "dynamicsRowHint": "Gap between peak and average level: the smaller, the more compressed.",
+      "widthRow": "Stereo width",
+      "widthRowHint": "Stereo energy relative to the centre, above 150 Hz (0 % = mono)."
+    },
+    "zones": {
+      "sub": "Sub-bass",
+      "low": "Bass",
+      "lowMid": "Low mids",
+      "mid": "Mids",
+      "high": "Highs"
+    }
   }
 }

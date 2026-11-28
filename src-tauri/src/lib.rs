@@ -1552,11 +1552,11 @@ async fn remaster_auto(state: State<'_, AppState>, id: i64, preset: String) -> R
 
 /// Spectre (24 bandes) : d'origine si `settings` est absent, sinon traité.
 #[tauri::command]
-async fn remaster_spectrum(state: State<'_, AppState>, id: i64, settings: Option<remaster::dsp::Settings>, gain_db: f64) -> Result<Vec<f32>, AppError> {
+async fn remaster_spectrum(state: State<'_, AppState>, id: i64, settings: remaster::dsp::Settings) -> Result<remaster::engine::Compare, AppError> {
     let lib = state.library()?.clone();
     blocking(move || {
         let path = remaster_path(&lib, id)?;
-        remaster::engine::spectrum(&path, settings.as_ref().map(|s| (s, gain_db))).map_err(|e| AppError::Io(std::io::Error::other(e)))
+        remaster::engine::compare(&path, &settings).map_err(|e| AppError::Io(std::io::Error::other(e)))
     })
     .await
 }

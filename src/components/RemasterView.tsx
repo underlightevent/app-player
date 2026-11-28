@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FileDown, Info, Play, RotateCcw, Save, Scissors, Square, Trash2, WandSparkles, Waves } from "lucide-react";
+import { FileDown, Info, Play, RotateCcw, Save, Scissors, Square, Trash2, WandSparkles } from "lucide-react";
 import { getSettings, isCoreError, setSetting } from "../core/api";
+import { SpectrumPanel } from "./SpectrumPanel";
 import { libraryRows, type TrackRow } from "../core/library";
 import { playerCommand } from "../core/player";
 import {
@@ -14,7 +15,6 @@ import {
   remasterGet,
   remasterLevel,
   remasterListen,
-  remasterSpectrum,
   remasterUpdate,
   parseUserPresets,
   type Prepared,
@@ -86,42 +86,26 @@ function Slider(p: { label: string; value: number; min: number; max: number; ste
   );
 }
 
+/** Curseur de fréquence : échelle logarithmique (20 Hz à 20 kHz), saisie exacte en Hz. */
+function FreqSlider(p: { label: string; value: number; disabled?: boolean; onChange: (v: number) => void }) {
+  const lo = Math.log(20);
+  const hi = Math.log(20000);
+  const pos = Math.round(((Math.log(Math.max(20, p.value)) - lo) / (hi - lo)) * 1000);
+  return (
+    <div className={`rm-slider rm-sub${p.disabled ? " disabled" : ""}`}>
+      <span className="rm-slider-label">{p.label}</span>
+      <input type="range" aria-label={p.label} min={0} max={1000} step={1} value={pos} disabled={p.disabled} onChange={(e) => p.onChange(Math.round(Math.exp(lo + (Number(e.target.value) / 1000) * (hi - lo))))} />
+      <NumInput label={p.label} value={p.value} min={20} max={20000} step={1} disabled={p.disabled} onChange={p.onChange} />
+      <span className="rm-slider-unit muted">Hz</span>
+    </div>
+  );
+}
+
 /** 83,4 s → « 1:23,4 ». */
 function clock(sec: number, lang: string) {
   const m = Math.floor(sec / 60);
   const r = sec - m * 60;
   return `${m}:${r.toLocaleString(lang, { minimumIntegerDigits: 2, minimumFractionDigits: 1, maximumFractionDigits: 1 })}`;
-}
-
-/** Spectre avant (gris) / après (couleur d'accent), 24 bandes de 30 Hz à 16 kHz. */
-function Spectrum({ before, after }: { before: number[] | null; after: number[] | null }) {
-  const w = 480;
-  const h = 140;
-  const all = [...(before ?? []), ...(after ?? [])];
-  if (all.length === 0) return null;
-  const max = Math.max(...all);
-  const min = Math.max(Math.min(...all), max - 60);
-  const y = (v: number) => h - ((Math.max(v, min) - min) / (max - min || 1)) * (h - 10) - 4;
-  const path = (vals: number[]) => vals.map((v, i) => `${i ? "L" : "M"}${(i / (vals.length - 1)) * w},${y(v)}`).join(" ");
-  const labels = [
-    [0, "30"],
-    [7, "100"],
-    [12, "300"],
-    [16, "1k"],
-    [20, "4k"],
-    [23, "16k"],
-  ] as const;
-  return (
-    <svg className="rm-spectrum" viewBox={`0 0 ${w} ${h + 16}`} role="img" aria-label="spectre">
-      {before && <path d={path(before)} className="rm-spec-before" />}
-      {after && <path d={path(after)} className="rm-spec-after" />}
-      {labels.map(([i, l]) => (
-        <text key={l} x={(i / 23) * w} y={h + 13} className="rm-spec-label" textAnchor={i === 0 ? "start" : i === 23 ? "end" : "middle"}>
-          {l}
-        </text>
-      ))}
-    </svg>
-  );
 }
 
 /** Écran Remaster : réglages, écoute avant / après au même volume, export WAV. */
@@ -135,7 +119,6 @@ export function RemasterView({ selection, playingId, onToast, onOpenTrack }: Pro
   const [listening, setListening] = useState(false);
   const [bypass, setBypass] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
-  const [spec, setSpec] = useState<{ before: number[] | null; after: number[] | null }>({ before: null, after: null });
   const levelTimer = useRef<number | undefined>(undefined);
   const [userPresets, setUserPresets] = useState<UserPreset[]>([]);
   const [naming, setNaming] = useState<string | null>(null);
@@ -154,7 +137,6 @@ export function RemasterView({ selection, playingId, onToast, onOpenTrack }: Pro
   // Morceau choisi : ses informations et ses derniers réglages.
   useEffect(() => {
     setPrep(null);
-    setSpec({ before: null, after: null });
     setListening(false);
     if (id == null) return setRow(null);
     void libraryRows([id]).then((r) => setRow(r[0] ?? null));
@@ -227,22 +209,6 @@ export function RemasterView({ selection, playingId, onToast, onOpenTrack }: Pro
   const toggleAb = (v: boolean) => {
     setBypass(v);
     remasterAb(v);
-  };
-
-  const compare = async () => {
-    if (id == null) return;
-    setBusy("spectrum");
-    try {
-      const p = prep ?? (await remasterLevel(id, s));
-      setPrep(p);
-      const [before, after] = await Promise.all([remasterSpectrum(id, null, 0), remasterSpectrum(id, s, p.gainDb)]);
-      // Même échelle : le spectre « avant » est décalé du gain de volume pour comparer les formes.
-      setSpec({ before: before.map((v) => v + (p.afterLufs - p.beforeLufs)), after });
-    } catch (e) {
-      onToast(errText(e), undefined, "error");
-    } finally {
-      setBusy(null);
-    }
   };
 
   const exportWav = async () => {
@@ -378,6 +344,8 @@ export function RemasterView({ selection, playingId, onToast, onOpenTrack }: Pro
       </div>
       {naming != null && <p className="muted small">{t("remaster.presetHint")}</p>}
 
+      <SpectrumPanel id={id} settings={s} />
+
       <div className="rm-grid">
         <section className="rm-card">
           <h2>
@@ -386,10 +354,7 @@ export function RemasterView({ selection, playingId, onToast, onOpenTrack }: Pro
           {s.bands.map((b, i) => (
             <div key={i} className="rm-band">
               <Slider label={t(`remaster.bands.${BAND_LABELS[i]}`)} value={b.gainDb} min={-12} max={12} step={0.1} unit="dB" disabled={!s.eqOn} onChange={(v) => setBand(i, { gainDb: v })} />
-              <label className={`rm-freq muted small${s.eqOn ? "" : " disabled"}`}>
-                {t("remaster.freq")}
-                <NumInput label={`${t(`remaster.bands.${BAND_LABELS[i]}`)} : ${t("remaster.freq")}`} value={b.freq} min={20} max={20000} step={1} disabled={!s.eqOn} onChange={(v) => setBand(i, { freq: v })} /> Hz
-              </label>
+              <FreqSlider label={t("remaster.freq")} value={b.freq} disabled={!s.eqOn} onChange={(v) => setBand(i, { freq: v })} />
             </div>
           ))}
           <Slider label={t("remaster.highpass")} value={s.highpassHz} min={0} max={200} step={1} unit="Hz" onChange={(v) => set({ highpassHz: v })} />
@@ -442,24 +407,6 @@ export function RemasterView({ selection, playingId, onToast, onOpenTrack }: Pro
           <p className="muted small">{t("remaster.trimHint")}</p>
         </section>
       </div>
-
-      <section className="rm-card">
-        <div className="folder-actions">
-          <h2>{t("remaster.spectrum")}</h2>
-          <span className="spacer" />
-          <button className="btn btn-small" disabled={busy != null} onClick={() => void compare()}>
-            <Waves size={14} aria-hidden /> {busy === "spectrum" ? t("remaster.computing") : t("remaster.compare")}
-          </button>
-        </div>
-        {spec.before ? (
-          <>
-            <Spectrum before={spec.before} after={spec.after} />
-            <p className="muted small"><span className="rm-key before" /> {t("remaster.before")} <span className="rm-key after" /> {t("remaster.after")}</p>
-          </>
-        ) : (
-          <p className="muted small">{t("remaster.spectrumHint")}</p>
-        )}
-      </section>
 
       <div className="folder-actions rm-export">
         <button className="btn btn-primary" disabled={busy != null} onClick={() => void exportWav()}>

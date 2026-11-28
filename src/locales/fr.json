@@ -1468,10 +1468,10 @@
     "limiter": "Limiteur (évite toute saturation)",
     "ceiling": "Plafond de crête",
     "loudnessHint": "Repères : −7 à −8 LUFS pour le club, −9 à −10 pour un son plus dynamique, −14 pour le streaming. Le limiteur garde toujours les crêtes sous le plafond.",
-    "spectrum": "Spectre avant / après",
+    "spectrum": "Comparaison original / résultat",
     "compare": "Comparer le spectre",
     "computing": "Calcul…",
-    "spectrumHint": "Affiche l'équilibre graves / médiums / aigus du morceau d'origine et du résultat (sur une minute au milieu du morceau).",
+    "spectrumHint": "Cliquez sur « Actualiser » pour comparer l'original et le résultat.",
     "export": "Exporter en WAV",
     "exporting": "Export en cours…",
     "exported": "« {{name}} » créé : {{lufs}} LUFS, crête {{peak}} dB. Ctrl+Z l'envoie en quarantaine.",
@@ -1504,6 +1504,43 @@
     "fadeOut": "Fondu de sortie",
     "toEnd": "la fin",
     "kept": "Gardé : de {{from}} à {{to}} (durée {{len}})",
-    "trimHint": "Au dixième de seconde. Début 0 = depuis le début ; fin au maximum = jusqu'au bout. Fondu 0 = aucun. La coupe et les fondus s'entendent à l'écoute et s'appliquent au fichier exporté ; l'original n'est pas touché."
+    "trimHint": "Au dixième de seconde. Début 0 = depuis le début ; fin au maximum = jusqu'au bout. Fondu 0 = aucun. La coupe et les fondus s'entendent à l'écoute et s'appliquent au fichier exporté ; l'original n'est pas touché.",
+    "specView": "Affichage",
+    "specMode": {
+      "curves": "Spectre",
+      "diff": "Écart",
+      "stereo": "Stéréo"
+    },
+    "sameLoudness": "Même volume",
+    "live": "En direct",
+    "refresh": "Actualiser",
+    "pin": "Garder visible en haut pendant les réglages",
+    "unpin": "Ne plus garder visible en haut",
+    "original": "Original",
+    "result": "Résultat",
+    "diff": "Écart",
+    "diffHint": "Barres : ce que vos réglages ajoutent (au-dessus de 0) ou retirent (en dessous), fréquence par fréquence, à volume égal.",
+    "matchedHint": "les deux courbes sont mises au même volume perçu : on compare l'équilibre, pas le volume.",
+    "realHint": "niveaux réels : le résultat paraît plus fort s'il a été monté en volume.",
+    "stereoViewHint": "largeur stéréo par fréquence (0 dB = autant de stéréo que de centre ; très bas = mono).",
+    "excerpt": "Mesuré sur l'extrait {{from}} → {{to}} (le milieu de la partie gardée), recalculé à chaque réglage.",
+    "zonesMatched": "Écarts par zone à volume égal.",
+    "rows": {
+      "loudnessRow": "Volume",
+      "loudnessRowHint": "Volume perçu (LUFS) sur l'extrait.",
+      "peakRow": "Crête",
+      "peakRowHint": "Niveau le plus haut atteint (0 dB = maximum numérique).",
+      "dynamicsRow": "Dynamique",
+      "dynamicsRowHint": "Écart entre la crête et le niveau moyen : plus il est petit, plus le son est compressé.",
+      "widthRow": "Largeur stéréo",
+      "widthRowHint": "Énergie stéréo par rapport au centre, au-dessus de 150 Hz (0 % = mono)."
+    },
+    "zones": {
+      "sub": "Infra-graves",
+      "low": "Graves",
+      "lowMid": "Bas-médiums",
+      "mid": "Médiums",
+      "high": "Aigus"
+    }
   }
 }

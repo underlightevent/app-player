@@ -1,5 +1,11 @@
 # Journal des versions
 
+## 0.8.2 — Remaster : réglages en pleine largeur et comparaison en direct (à valider)
+
+- Chaque réglage du Remaster sur sa ligne, en pleine largeur (curseurs longs et précis, saisie chiffrée gardée) ; fréquences de l'égaliseur au curseur.
+- Comparaison original / résultat recalculée en direct : spectre détaillé (48 bandes), vue des écarts, vue stéréo par fréquence, valeurs au survol, tableau volume / crête / dynamique / largeur stéréo / zones ; graphique gardé visible en haut pendant les réglages.
+- Protection du son : sur un morceau déjà très fort, le volume cible n'est plus atteint à n'importe quel prix (le limiteur n'écrase plus le son) ; le volume réellement obtenu est affiché.
+
 ## 0.8.1 — Perfectionnements (à valider, avec les phases 6 et 7)
 
 - Remaster : curseurs plus précis avec case chiffrée modifiable, fréquence de chaque bande réglable ; **préréglages personnels** (enregistrer, appliquer, supprimer, en lot) ; **coupe du début / de la fin** au dixième de seconde ; **fondus** d'entrée et de sortie.
