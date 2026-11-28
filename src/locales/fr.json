@@ -28,7 +28,8 @@
     "watch": "Sorties",
     "sets": "Sets",
     "stats": "Statistiques",
-    "dropHint": "Déposez ici des morceaux glissés depuis le tableau"
+    "dropHint": "Déposez ici des morceaux glissés depuis le tableau",
+    "remaster": "Remaster"
   },
   "topbar": {
     "searchPlaceholder": "Rechercher dans la bibliothèque",
@@ -263,7 +264,9 @@
     "backup": "Sauvegarde de la bibliothèque",
     "usbCopy": "Copie vers la clé USB",
     "loudness": "Mesure du volume (LUFS)",
-    "analysis": "Analyse BPM, tonalité et énergie"
+    "analysis": "Analyse BPM, tonalité et énergie",
+    "remaster": "Export Remaster (WAV)",
+    "remasterBatch": "Remaster en lot"
   },
   "player": {
     "nothing": "Aucun morceau en lecture",
@@ -361,7 +364,8 @@
     "wavToAiff": "la conversion en AIFF",
     "titleFormat": "la nouvelle présentation des titres",
     "repairDates": "la réparation des dates",
-    "analysis": "l'écriture des BPM et tonalités analysés"
+    "analysis": "l'écriture des BPM et tonalités analysés",
+    "remaster": "le Remaster"
   },
   "edit": {
     "saved_one": "Morceau modifié",
@@ -425,7 +429,8 @@
     "usbCopy": "Copier vers une clé USB…",
     "analyze": "Analyser BPM, tonalité et énergie",
     "loudness": "Mesurer le volume (LUFS)",
-    "repairDates": "Réparer les dates abîmées…"
+    "repairDates": "Réparer les dates abîmées…",
+    "remaster": "Remaster…"
   },
   "rename": {
     "title_one": "Renommer {{count}} fichier",
@@ -1397,5 +1402,72 @@
     "apply_other": "Réparer {{count}} fichiers",
     "repaired_one": "{{count}} fichier réparé.",
     "repaired_other": "{{count}} fichiers réparés."
+  },
+  "remaster": {
+    "pick": "Sélectionnez un morceau dans la bibliothèque, puis revenez ici (ou … › Remaster…).",
+    "firstOfSelection": "premier des {{count}} morceaux sélectionnés",
+    "listen": "Écouter le résultat",
+    "preparing": "Préparation…",
+    "stop": "Arrêter l'écoute",
+    "ab": "Comparer",
+    "before": "Avant",
+    "after": "Après",
+    "abHint": "« Avant » joue le son d'origine au même volume perçu que le résultat : vous comparez la qualité, pas le volume. Les réglages s'entendent en direct.",
+    "levels": "Volume : {{before}} → {{after}} LUFS · crête {{peak}} dB",
+    "preset": "Préréglage",
+    "presets": {
+      "auto": "Automatique",
+      "club": "Club fort",
+      "warm": "Chaud",
+      "bright": "Brillant",
+      "punch": "Punch",
+      "soft": "Doux"
+    },
+    "applyPreset": "Analyser et appliquer",
+    "analyzing": "Analyse…",
+    "presetApplied": "Réglages « {{preset}} » calculés pour ce morceau.",
+    "reset": "Remettre à plat",
+    "eq": "Égaliseur",
+    "bands": {
+      "low": "Graves",
+      "lowMid": "Bas-médiums",
+      "mid": "Médiums",
+      "highMid": "Hauts-médiums",
+      "high": "Aigus"
+    },
+    "highpass": "Coupe des infra-graves",
+    "off": "Désactivé",
+    "stereo": "Mono / stéréo",
+    "width": "Largeur stéréo",
+    "monoBass": "Graves en mono",
+    "below": "sous {{hz}} Hz",
+    "fullMono": "Tout en mono",
+    "stereoHint": "Graves en mono : ce qui est sous la fréquence choisie devient identique sur les deux canaux (plus puissant et plus stable sur un système de club). Largeur : 0 % = mono, 100 % = d'origine, au-delà = plus large.",
+    "comp": "Compresseur",
+    "threshold": "Seuil",
+    "ratio": "Taux",
+    "attack": "Attaque",
+    "release": "Relâchement",
+    "makeup": "Gain de compensation",
+    "loudness": "Volume et limiteur",
+    "target": "Volume cible",
+    "noTarget": "Pas de volume cible",
+    "limiter": "Limiteur (évite toute saturation)",
+    "ceiling": "Plafond de crête",
+    "loudnessHint": "Repères : −7 à −8 LUFS pour le club, −9 à −10 pour un son plus dynamique, −14 pour le streaming. Le limiteur garde toujours les crêtes sous le plafond.",
+    "spectrum": "Spectre avant / après",
+    "compare": "Comparer le spectre",
+    "computing": "Calcul…",
+    "spectrumHint": "Affiche l'équilibre graves / médiums / aigus du morceau d'origine et du résultat (sur une minute au milieu du morceau).",
+    "export": "Exporter en WAV",
+    "exporting": "Export en cours…",
+    "exported": "« {{name}} » créé : {{lufs}} LUFS, crête {{peak}} dB. Ctrl+Z l'envoie en quarantaine.",
+    "open": "Voir",
+    "batch": "Remaster automatique de {{count}} morceaux ({{preset}})",
+    "batchStarted_one": "Remaster de {{count}} morceau lancé en tâche de fond.",
+    "batchStarted_other": "Remaster de {{count}} morceaux lancé en tâche de fond.",
+    "batchRunning": "Un Remaster en lot est déjà en cours.",
+    "exportHint": "L'original n'est jamais modifié : un nouveau fichier « … (Remaster).wav » (24 bits) est créé à côté, avec les tags et la pochette, la version complétée de « Remaster », et ajouté à la bibliothèque.",
+    "limits": "Ce que Remaster peut faire : volume, équilibre graves / aigus, densité, image stéréo. Ce qu'il ne peut pas faire : recréer les aigus perdus d'un MP3 basse qualité. Comparez toujours avant / après."
   }
 }

@@ -62,6 +62,7 @@ import { AddToPlaylistDialog, ConvertDialog } from "./components/Phase4Dialogs";
 import { DatesDialog, TagsDialog, UsbCopyDialog } from "./components/Phase6Dialogs";
 import { SetsView } from "./components/SetsView";
 import { StatsView } from "./components/StatsView";
+import { RemasterView } from "./components/RemasterView";
 import { analysisRun, loudnessRun } from "./core/djtools";
 import { Modal } from "./components/Modal";
 import { exportM3u, openReleasePage, pickSave, playlistRemove, rekordboxStatus, updateCheck, type Playlist } from "./core/rekordbox";
@@ -533,6 +534,7 @@ export default function App() {
       disabled: selection.size === 0,
       run: async () => toast.show((await loudnessRun([...selection])) ? t("loudness.started") : t("loudness.already")),
     },
+    { id: "remaster", label: t("actions.remaster"), disabled: selection.size === 0, run: () => setView("remaster") },
     { id: "dates", label: t("actions.repairDates"), disabled: selection.size === 0, run: () => setDatesIds([...selection]) },
   ];
 
@@ -888,6 +890,16 @@ export default function App() {
             />
           ) : view === "sets" ? (
             <SetsView selection={selectedIdList} keyNotation={keyNotation} onPlay={(id) => void playTrack(id)} onToast={toast.show} />
+          ) : view === "remaster" ? (
+            <RemasterView
+              selection={selectedIdList}
+              playingId={player.trackId}
+              onToast={toast.show}
+              onOpenTrack={(tid) => {
+                setSelection(new Set([tid]));
+                setView("library");
+              }}
+            />
           ) : view === "stats" ? (
             <StatsView />
           ) : view === "watch" ? (

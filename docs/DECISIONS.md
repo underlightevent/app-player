@@ -336,3 +336,20 @@ Les trames de date mal formées (TDRC, TDEN, TDOR, TDRL, TDTG, TYER, TDAT, TIME,
 
 ### D-608 · Vignettes, glisser-déposer, mises à jour, Tidal
 Vignettes : colonne optionnelle, pochette en 64 px chargée à l'affichage de la ligne, gardée en mémoire pour la session. Glisser des morceaux du tableau sur « Playlists » ou « Sets » dans la barre latérale ouvre le choix de la playlist ou du set. Installation automatique des mises à jour : toujours préparée mais inactive, elle exige une clé de signature des mises à jour que seul l'utilisateur peut créer et garder (docs/SIGNATURE.md) ; la vérification et le lien de téléchargement restent en place. Tidal : non fait dans cette phase (documentation officielle non vérifiée), noté dans docs/IDEES.md.
+
+## Phase 7 — Remaster
+
+### D-701 · Export en WAV seulement, original jamais modifié
+Choix de l'utilisateur : export WAV seulement (pas d'encodeur MP3, dont les meilleurs sont sous licence LGPL, ni FLAC). WAV PCM 24 bits, même fréquence d'échantillonnage que l'original, écrit dans un fichier temporaire puis renommé en « … (Remaster).wav » à côté de l'original (« (Remaster 2) »… si le nom est pris ; jamais d'écrasement). Tags et pochette recopiés par l'écriture sûre habituelle ; version complétée de « Remaster » pour que le doublon avec l'original ne soit pas proposé (versions différentes). L'original est seulement lu (vérifié octet pour octet par un test). Annulation : le nouveau fichier part en quarantaine (même mécanisme que la conversion WAV → AIFF). Réglages gardés par morceau (table `remaster`, migration 12).
+
+### D-702 · Chaîne de traitement
+Programme maison (pas de bibliothèque externe, aucune licence nouvelle) : passe-haut 2ᵉ ordre ; égaliseur 5 bandes (biquads de R. Bristow-Johnson : plateau grave 90 Hz, cloches 250 Hz / 1 kHz / 3,5 kHz, plateau aigu 10 kHz) ; mono / stéréo en milieu / côtés (largeur = gain du côté ; graves en mono = passe-haut 24 dB/octave sur le côté, sous la fréquence choisie) ; compresseur à détection de crête liée sur les deux canaux, genou doux de 6 dB ; gain ; limiteur à anticipation de 5 ms (minimum glissant des gains exigés, lissage, plafond strict en dernier recours : la crête ne dépasse jamais le plafond). Tests : réponse de l'égaliseur à 0,3 dB près, passe-haut, graves en mono, compresseur, plafond du limiteur, neutralité quand tout est à zéro.
+
+### D-703 · Volume cible
+Le gain avant limiteur est cherché par plusieurs passes de mesure (EBU R128) : sans limiteur, puis avec, par la méthode de la sécante (le limiteur « mange » une partie du gain), jusqu'à 0,3 LU de la cible ou 7 passes. Si la cible n'est pas atteignable sans écraser le son, le volume réellement obtenu est affiché. Essais sur des copies de deux morceaux de l'utilisateur : −9,2 LUFS pour une cible de −9, crête à −1,0 dB, 7 à 9 s par morceau.
+
+### D-704 · Mode automatique
+Mesure du volume, de la dynamique (crête moins niveau moyen) et de l'équilibre en 5 zones (énergie par octave relative aux médiums). Référence : médiane mesurée sur 82 morceaux de la bibliothèque de l'utilisateur (le 28/11/2026). Correction prudente : un tiers de l'écart, ±3 dB au plus, graves jamais retirés de plus de 1,5 dB ; compression légère (1,5:1 ou 2:1) ; graves en mono sous 120 Hz ; volume cible −9 LUFS (préréglages : Club fort −7, Punch −8, Doux −12 sans compression, Chaud, Brillant).
+
+### D-705 · Écoute avant / après
+Le traitement s'applique en direct dans le lecteur de l'application (réglages pris en compte au bloc suivant). « Avant » joue l'original avec le gain qui le met au même volume perçu que le résultat (différence des LUFS mesurés), pour juger la qualité et non le volume ; le volume est recalculé une seconde après le dernier changement de réglage.

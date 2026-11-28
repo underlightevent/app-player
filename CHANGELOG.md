@@ -1,5 +1,12 @@
 # Journal des versions
 
+## 0.8.0 — Phase 7 : Remaster (à valider, avec la phase 6)
+
+- Écran Remaster : égaliseur 5 bandes, coupe des infra-graves, largeur stéréo et graves en mono, compresseur, volume cible en LUFS, limiteur (jamais de saturation).
+- Mode automatique et préréglages (Automatique, Club fort, Chaud, Brillant, Punch, Doux), calés sur la bibliothèque.
+- Écoute en direct dans le lecteur, comparaison avant / après au même volume, spectre avant / après.
+- Export dans un nouveau fichier WAV 24 bits (l'original n'est jamais modifié), tags et pochette recopiés, annulable ; traitement en lot.
+
 ## 0.7.0 — Phase 6 : outils du DJ (à valider)
 
 - Écran Sets : ordre d'un set, compatibilité de tonalité (Camelot) et de BPM de chaque enchaînement, suggestions du morceau suivant, export M3U8, Rekordbox et clé USB.

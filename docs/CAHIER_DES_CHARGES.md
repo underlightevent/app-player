@@ -587,6 +587,33 @@ Critères de validation :
 - [ ] Le volume LUFS d'un morceau est proche de celui mesuré par un autre logiciel (±1 LU).
 - [ ] L'analyse BPM / tonalité d'un morceau sans valeur donne un résultat cohérent avec Rekordbox dans la plupart des cas, et ne touche pas un morceau qui en a déjà.
 
+### Phase 7 — Remaster
+
+Demandée par l'utilisateur le 28/11/2026. Améliorer le son d'un titre (volume, équilibre, densité, image stéréo), à la main ou automatiquement, et l'exporter dans un **nouveau fichier WAV**. **L'original n'est jamais modifié** (le principe « le son n'est jamais modifié » est respecté : on crée une copie traitée, comme la conversion WAV → AIFF crée un nouveau fichier).
+
+**Chaîne de traitement** (dans cet ordre, chaque étage activable) :
+- **Filtre passe-haut** (coupe les infra-graves inutiles, 20 à 40 Hz).
+- **Égaliseur** : 5 bandes réglables (graves en plateau, bas-médiums, médiums, hauts-médiums, aigus en plateau), ±12 dB.
+- **Égalisation mono / stéréo** : largeur stéréo (0 % = mono, 100 % = d'origine, jusqu'à 150 %), **graves en mono** sous une fréquence choisie (utile en club), mono complet en option.
+- **Compresseur** : seuil, taux, attaque, relâchement, gain de compensation.
+- **Volume cible** en LUFS (par exemple −8 pour le club), atteint automatiquement.
+- **Limiteur** à anticipation : plafond de crête (−1 dB par défaut), jamais de saturation numérique.
+
+**Mode automatique** : analyse du titre (volume, équilibre graves / médiums / aigus comparé à une courbe de référence « club », dynamique) puis réglages doux et bornés (égaliseur à ±4 dB au plus, compression légère, graves en mono sous 120 Hz, volume cible, limiteur). **Préréglages** : Automatique, Club fort, Chaud, Brillant, Punch, Doux.
+
+**Écoute** : dans le lecteur du bas, avant / après **au même volume perçu** (bascule A/B), pour juger honnêtement. Les réglages changent le son en direct. Spectre affiché avant / après.
+
+**Export** : WAV 24 bits, même fréquence d'échantillonnage que l'original, à côté de l'original sous le nom « … (Remaster).wav » (jamais d'écrasement), tags et pochette recopiés, version complétée de « Remaster » (le titre n'est donc pas regroupé avec l'original dans les doublons), ajouté à la bibliothèque. Les réglages utilisés sont gardés pour pouvoir refaire l'export. Traitement en lot (mode automatique ou préréglage) sur une sélection, en tâche de fond annulable.
+
+**Limites, dites dans l'aide** : on ne recrée pas les aigus perdus d'un MP3 basse qualité ; l'outil améliore le volume, l'équilibre, la densité et l'image stéréo. Pas de restauration par IA.
+
+Critères de validation :
+- [ ] Un titre traité en mode automatique atteint le volume cible à ±0,5 LU et ne dépasse jamais le plafond de crête.
+- [ ] La bascule A/B compare au même volume perçu.
+- [ ] L'export crée un nouveau WAV avec tags et pochette ; l'original est identique octet pour octet.
+- [ ] Avec « graves en mono », les graves sous la fréquence choisie sont identiques sur les deux canaux.
+- [ ] Le traitement en lot de 10 titres se termine, s'annule proprement et chaque export est dans la bibliothèque.
+
 ## Tests, qualité et documentation
 
 **Tests automatiques**, lancés par la CI à chaque modification :

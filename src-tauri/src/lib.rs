@@ -25,6 +25,7 @@ mod update;
 mod util;
 mod watch;
 mod djtools;
+mod remaster;
 #[cfg(test)]
 mod testdata;
 
@@ -1515,6 +1516,189 @@ async fn dates_apply(state: State<'_, AppState>, ids: Vec<i64>) -> Result<EditRe
     blocking(move || djtools::dates::apply(&lib, &db::open_worker(lib.db_path())?, &ids)).await
 }
 
+// ---------- Remaster (phase 7) ----------
+
+/// Écoute en cours avec le traitement en direct (réglages modifiables, bascule A/B).
+static REMASTER_LIVE: Mutex<Option<audio::player::LiveHandle>> = Mutex::new(None);
+static REMASTER_RUNNING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+fn remaster_path(lib: &library::Library, id: i64) -> Result<PathBuf, AppError> {
+    let conn = db::open_worker(lib.db_path())?;
+    lib.track_path(&conn, id)?.ok_or(AppError::Offline)
+}
+
+#[tauri::command]
+async fn remaster_get(state: State<'_, AppState>, id: i64) -> Result<Option<remaster::dsp::Settings>, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || remaster::engine::load_settings(&db::open_worker(lib.db_path())?, id)).await
+}
+
+#[tauri::command]
+fn remaster_default() -> remaster::dsp::Settings {
+    remaster::dsp::Settings::default()
+}
+
+/// Réglages automatiques (analyse du morceau) pour un préréglage.
+#[tauri::command]
+async fn remaster_auto(state: State<'_, AppState>, id: i64, preset: String) -> Result<remaster::dsp::Settings, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        let path = remaster_path(&lib, id)?;
+        let m = remaster::engine::measure(&path).map_err(|e| AppError::Io(std::io::Error::other(e)))?;
+        Ok(remaster::engine::auto_settings(&m, &preset))
+    })
+    .await
+}
+
+/// Spectre (24 bandes) : d'origine si `settings` est absent, sinon traité.
+#[tauri::command]
+async fn remaster_spectrum(state: State<'_, AppState>, id: i64, settings: Option<remaster::dsp::Settings>, gain_db: f64) -> Result<Vec<f32>, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        let path = remaster_path(&lib, id)?;
+        remaster::engine::spectrum(&path, settings.as_ref().map(|s| (s, gain_db))).map_err(|e| AppError::Io(std::io::Error::other(e)))
+    })
+    .await
+}
+
+/// Calcule le gain du volume cible et les volumes avant / après ; met à jour l'écoute en cours.
+#[tauri::command]
+async fn remaster_level(state: State<'_, AppState>, id: i64, settings: remaster::dsp::Settings) -> Result<remaster::engine::Prepared, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        let path = remaster_path(&lib, id)?;
+        let p = remaster::engine::prepare(&path, &settings.clamped()).map_err(|e| AppError::Io(std::io::Error::other(e)))?;
+        if let Ok(guard) = REMASTER_LIVE.lock() {
+            if let Some(live) = guard.as_ref() {
+                if let Ok(mut l) = live.lock() {
+                    l.settings = settings.clamped();
+                    l.gain_db = p.gain_db;
+                    l.bypass_gain_db = p.after_lufs - p.before_lufs;
+                    l.version += 1;
+                }
+            }
+        }
+        Ok(p)
+    })
+    .await
+}
+
+/// Écoute du morceau avec le traitement en direct, dans le lecteur du bas.
+#[tauri::command]
+async fn remaster_listen(state: State<'_, AppState>, id: i64, settings: remaster::dsp::Settings) -> Result<remaster::engine::Prepared, AppError> {
+    let lib = state.library()?.clone();
+    let player = state.player.clone();
+    blocking(move || {
+        let path = remaster_path(&lib, id)?;
+        let s = settings.clamped();
+        let p = remaster::engine::prepare(&path, &s).map_err(|e| AppError::Io(std::io::Error::other(e)))?;
+        let live: audio::player::LiveHandle = std::sync::Arc::new(Mutex::new(audio::player::Live {
+            settings: s,
+            gain_db: p.gain_db,
+            bypass: false,
+            bypass_gain_db: p.after_lufs - p.before_lufs,
+            version: 1,
+        }));
+        if let Ok(mut g) = REMASTER_LIVE.lock() {
+            *g = Some(live.clone());
+        }
+        let conn = db::open_worker(lib.db_path())?;
+        let duration: i64 = conn.query_row("SELECT coalesce(duration_ms, 0) FROM tracks WHERE id = ?1", [id], |r| r.get(0))?;
+        player.load_live(id, path, duration.max(0) as u64, live);
+        Ok(p)
+    })
+    .await
+}
+
+/// Réglages changés pendant l'écoute (sans recalcul du volume : voir `remaster_level`).
+#[tauri::command]
+fn remaster_update(settings: remaster::dsp::Settings) {
+    if let Ok(guard) = REMASTER_LIVE.lock() {
+        if let Some(live) = guard.as_ref() {
+            if let Ok(mut l) = live.lock() {
+                l.settings = settings.clamped();
+                l.version += 1;
+            }
+        }
+    }
+}
+
+/// Bascule avant (son d'origine, même volume perçu) / après.
+#[tauri::command]
+fn remaster_ab(bypass: bool) {
+    if let Ok(guard) = REMASTER_LIVE.lock() {
+        if let Some(live) = guard.as_ref() {
+            if let Ok(mut l) = live.lock() {
+                l.bypass = bypass;
+            }
+        }
+    }
+}
+
+/// Export du morceau traité dans un nouveau WAV (tâche suivie, annulable par Ctrl+Z).
+#[tauri::command]
+async fn remaster_export(state: State<'_, AppState>, id: i64, settings: remaster::dsp::Settings) -> Result<remaster::engine::ExportResult, AppError> {
+    let lib = state.library()?.clone();
+    blocking(move || {
+        let conn = db::open_worker(lib.db_path())?;
+        let task = lib.tasks.start("tasks.remaster", None);
+        let batch = history::begin_batch(&conn, "history.remaster", None)?;
+        let r = remaster::engine::export(&lib, &conn, id, &settings, batch, Some(&task));
+        match &r {
+            Ok(_) => task.finish(),
+            Err(e) => task.fail(e.to_string()),
+        }
+        let _ = history::drop_if_empty(&conn, batch);
+        lib.notify_changed(true);
+        r
+    })
+    .await
+}
+
+/// Remaster en lot (préréglage appliqué à chaque morceau), en tâche de fond.
+#[tauri::command]
+async fn remaster_batch(state: State<'_, AppState>, ids: Vec<i64>, preset: String) -> Result<bool, AppError> {
+    use std::sync::atomic::Ordering;
+    let lib = state.library()?.clone();
+    if REMASTER_RUNNING.swap(true, Ordering::SeqCst) {
+        return Ok(false);
+    }
+    std::thread::spawn(move || {
+        let task = lib.tasks.start("tasks.remasterBatch", None);
+        task.set_total(ids.len() as u64);
+        let res = (|| -> Result<(), AppError> {
+            let conn = db::open_worker(lib.db_path())?;
+            let batch = history::begin_batch(&conn, "history.remaster", None)?;
+            for (i, id) in ids.iter().enumerate() {
+                if task.is_cancelled() {
+                    break;
+                }
+                let one = (|| -> Result<(), AppError> {
+                    let path = remaster_path(&lib, *id)?;
+                    let m = remaster::engine::measure(&path).map_err(|e| AppError::Io(std::io::Error::other(e)))?;
+                    let s = remaster::engine::auto_settings(&m, &preset);
+                    remaster::engine::export(&lib, &conn, *id, &s, batch, Some(&task))?;
+                    Ok(())
+                })();
+                if let Err(e) = one {
+                    log::warn!("Remaster impossible (morceau {id}) : {e}");
+                }
+                task.progress(i as u64 + 1);
+                lib.notify_changed(false);
+            }
+            history::drop_if_empty(&conn, batch)?;
+            Ok(())
+        })();
+        match res {
+            Ok(()) => task.finish(),
+            Err(e) => task.fail(e.to_string()),
+        }
+        lib.notify_changed(true);
+        REMASTER_RUNNING.store(false, Ordering::SeqCst);
+    });
+    Ok(true)
+}
+
 #[tauri::command]
 async fn update_check() -> Result<update::UpdateInfo, AppError> {
     blocking(update::check).await
@@ -1720,6 +1904,16 @@ pub fn run() {
             convert_apply,
             update_check,
             open_release_page,
+            remaster_get,
+            remaster_default,
+            remaster_auto,
+            remaster_spectrum,
+            remaster_level,
+            remaster_listen,
+            remaster_update,
+            remaster_ab,
+            remaster_export,
+            remaster_batch,
             tags_list,
             tag_create,
             tag_update,

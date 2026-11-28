@@ -334,6 +334,12 @@ const MIGRATIONS: &[&str] = &[
         energy   INTEGER,
         analyzed_at INTEGER NOT NULL DEFAULT (unixepoch())
     );",
+    // 12 — Remaster (phase 7) : réglages utilisés par morceau.
+    "CREATE TABLE remaster (
+        track_id   INTEGER PRIMARY KEY REFERENCES tracks(id) ON DELETE CASCADE,
+        settings   TEXT NOT NULL,
+        updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+    );",
 ];
 
 /// Ouvre une connexion supplémentaire (tâches de fond). La base doit déjà exister et être migrée.

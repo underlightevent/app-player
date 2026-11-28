@@ -12,6 +12,7 @@ import {
   ListMusic,
   ListOrdered,
   PanelLeftClose,
+  WandSparkles,
   Radar,
   PanelLeftOpen,
   Settings,
@@ -28,6 +29,7 @@ export type ViewId =
   | "quarantine"
   | "playlists"
   | "sets"
+  | "remaster"
   | "stats"
   | "watch"
   | "folders"
@@ -50,6 +52,7 @@ const TOOLS: NavEntry[] = [
   { id: "quarantine", icon: ShieldAlert },
   { id: "playlists", icon: ListMusic },
   { id: "sets", icon: ListOrdered },
+  { id: "remaster", icon: WandSparkles },
   { id: "watch", icon: Radar },
   { id: "stats", icon: BarChart3 },
   { id: "folders", icon: Folder },

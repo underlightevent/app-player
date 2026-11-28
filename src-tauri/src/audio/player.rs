@@ -16,12 +16,62 @@ use tauri::{AppHandle, Emitter};
 
 use super::decode::Decoder;
 
+/// Traitement « Remaster » appliqué en direct pendant l'écoute (phase 7) : réglages
+/// modifiables à tout moment, bascule avant / après au même volume perçu.
+#[derive(Debug, Clone)]
+pub struct Live {
+    pub settings: crate::remaster::dsp::Settings,
+    /// Gain avant le limiteur pour atteindre le volume cible.
+    pub gain_db: f64,
+    /// Vrai : son d'origine (« avant »), au même volume perçu que le résultat.
+    pub bypass: bool,
+    pub bypass_gain_db: f64,
+    /// Augmenté à chaque changement de réglages (le traitement est alors reconstruit).
+    pub version: u64,
+}
+
+pub type LiveHandle = Arc<Mutex<Live>>;
+
 /// Source rodio alimentée par notre décodeur Symphonia.
 struct FileSource {
     dec: Decoder,
     buf: Vec<f32>,
     pos: usize,
     done: bool,
+    live: Option<LiveHandle>,
+    processor: Option<(u64, crate::remaster::dsp::Processor)>,
+    raw: Vec<f32>,
+}
+
+impl FileSource {
+    fn new(dec: Decoder, live: Option<LiveHandle>) -> FileSource {
+        // Traitement en direct : mono et stéréo seulement.
+        let live = live.filter(|_| dec.channels <= 2);
+        FileSource { dec, buf: Vec::new(), pos: 0, done: false, live, processor: None, raw: Vec::new() }
+    }
+
+    /// Bloc suivant, traité si un Remaster est en cours d'écoute.
+    fn refill(&mut self) -> Result<bool, String> {
+        let Some(live) = self.live.clone() else { return self.dec.next_block(&mut self.buf) };
+        if !self.dec.next_block(&mut self.raw)? {
+            return Ok(false);
+        }
+        let st = live.lock().map(|l| l.clone()).map_err(|_| "état indisponible".to_string())?;
+        if st.bypass {
+            let g = 10f32.powf(st.bypass_gain_db as f32 / 20.0);
+            self.buf.clear();
+            self.buf.extend(self.raw.iter().map(|x| (x * g).clamp(-1.0, 1.0)));
+            return Ok(true);
+        }
+        let rebuild = self.processor.as_ref().map(|(v, _)| *v != st.version).unwrap_or(true);
+        if rebuild {
+            self.processor = Some((st.version, crate::remaster::dsp::Processor::new(&st.settings, self.dec.sample_rate, self.dec.channels, st.gain_db)));
+        }
+        if let Some((_, p)) = self.processor.as_mut() {
+            p.process(&self.raw, &mut self.buf);
+        }
+        Ok(true)
+    }
 }
 
 impl Iterator for FileSource {
@@ -32,7 +82,7 @@ impl Iterator for FileSource {
                 return None;
             }
             self.pos = 0;
-            match self.dec.next_block(&mut self.buf) {
+            match self.refill() {
                 Ok(true) => {}
                 Ok(false) => {
                     self.done = true;
@@ -111,7 +161,7 @@ pub enum Src {
 }
 
 enum Cmd {
-    Load { track_id: Option<i64>, src: Src, duration_ms: u64, autoplay: bool, external: Option<External> },
+    Load { track_id: Option<i64>, src: Src, duration_ms: u64, autoplay: bool, external: Option<External>, live: Option<LiveHandle> },
     Play,
     Pause,
     Seek(u64),
@@ -138,7 +188,11 @@ impl PlayerHandle {
     }
 
     pub fn load(&self, track_id: i64, path: PathBuf, duration_ms: u64, autoplay: bool) {
-        let _ = self.tx.send(Cmd::Load { track_id: Some(track_id), src: Src::Path(path), duration_ms, autoplay, external: None });
+        let _ = self.tx.send(Cmd::Load { track_id: Some(track_id), src: Src::Path(path), duration_ms, autoplay, external: None, live: None });
+    }
+    /// Écoute d'un morceau avec le traitement Remaster en direct.
+    pub fn load_live(&self, track_id: i64, path: PathBuf, duration_ms: u64, live: LiveHandle) {
+        let _ = self.tx.send(Cmd::Load { track_id: Some(track_id), src: Src::Path(path), duration_ms, autoplay: true, external: None, live: Some(live) });
     }
     /// Extrait gardé en mémoire (`ext` : « mp3 » ou « m4a »).
     pub fn load_bytes(&self, bytes: Vec<u8>, ext: &str, external: External, autoplay: bool) {
@@ -148,6 +202,7 @@ impl PlayerHandle {
             duration_ms: 30_000,
             autoplay,
             external: Some(external),
+            live: None,
         });
     }
     pub fn play(&self) {
@@ -188,7 +243,7 @@ fn run(rx: Receiver<Cmd>, state: Arc<Mutex<PlayerState>>, app: Option<AppHandle>
         let timeout = if playing { Duration::from_millis(200) } else { Duration::from_secs(3600) };
         match rx.recv_timeout(timeout) {
             Ok(cmd) => match cmd {
-                Cmd::Load { track_id, src, duration_ms, autoplay, external } => {
+                Cmd::Load { track_id, src, duration_ms, autoplay, external, live } => {
                     if output.is_none() {
                         match rodio::DeviceSinkBuilder::open_default_sink() {
                             Ok(mut o) => {
@@ -214,7 +269,7 @@ fn run(rx: Receiver<Cmd>, state: Arc<Mutex<PlayerState>>, app: Option<AppHandle>
                     match opened {
                         Ok(dec) => {
                             let dur = dec.duration_ms.filter(|d| *d > 0).unwrap_or(duration_ms);
-                            p.append(FileSource { dec, buf: Vec::new(), pos: 0, done: false });
+                            p.append(FileSource::new(dec, live.clone()));
                             if autoplay {
                                 p.play();
                             } else {

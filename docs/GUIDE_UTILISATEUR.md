@@ -273,6 +273,24 @@ L'écran **Sets** prépare l'ordre d'une soirée.
 4. Changez l'ordre en glissant la poignée ⋮⋮, ou avec les flèches.
 5. **M3U8**, **Rekordbox (XML)** et **Clé USB…** exportent le set.
 
+## Remaster
+
+L'écran **Remaster** améliore le son d'un morceau et l'exporte dans un **nouveau fichier WAV** : l'original n'est jamais modifié.
+1. Sélectionnez un morceau dans la bibliothèque, puis ouvrez **Remaster** (ou **… › Remaster…**).
+2. Choisissez un **préréglage** (Automatique, Club fort, Chaud, Brillant, Punch, Doux) puis **Analyser et appliquer** : l'application mesure le morceau et propose des réglages doux.
+3. **Écouter le résultat** : le morceau joue dans le lecteur du bas avec les réglages. **Avant / Après** compare au **même volume** (on juge la qualité, pas le volume). Les réglages s'entendent en direct.
+4. Ajustez à la main si besoin :
+   - **Égaliseur** : graves, bas-médiums, médiums, hauts-médiums, aigus (±12 dB), coupe des infra-graves ;
+   - **Mono / stéréo** : largeur stéréo, **graves en mono** sous une fréquence (plus puissant en club), tout en mono ;
+   - **Compresseur** : seuil, taux, attaque, relâchement, gain de compensation ;
+   - **Volume et limiteur** : volume cible (−7 à −8 LUFS pour le club), plafond de crête (−1 dB) : le son ne sature jamais.
+5. **Comparer le spectre** montre l'équilibre avant / après.
+6. **Exporter en WAV** : « … (Remaster).wav » (24 bits) est créé à côté de l'original, avec les tags et la pochette, et ajouté à la bibliothèque. **Ctrl+Z** l'envoie en quarantaine.
+
+Plusieurs morceaux sélectionnés : **Remaster automatique de N morceaux** applique le préréglage choisi à chacun, en tâche de fond.
+
+Ce que Remaster ne fait pas : recréer les aigus perdus d'un MP3 de basse qualité. Comparez toujours avant / après.
+
 ## Statistiques
 
 L'écran **Statistiques** montre la taille de la bibliothèque, la répartition par genre, décennie, format, qualité, tonalité et BPM, la place par disque, les morceaux ajoutés chaque mois et les plus joués (après import de l'historique).

@@ -28,7 +28,8 @@
     "watch": "Releases",
     "sets": "Sets",
     "stats": "Statistics",
-    "dropHint": "Drop tracks dragged from the table here"
+    "dropHint": "Drop tracks dragged from the table here",
+    "remaster": "Remaster"
   },
   "topbar": {
     "searchPlaceholder": "Search the library",
@@ -263,7 +264,9 @@
     "backup": "Library backup",
     "usbCopy": "Copy to USB key",
     "loudness": "Loudness measurement (LUFS)",
-    "analysis": "BPM, key and energy analysis"
+    "analysis": "BPM, key and energy analysis",
+    "remaster": "Remaster export (WAV)",
+    "remasterBatch": "Batch remaster"
   },
   "player": {
     "nothing": "Nothing playing",
@@ -361,7 +364,8 @@
     "wavToAiff": "the AIFF conversion",
     "titleFormat": "the new title format",
     "repairDates": "the date repair",
-    "analysis": "writing the analyzed BPMs and keys"
+    "analysis": "writing the analyzed BPMs and keys",
+    "remaster": "the remaster"
   },
   "edit": {
     "saved_one": "Track updated",
@@ -425,7 +429,8 @@
     "usbCopy": "Copy to a USB key…",
     "analyze": "Analyze BPM, key and energy",
     "loudness": "Measure loudness (LUFS)",
-    "repairDates": "Repair broken dates…"
+    "repairDates": "Repair broken dates…",
+    "remaster": "Remaster…"
   },
   "rename": {
     "title_one": "Rename {{count}} file",
@@ -1397,5 +1402,72 @@
     "apply_other": "Repair {{count}} files",
     "repaired_one": "{{count}} file repaired.",
     "repaired_other": "{{count}} files repaired."
+  },
+  "remaster": {
+    "pick": "Select a track in the library, then come back here (or … › Remaster…).",
+    "firstOfSelection": "first of the {{count}} selected tracks",
+    "listen": "Listen to the result",
+    "preparing": "Preparing…",
+    "stop": "Stop listening",
+    "ab": "Compare",
+    "before": "Before",
+    "after": "After",
+    "abHint": "“Before” plays the original at the same perceived loudness as the result: you compare quality, not volume. Settings are heard live.",
+    "levels": "Loudness: {{before}} → {{after}} LUFS · peak {{peak}} dB",
+    "preset": "Preset",
+    "presets": {
+      "auto": "Automatic",
+      "club": "Club loud",
+      "warm": "Warm",
+      "bright": "Bright",
+      "punch": "Punch",
+      "soft": "Soft"
+    },
+    "applyPreset": "Analyze and apply",
+    "analyzing": "Analyzing…",
+    "presetApplied": "“{{preset}}” settings computed for this track.",
+    "reset": "Reset to flat",
+    "eq": "Equalizer",
+    "bands": {
+      "low": "Lows",
+      "lowMid": "Low mids",
+      "mid": "Mids",
+      "highMid": "High mids",
+      "high": "Highs"
+    },
+    "highpass": "Sub-bass cut",
+    "off": "Off",
+    "stereo": "Mono / stereo",
+    "width": "Stereo width",
+    "monoBass": "Bass in mono",
+    "below": "below {{hz}} Hz",
+    "fullMono": "Full mono",
+    "stereoHint": "Bass in mono: everything below the chosen frequency becomes identical on both channels (punchier and more stable on a club system). Width: 0% = mono, 100% = original, above = wider.",
+    "comp": "Compressor",
+    "threshold": "Threshold",
+    "ratio": "Ratio",
+    "attack": "Attack",
+    "release": "Release",
+    "makeup": "Makeup gain",
+    "loudness": "Loudness and limiter",
+    "target": "Target loudness",
+    "noTarget": "No target",
+    "limiter": "Limiter (prevents any clipping)",
+    "ceiling": "Peak ceiling",
+    "loudnessHint": "Guide: −7 to −8 LUFS for club, −9 to −10 for a more dynamic sound, −14 for streaming. The limiter always keeps peaks under the ceiling.",
+    "spectrum": "Spectrum before / after",
+    "compare": "Compare spectrum",
+    "computing": "Computing…",
+    "spectrumHint": "Shows the low / mid / high balance of the original and of the result (one minute in the middle of the track).",
+    "export": "Export as WAV",
+    "exporting": "Exporting…",
+    "exported": "“{{name}}” created: {{lufs}} LUFS, peak {{peak}} dB. Ctrl+Z moves it to quarantine.",
+    "open": "Show",
+    "batch": "Automatic remaster of {{count}} tracks ({{preset}})",
+    "batchStarted_one": "Remaster of {{count}} track started in the background.",
+    "batchStarted_other": "Remaster of {{count}} tracks started in the background.",
+    "batchRunning": "A batch remaster is already running.",
+    "exportHint": "The original is never modified: a new “… (Remaster).wav” file (24-bit) is created next to it, with tags and cover, the version extended with “Remaster”, and added to the library.",
+    "limits": "What Remaster can do: loudness, low / high balance, density, stereo image. What it cannot do: bring back the highs lost in a low-quality MP3. Always compare before / after."
   }
 }
