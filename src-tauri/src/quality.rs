@@ -336,6 +336,8 @@ pub const HEALTH_KEYS: &[&str] = &[
     "low_bitrate", "bad_names", "long_paths", "bad_chars", "wav_desync", "missing", "unreadable", "corrupt",
     // Phase 6
     "too_loud", "too_quiet", "no_bpm", "no_key", "never_played",
+    // Phase 8
+    "long_silence",
 ];
 
 /// Largeur minimale d'une pochette correcte.
@@ -361,6 +363,8 @@ pub fn health_sql(key: &str, low_bitrate: i64) -> Option<String> {
         "no_bpm" => format!("{ok} AND coalesce(t.bpm, 0) = 0"),
         "no_key" => format!("{ok} AND coalesce(t.musical_key, '') = ''"),
         "never_played" => format!("{ok} AND t.id NOT IN (SELECT track_id FROM plays)"),
+        // Silence de plus de 2 s au début ou de plus de 5 s à la fin (analyse de structure).
+        "long_silence" => format!("{ok} AND t.id IN (SELECT track_id FROM structure WHERE lead_silence_ms > 2000 OR tail_silence_ms > 5000)"),
         "low_bitrate" => {
             // Un M4A peut être sans perte (ALAC) : seul l'AAC compte.
             format!(

@@ -24,3 +24,7 @@ Idées notées en chemin, à discuter avant de les réaliser.
 - Veille musicale (demandée par l'utilisateur le 27/11/2026, à cadrer avant de développer) : classements par pays (flux RSS d'Apple Music, classements Deezer), nouvelles sorties par label (MusicBrainz, Discogs) ou par pays (Apple Music), ajout à une « liste d'envies » avec lien d'achat ; un morceau de la liste arrivé dans l'Inbox serait reconnu et coché. Le téléchargement de musique lui-même reste hors périmètre (cahier des charges) : seulement des liens vers les boutiques.
 - Phase 5 : compte Tidal lié (API officielle récente avec OAuth et écriture des playlists, à vérifier) ; Discogs pour les sorties de label (clé gratuite).
 - Phase 6 : installation automatique des mises à jour (créer la clé de signature, docs/SIGNATURE.md) ; compte Tidal ; écrire les étiquettes personnelles dans le champ « commentaire » pour Rekordbox (en option) ; affiner l'analyse de tonalité (modèle entraîné, sous licence permissive).
+- Phase 8 : ouvrir les archives .zip (Bandcamp) du dossier de téléchargements surveillé.
+- Phase 8 : séparation des pistes accélérée par la carte graphique (DirectML sous Windows, CoreML sur Mac) ; fondu entre fenêtres de 7,8 s.
+- Phase 8 : vérifier sur une copie de bibliothèque Rekordbox ce que l'import XML fait des repères d'un morceau déjà présent.
+- Phase 8 : grille à tempo variable (morceaux joués par des musiciens) ; détection du premier temps quand le morceau ne commence pas sur une mesure.

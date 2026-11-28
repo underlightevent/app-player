@@ -5,6 +5,7 @@ import type { TrackRow } from "../core/library";
 import type { PlayerState } from "../core/player";
 import { waveform } from "../core/player";
 import { trackCover } from "../core/edit";
+import { structureGet, type Structure } from "../core/prep";
 import { formatDuration } from "../core/format";
 
 /** Modes de lecture du lecteur du bas. */
@@ -35,12 +36,15 @@ function Waveform({ trackId, seekable, position, duration, onSeek }: { trackId: 
   const canvas = useRef<HTMLCanvasElement>(null);
   const [peaks, setPeaks] = useState<number[] | null>(null);
   const [hover, setHover] = useState<number | null>(null);
+  const [st, setSt] = useState<Structure | null>(null);
 
   useEffect(() => {
     setPeaks(null);
+    setSt(null);
     if (trackId == null) return;
     let stale = false;
     void waveform(trackId).then((w) => !stale && setPeaks(w));
+    void structureGet(trackId).then((s) => !stale && setSt(s)).catch(() => {});
     return () => {
       stale = true;
     };
@@ -73,11 +77,28 @@ function Waveform({ trackId, seekable, position, duration, onSeek }: { trackId: 
       ctx.fillStyle = i / bars < ratio ? played : rest;
       ctx.fillRect(x, (h - bh) / 2, 2, bh);
     }
+    // Sections (fine bande en bas) et repères directs (petits triangles en haut).
+    if (st && duration > 0) {
+      for (const sec of st.sections) {
+        ctx.fillStyle = styles.getPropertyValue(`--section-${sec.kind === "main" ? "intro" : sec.kind}`).trim() || rest;
+        ctx.fillRect((sec.startMs / duration) * w, h - 3, ((sec.endMs - sec.startMs) / duration) * w, 3);
+      }
+      ctx.fillStyle = styles.getPropertyValue("--color-text").trim() || "#000";
+      for (const c of st.cues) {
+        if (c.hot == null) continue;
+        const x = (c.ms / duration) * w;
+        ctx.beginPath();
+        ctx.moveTo(x - 4, 0);
+        ctx.lineTo(x + 4, 0);
+        ctx.lineTo(x, 5);
+        ctx.fill();
+      }
+    }
     if (hover != null) {
       ctx.fillStyle = styles.getPropertyValue("--color-text").trim() || "#000";
       ctx.fillRect(hover * w, 0, 1, h);
     }
-  }, [peaks, position, duration, hover]);
+  }, [peaks, position, duration, hover, st]);
 
   const ratioAt = (e: MouseEvent<HTMLCanvasElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
@@ -140,7 +161,7 @@ export function PlayerBar({ state, track, onToggle, onPrev, onNext, modes, onRep
               {ext.version && <span className="muted"> ({ext.version})</span>}
             </div>
             <div className="player-artist muted">
-              {ext.artists.join(", ")} · {t("player.preview", { service: t(`watch.sites.${ext.service}`, { defaultValue: ext.service }) })}
+              {ext.service === "transition" ? t("prep.transitionLabel") : <>{ext.artists.join(", ")} · {t("player.preview", { service: t(`watch.sites.${ext.service}`, { defaultValue: ext.service }) })}</>}
             </div>
           </>
         ) : track ? (

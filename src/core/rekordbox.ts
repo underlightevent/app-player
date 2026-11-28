@@ -43,7 +43,7 @@ export interface ConvertItem {
   trackId: number;
   fileName: string;
   targetName: string;
-  status: "ok" | "not_wav" | "unsupported" | "exists" | "offline";
+  status: "ok" | "lossy" | "same" | "unsupported" | "exists" | "offline";
   detail: string | null;
   inRekordbox: boolean;
 }
@@ -211,22 +211,28 @@ export async function playlistTrackIds(id: number): Promise<number[]> {
 }
 
 // ---------- Conversion WAV → AIFF ----------
-export async function convertPreview(ids: number[]): Promise<ConvertItem[]> {
+/** Format voulu (phase 8) : AIFF ou WAV, profondeur gardée (null) ou 16 / 24 bits. */
+export interface ConvertTarget {
+  format: "aiff" | "wav";
+  bits: 16 | 24 | null;
+}
+
+export async function convertPreview(ids: number[], target: ConvertTarget = { format: "aiff", bits: null }): Promise<ConvertItem[]> {
   if (!inTauri)
     return ids.slice(0, 3).map((id, i) => ({
       trackId: id,
       fileName: `Artiste ${id} - Morceau ${id}.wav`,
-      targetName: `Artiste ${id} - Morceau ${id}.aiff`,
-      status: "ok",
+      targetName: `Artiste ${id} - Morceau ${id}.${target.format}`,
+      status: i === 2 ? "lossy" : "ok",
       detail: null,
       inRekordbox: i === 0,
     }));
-  return invoke<ConvertItem[]>("convert_preview", { ids });
+  return invoke<ConvertItem[]>("convert_preview", { ids, target });
 }
 
-export async function convertApply(ids: number[]): Promise<EditReport> {
+export async function convertApply(ids: number[], target: ConvertTarget = { format: "aiff", bits: null }): Promise<EditReport> {
   if (!inTauri) return { batchId: null, ok: ids.length, failures: [] };
-  return invoke<EditReport>("convert_apply", { ids });
+  return invoke<EditReport>("convert_apply", { ids, target });
 }
 
 // ---------- Mises à jour ----------

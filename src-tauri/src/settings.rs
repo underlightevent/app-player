@@ -16,6 +16,10 @@ const KNOWN: &[(&str, &[&str], &str)] = &[
     ("player_repeat", &["off", "all", "one"], "off"),
     ("player_shuffle", &["true", "false"], "false"),
     ("player_autonext", &["true", "false"], "true"),
+    // Phase 8 : export XML vers Rekordbox (repères et étiquettes), dossier surveillé.
+    ("rb_export_cues", &["off", "memory", "memory_hot"], "off"),
+    ("rb_export_tags_comment", &["true", "false"], "false"),
+    ("downloads_watch", &["true", "false"], "false"),
     ("language", &["fr", "en"], "fr"),
     ("onboarding_done", &["true", "false"], "false"),
     ("table_density", &["compact", "comfortable"], "compact"),
@@ -80,6 +84,8 @@ const FREE_TEXT: &[(&str, &str)] = &[
     ("backup_last", ""),
     // Remaster : préréglages de l'utilisateur (liste JSON [{name, settings}]).
     ("remaster_presets", "[]"),
+    // Phase 8 : dossier de téléchargements surveillé (vers l'Inbox).
+    ("downloads_dir", ""),
 ];
 const MAX_FREE_TEXT: usize = 100_000;
 

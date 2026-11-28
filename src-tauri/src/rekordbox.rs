@@ -463,6 +463,55 @@ pub struct ExportPlaylist {
     pub ids: Vec<i64>,
 }
 
+/// Ajouts de la phase 8 à l'export XML (réglages, désactivés par défaut).
+#[derive(Debug, Clone, Copy, Default)]
+pub struct XmlExtras {
+    /// Grille de tempo et repères mémoire proposés par l'analyse de structure.
+    pub cues: bool,
+    /// Repères directs (A, B, C, D) en plus des repères mémoire.
+    pub hot_cues: bool,
+    /// Étiquettes personnelles dans « Commentaire » (« #mariage #cocktail »).
+    pub tags_in_comment: bool,
+}
+
+/// Grille et repères d'un morceau, au format Rekordbox (enfants de TRACK).
+fn cue_marks(conn: &Connection, id: i64, hot: bool) -> String {
+    let Ok(Some(st)) = crate::prep::structure::get(conn, id) else { return String::new() };
+    // Grille trop incertaine : on laisse Rekordbox analyser lui-même.
+    if st.confidence < 0.15 {
+        return String::new();
+    }
+    let mut x = format!("      <TEMPO Inizio=\"{:.3}\" Bpm=\"{:.2}\" Metro=\"4/4\" Battito=\"1\"/>\n", st.first_beat_ms / 1000.0, st.bpm);
+    for c in &st.cues {
+        let num = match c.hot {
+            Some(n) if hot => n as i64,
+            Some(_) => continue,
+            None => -1,
+        };
+        let name = match c.name.as_str() {
+            "start" => "Début",
+            "drop" => "Drop",
+            "break" => "Break",
+            "outro" => "Outro",
+            "intro" => "Intro",
+            "build" => "Montée",
+            "main" => "Corps",
+            other => other,
+        };
+        x.push_str(&format!("      <POSITION_MARK Name=\"{}\" Type=\"0\" Start=\"{:.3}\" Num=\"{num}\"/>\n", esc(name), c.ms / 1000.0));
+    }
+    x
+}
+
+/// Étiquettes personnelles d'un morceau, pour le champ « Commentaire ».
+fn tag_comment(conn: &Connection, id: i64) -> String {
+    let Ok(mut st) = conn.prepare_cached("SELECT g.name FROM track_user_tags tt JOIN user_tags g ON g.id = tt.tag_id WHERE tt.track_id = ?1 ORDER BY g.name COLLATE NOCASE") else {
+        return String::new();
+    };
+    let names: Vec<String> = st.query_map([id], |r| r.get::<_, String>(0)).map(|it| it.flatten().collect()).unwrap_or_default();
+    names.iter().map(|n| format!("#{}", n.replace(' ', "_"))).collect::<Vec<_>>().join(" ")
+}
+
 /// Fichier XML au format Rekordbox : collection et playlists (les filtres intelligents
 /// sont exportés comme playlists, avec leurs morceaux du moment).
 pub fn export_xml(
@@ -472,6 +521,7 @@ pub fn export_xml(
     playlists: &[ExportPlaylist],
     version_in_title: bool,
     artist_in_title: bool,
+    extras: XmlExtras,
 ) -> Result<(String, usize, usize), AppError> {
     let mut all: Vec<i64> = ids.to_vec();
     for p in playlists {
@@ -500,7 +550,7 @@ pub fn export_xml(
             artist_in_title,
         );
         col.push_str(&format!(
-            "    <TRACK TrackID=\"{}\" Name=\"{}\" Artist=\"{}\" Composer=\"\" Album=\"{}\" Grouping=\"\" Genre=\"{}\" Kind=\"{}\" Size=\"{}\" TotalTime=\"{}\" DiscNumber=\"0\" TrackNumber=\"0\" Year=\"{}\" AverageBpm=\"{}\" DateAdded=\"{}\" BitRate=\"{}\" SampleRate=\"{}\" Comments=\"\" PlayCount=\"0\" Rating=\"{}\" Location=\"{}\" Remixer=\"{}\" Tonality=\"{}\" Label=\"{}\" Mix=\"{}\"/>\n",
+            "    <TRACK TrackID=\"{}\" Name=\"{}\" Artist=\"{}\" Composer=\"\" Album=\"{}\" Grouping=\"\" Genre=\"{}\" Kind=\"{}\" Size=\"{}\" TotalTime=\"{}\" DiscNumber=\"0\" TrackNumber=\"0\" Year=\"{}\" AverageBpm=\"{}\" DateAdded=\"{}\" BitRate=\"{}\" SampleRate=\"{}\" Comments=\"{}\" PlayCount=\"0\" Rating=\"{}\" Location=\"{}\" Remixer=\"{}\" Tonality=\"{}\" Label=\"{}\" Mix=\"{}\"",
             r.id,
             esc(&name),
             esc(&r.artists.join(", ")),
@@ -514,6 +564,7 @@ pub fn export_xml(
             crate::db::today(),
             r.bitrate.unwrap_or(0),
             r.sample_rate.unwrap_or(0),
+            esc(&if extras.tags_in_comment { tag_comment(conn, r.id) } else { String::new() }),
             rb_rating(r.rating),
             esc(&encode_location(p)),
             esc(r.remixer.as_deref().unwrap_or("")),
@@ -521,6 +572,12 @@ pub fn export_xml(
             esc(r.label.as_deref().unwrap_or("")),
             esc(r.version.as_deref().unwrap_or("")),
         ));
+        let marks = if extras.cues { cue_marks(conn, r.id, extras.hot_cues) } else { String::new() };
+        if marks.is_empty() {
+            col.push_str("/>\n");
+        } else {
+            col.push_str(&format!(">\n{marks}    </TRACK>\n"));
+        }
     }
     let mut pl = String::new();
     for p in playlists {
@@ -621,7 +678,7 @@ mod tests {
         let conn = crate::db::open_worker(lib.db_path()).unwrap();
         conn.execute("UPDATE tracks SET rating = 4, title = 'Titre \"x\"', version = 'Extended Mix', musical_key = 'Am'", []).unwrap();
         let pls = vec![ExportPlaylist { name: "Soirée <1>".into(), ids: vec![ids[1]] }];
-        let (xml, n, skipped) = export_xml(&conn, &lib.mounts(), &[ids[0]], &pls, true, false).unwrap();
+        let (xml, n, skipped) = export_xml(&conn, &lib.mounts(), &[ids[0]], &pls, true, false, XmlExtras::default()).unwrap();
         assert_eq!((n, skipped), (2, 0));
         assert!(xml.contains("Rating=\"204\""));
         assert!(xml.contains("Mix=\"Extended Mix\""));

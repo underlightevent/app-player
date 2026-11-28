@@ -60,6 +60,8 @@ import { WatchView } from "./components/WatchView";
 import { PlaylistsView } from "./components/PlaylistsView";
 import { AddToPlaylistDialog, ConvertDialog } from "./components/Phase4Dialogs";
 import { DatesDialog, TagsDialog, UsbCopyDialog } from "./components/Phase6Dialogs";
+import { DjEditDialog, SimilarDialog, StemsDialog, UsbCheckDialog, prepError } from "./components/PrepDialogs";
+import { stemsStatus, structureRun, transitionPlay, vocalsDetect } from "./core/prep";
 import { SetsView } from "./components/SetsView";
 import { StatsView } from "./components/StatsView";
 import { RemasterView } from "./components/RemasterView";
@@ -378,6 +380,9 @@ export default function App() {
   // Phase 6 : étiquettes, copie USB, réparation des dates.
   const [tagsRows, setTagsRows] = useState<TrackRow[] | null>(null);
   const [usbIds, setUsbIds] = useState<number[] | null>(null);
+  // Phase 8 : outils de préparation.
+  const [prepDialog, setPrepDialog] = useState<{ kind: "similar" | "djedit" | "stems"; row: TrackRow | null } | null>(null);
+  const [usbCheckOpen, setUsbCheckOpen] = useState(false);
   const [datesIds, setDatesIds] = useState<number[] | null>(null);
   const [quarantineAsk, setQuarantineAsk] = useState<{ ids: number[]; inRekordbox: number } | null>(null);
   const [openPlaylist, setOpenPlaylist] = useState<Playlist | null>(null);
@@ -515,9 +520,9 @@ export default function App() {
     },
     {
       id: "convert",
-      label: t("actions.convertAiff"),
-      disabled: !selectedRows.some((r) => r.format === "wav"),
-      run: () => setConvertIds(selectedRows.filter((r) => r.format === "wav").map((r) => r.id)),
+      label: t("actions.convertLossless"),
+      disabled: !selectedRows.some((r) => ["wav", "aiff", "aif", "flac", "m4a"].includes(r.format)),
+      run: () => setConvertIds(selectedRows.filter((r) => ["wav", "aiff", "aif", "flac", "m4a"].includes(r.format)).map((r) => r.id)),
     },
     // ---------- Phase 6 ----------
     { id: "tags", label: t("actions.tags"), disabled: selection.size === 0, run: () => setTagsRows(selectedRows) },
@@ -536,6 +541,46 @@ export default function App() {
     },
     { id: "remaster", label: t("actions.remaster"), disabled: selection.size === 0, run: () => setView("remaster") },
     { id: "dates", label: t("actions.repairDates"), disabled: selection.size === 0, run: () => setDatesIds([...selection]) },
+    // ---------- Phase 8 ----------
+    {
+      id: "structure",
+      label: t("actions.structure"),
+      disabled: selection.size === 0,
+      run: async () => toast.show((await structureRun([...selection])) ? t("prep.structureStarted") : t("prep.structureBusy")),
+    },
+    { id: "similar", label: t("actions.similar"), disabled: selection.size !== 1, run: () => setPrepDialog({ kind: "similar", row: selectedRows[0] ?? null }) },
+    {
+      id: "transition",
+      label: t("actions.transition"),
+      disabled: selection.size !== 2,
+      run: async () => {
+        // Ordre du tableau : le premier affiché enchaîne sur le second.
+        const [a, b] = [...selection].sort((x, y) => lib.ids.indexOf(x) - lib.ids.indexOf(y));
+        try {
+          await transitionPlay(a, b, 16);
+          toast.show(t("prep.transitionStarted"));
+        } catch (e) {
+          toast.show(prepError(t, e), undefined, "error");
+        }
+      },
+    },
+    { id: "djedit", label: t("actions.djedit"), disabled: selection.size !== 1, run: () => setPrepDialog({ kind: "djedit", row: selectedRows[0] ?? null }) },
+    { id: "stems", label: t("actions.stems"), disabled: selection.size !== 1, run: () => setPrepDialog({ kind: "stems", row: selectedRows[0] ?? null }) },
+    {
+      id: "vocals",
+      label: t("actions.vocals"),
+      disabled: selection.size === 0,
+      run: async () => {
+        const st = await stemsStatus();
+        if (!st.installed) return setPrepDialog({ kind: "stems", row: null });
+        try {
+          toast.show((await vocalsDetect([...selection], t("prep.tagVocals"), t("prep.tagInstrumental"))) ? t("prep.vocalsStarted", { count: selection.size }) : t("prep.stemsBusy"));
+        } catch (e) {
+          toast.show(prepError(t, e), undefined, "error");
+        }
+      },
+    },
+    { id: "usbcheck", label: t("actions.usbCheck"), run: () => setUsbCheckOpen(true) },
   ];
 
   // ---------- Dossiers ----------
@@ -945,7 +990,7 @@ export default function App() {
               }}
             />
           ) : view === "sets" ? (
-            <SetsView selection={selectedIdList} keyNotation={keyNotation} onPlay={(id) => void playTrack(id)} onToast={toast.show} />
+            <SetsView pool={lib.ids} selection={selectedIdList} keyNotation={keyNotation} onPlay={(id) => void playTrack(id)} onToast={toast.show} />
           ) : view === "remaster" ? (
             <RemasterView
               selection={selectedIdList}
@@ -1052,6 +1097,7 @@ export default function App() {
             revision={revision}
             futureName={futureName}
             onManualSearch={() => setManualSearch(true)}
+            onPrepTool={(kind) => selectedRows[0] && setPrepDialog({ kind, row: selectedRows[0] })}
           />
         )}
       </div>
@@ -1159,6 +1205,22 @@ export default function App() {
       {playlistDialog && <AddToPlaylistDialog ids={playlistDialog} onClose={() => setPlaylistDialog(null)} onDone={(text) => toast.show(text)} />}
       {convertIds && <ConvertDialog ids={convertIds} onClose={() => setConvertIds(null)} onDone={(r) => reportDone(r, "convert.done")} />}
       {tagsRows && <TagsDialog rows={tagsRows} onClose={() => setTagsRows(null)} onToast={toast.show} />}
+      {prepDialog?.kind === "similar" && prepDialog.row && (
+        <SimilarDialog id={prepDialog.row.id} onClose={() => setPrepDialog(null)} onPlay={(id) => void playTrack(id)} onToast={toast.show} />
+      )}
+      {prepDialog?.kind === "djedit" && prepDialog.row && (
+        <DjEditDialog
+          row={prepDialog.row}
+          onClose={() => setPrepDialog(null)}
+          onToast={toast.show}
+          onOpenTrack={(tid) => {
+            setSelection(new Set([tid]));
+            setView("library");
+          }}
+        />
+      )}
+      {prepDialog?.kind === "stems" && <StemsDialog row={prepDialog.row} onClose={() => setPrepDialog(null)} onToast={toast.show} />}
+      {usbCheckOpen && <UsbCheckDialog onClose={() => setUsbCheckOpen(false)} />}
       {usbIds && <UsbCopyDialog ids={usbIds} defaultName={t("usb.defaultName")} onClose={() => setUsbIds(null)} onToast={toast.show} />}
       {datesIds && <DatesDialog ids={datesIds} onClose={() => setDatesIds(null)} onDone={(r) => reportDone(r, "dates.repaired")} />}
       {quarantineAsk && (

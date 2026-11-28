@@ -185,6 +185,8 @@ pub struct External {
 pub enum Src {
     Path(PathBuf),
     Bytes(Vec<u8>, String),
+    /// Essai d'un enchaînement entre deux morceaux (phase 8).
+    Transition(Box<crate::prep::transition::Plan>),
 }
 
 enum Cmd {
@@ -220,6 +222,10 @@ impl PlayerHandle {
     /// Écoute d'un morceau avec le traitement Remaster en direct.
     pub fn load_live(&self, track_id: i64, path: PathBuf, duration_ms: u64, live: LiveHandle) {
         let _ = self.tx.send(Cmd::Load { track_id: Some(track_id), src: Src::Path(path), duration_ms, autoplay: true, external: None, live: Some(live) });
+    }
+    /// Essai d'un enchaînement (écoute seulement).
+    pub fn load_transition(&self, plan: crate::prep::transition::Plan, external: External) {
+        let _ = self.tx.send(Cmd::Load { track_id: None, src: Src::Transition(Box::new(plan)), duration_ms: 0, autoplay: true, external: Some(external), live: None });
     }
     /// Extrait gardé en mémoire (`ext` : « mp3 » ou « m4a »).
     pub fn load_bytes(&self, bytes: Vec<u8>, ext: &str, external: External, autoplay: bool) {
@@ -289,7 +295,31 @@ fn run(rx: Receiver<Cmd>, state: Arc<Mutex<PlayerState>>, app: Option<AppHandle>
                     }
                     let p = player.as_ref().expect("lecteur prêt");
                     p.clear();
+                    if let Src::Transition(plan) = src {
+                        let dur = plan.total_ms as u64;
+                        match crate::prep::transition::MixSource::new(*plan) {
+                            Ok(mix) => {
+                                p.append(mix);
+                                p.play();
+                                emit(&set(&|s| {
+                                    s.track_id = None;
+                                    s.external = external.clone();
+                                    s.playing = true;
+                                    s.position_ms = 0;
+                                    s.duration_ms = dur;
+                                    s.ended = false;
+                                    s.error = None;
+                                }));
+                            }
+                            Err(e) => {
+                                log::warn!("Enchaînement impossible : {e}");
+                                emit(&set(&|s| s.error = Some("unreadable".into())));
+                            }
+                        }
+                        continue;
+                    }
                     let (opened, what) = match src {
+                        Src::Transition(_) => unreachable!(),
                         Src::Path(path) => (Decoder::open(&path), path.display().to_string()),
                         Src::Bytes(bytes, ext) => (Decoder::open_bytes(bytes, &ext), "extrait".to_string()),
                     };

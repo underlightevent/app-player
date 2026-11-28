@@ -276,6 +276,32 @@ L'écran **Sets** prépare l'ordre d'une soirée.
 3. Cliquez sur un morceau : les **suggestions** en dessous montrent ce qui s'enchaîne bien après lui (tonalité compatible, BPM proche, même genre en priorité). **Ajouter** le met à la fin du set.
 4. Changez l'ordre en glissant la poignée ⋮⋮, ou avec les flèches.
 5. **M3U8**, **Rekordbox (XML)** et **Clé USB…** exportent le set.
+6. **Essayer un enchaînement** : le bouton ⇄ de chaque ligne joue la fin du morceau précédent puis mélange le début de celui-ci, au même tempo, sur la longueur choisie (**Mélange** : 16 ou 32 mesures). Écoute seulement.
+7. **Générer un set…** : choisissez une durée, une courbe d'énergie (montée, plateau, vagues, descente) et un tempo ; l'application propose un ordre de morceaux compatibles, pris parmi ceux **affichés dans la bibliothèque** (filtrez d'abord par genre, étiquette ou playlist). Le set est ensuite modifiable.
+
+## Préparation avancée
+
+**Structure et repères.** Le panneau de détail montre, pour chaque morceau analysé, son tempo, la netteté de la grille (« grille incertaine » quand le rythme est peu régulier ou que le tag n'a pas de BPM), les silences au début et à la fin, et une bande colorée des sections : intro (gris), montée (orange), drop (violet), break (turquoise), outro. La même bande et les repères A à D s'affichent sur la forme d'onde du lecteur. Pour analyser : **… › Analyser la structure**, ou **Réglages › Préparation avancée › Analyser toute la bibliothèque** (environ une demi-seconde par morceau, rien n'est écrit dans les fichiers).
+
+**Repères dans Rekordbox.** Dans **Réglages › Préparation avancée**, « Repères dans l'export Rekordbox » ajoute la grille et les repères proposés à l'export XML. Désactivé par défaut : pour un morceau déjà dans Rekordbox, l'import peut remplacer vos propres repères. Essayez d'abord sur une copie et sauvegardez Rekordbox.
+
+**Morceaux similaires.** Bouton **Similaires** du panneau de détail : les morceaux les plus proches (tempo, tonalité compatible, énergie, genre, couleur du son). ▶ écoute, ⇄ essaie l'enchaînement.
+
+**Essai d'enchaînement.** Sélectionnez deux morceaux puis **… › Essayer l'enchaînement** (le premier affiché enchaîne sur le second), ou utilisez ⇄ dans un set.
+
+**DJ edit.** Bouton **DJ edit** du panneau de détail : ajoute 8, 16, 32 ou 64 mesures à l'intro et / ou à l'outro en répétant une boucle de 4, 8 ou 16 mesures. Un nouveau fichier « … (DJ Edit).wav » est créé à côté de l'original ; **Ctrl+Z** l'envoie en quarantaine.
+
+**Séparer voix / instrumental.** Bouton **Séparer** : instrumental, acapella, les deux, ou les 4 pistes (batterie, basse, autres, voix). La première fois, l'application propose de télécharger le moteur et le modèle (environ 220 Mo, vérifiés) ; rien n'est envoyé sur internet, le calcul se fait sur l'ordinateur (1 à 3 minutes par morceau). Les résultats sont de nouveaux fichiers WAV à côté de l'original.
+
+**Détecter les voix.** **… › Détecter les voix** sur une sélection : étiquettes « Avec voix » ou « Instrumental » (environ 10 s par morceau, après installation du modèle).
+
+**Contrôler une clé USB.** **… › Contrôler une clé USB…** : choisissez la clé et votre matériel ; le rapport liste les fichiers illisibles, les formats non lus (FLAC sur un ancien CDJ…), les WAV en virgule flottante, les fréquences trop élevées, les chemins trop longs et le système de fichiers (NTFS n'est jamais lu). Chaque problème est accompagné de la solution. Rien n'est modifié.
+
+**Convertir.** **… › Convertir (AIFF / WAV sans perte)…** : FLAC, ALAC, AIFF ou WAV vers AIFF ou WAV, en gardant la profondeur ou en 16 / 24 bits. Le son est vérifié identique ; l'original part en quarantaine.
+
+**Dossier de téléchargements.** Dans **Réglages › Préparation avancée**, choisissez votre dossier de téléchargements et cochez « Déplacer automatiquement vers l'Inbox » : chaque nouveau fichier audio y est copié (copie vérifiée), puis l'original part dans la corbeille. Il faut une Inbox.
+
+**Couper les silences.** Dans **Remaster › Coupe et fondus**, **Couper les silences** règle le début et la fin d'après l'analyse de structure.
 
 ## Remaster
 

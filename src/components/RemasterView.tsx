@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { FileDown, Info, Play, RotateCcw, Save, Scissors, Square, Trash2, WandSparkles } from "lucide-react";
 import { getSettings, isCoreError, setSetting } from "../core/api";
 import { SpectrumPanel } from "./SpectrumPanel";
+import { structureGet } from "../core/prep";
 import { libraryRows, type TrackRow } from "../core/library";
 import { playerCommand } from "../core/player";
 import {
@@ -404,6 +405,21 @@ export function RemasterView({ selection, playingId, onToast, onOpenTrack }: Pro
           <p className="muted small tabular">
             {t("remaster.kept", { from: clock(s.startS, i18n.language), to: s.endS > 0 ? clock(s.endS, i18n.language) : t("remaster.toEnd"), len: clock(keptS, i18n.language) })}
           </p>
+          <div className="folder-actions">
+            <button
+              className="btn btn-small"
+              onClick={async () => {
+                const st = await structureGet(id).catch(() => null);
+                if (!st) return onToast(t("prep.silencesUnknown"));
+                const lead = Math.floor(st.leadSilenceMs / 100) / 10;
+                const tail = st.tailSilenceMs >= 300 ? Math.floor((st.durationMs - st.tailSilenceMs + 200) / 100) / 10 : 0;
+                set({ startS: lead >= 0.2 ? lead : s.startS, endS: tail > 0 ? tail : s.endS });
+                onToast(t("prep.silencesCut", { lead: lead.toLocaleString(i18n.language), tail: (st.tailSilenceMs / 1000).toLocaleString(i18n.language, { maximumFractionDigits: 1 }) }));
+              }}
+            >
+              <Scissors size={14} aria-hidden /> {t("prep.cutSilences")}
+            </button>
+          </div>
           <p className="muted small">{t("remaster.trimHint")}</p>
         </section>
       </div>

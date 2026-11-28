@@ -37,7 +37,16 @@ Uniquement des licences permissives (principe 12 du cahier des charges). La list
 | sha2 | connexion Spotify (défi PKCE) | MIT ou Apache-2.0 |
 | getrandom | connexion Spotify (valeurs aléatoires sûres) | MIT ou Apache-2.0 |
 | ebur128 | mesure du volume perçu (EBU R128) | MIT |
+| ort (chargement dynamique) | appel du moteur ONNX Runtime (séparation des pistes) | MIT ou Apache-2.0 |
+| flate2 | lecture d'un fichier dans le paquet NuGet d'ONNX Runtime | MIT ou Apache-2.0 |
 | tempfile (tests uniquement) | dossiers temporaires | MIT ou Apache-2.0 |
+
+### Téléchargés à la demande (jamais inclus dans l'installateur)
+
+| Composant | Rôle | Licence |
+| --- | --- | --- |
+| ONNX Runtime 1.23.2 (Microsoft, paquet NuGet officiel) | moteur de calcul du modèle de séparation | MIT |
+| Demucs v4 « htdemucs » (Meta), conversion ONNX Runtime | modèle de séparation des pistes | MIT (poids de Meta ; voir D-807) |
 
 ## Interface (JavaScript)
 

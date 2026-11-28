@@ -340,6 +340,23 @@ const MIGRATIONS: &[&str] = &[
         settings   TEXT NOT NULL,
         updated_at INTEGER NOT NULL DEFAULT (unixepoch())
     );",
+    // 13 — Phase 8 : structure des morceaux (grille, sections, repères, silences, profil) et part de voix.
+    "CREATE TABLE structure (
+        track_id        INTEGER PRIMARY KEY REFERENCES tracks(id) ON DELETE CASCADE,
+        size            INTEGER NOT NULL,
+        mtime           INTEGER NOT NULL,
+        data            TEXT NOT NULL,
+        lead_silence_ms INTEGER,
+        tail_silence_ms INTEGER,
+        analyzed_at     INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+    CREATE TABLE vocals (
+        track_id    INTEGER PRIMARY KEY REFERENCES tracks(id) ON DELETE CASCADE,
+        size        INTEGER NOT NULL,
+        mtime       INTEGER NOT NULL,
+        ratio       REAL NOT NULL,
+        analyzed_at INTEGER NOT NULL DEFAULT (unixepoch())
+    );",
 ];
 
 /// Ouvre une connexion supplémentaire (tâches de fond). La base doit déjà exister et être migrée.

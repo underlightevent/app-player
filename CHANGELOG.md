@@ -1,5 +1,14 @@
 # Journal des versions
 
+## 0.9.0 — Phase 8 : préparation avancée, édition et séparation (à valider)
+
+- Structure des morceaux : grille, sections (intro, montée, drop, break, outro), repères, silences ; affichés dans le détail et sur la forme d'onde ; export des repères vers Rekordbox (option).
+- Morceaux similaires ; générateur de set (durée, courbe d'énergie, tempo) ; essai d'un enchaînement calé dans le lecteur.
+- DJ edit : intro / outro allongées sans clic, nouveau WAV.
+- Séparation voix / instrumental / 4 pistes (Demucs, sur l'ordinateur ; modèle téléchargé avec accord) ; détection des voix (étiquettes).
+- Contrôle d'une clé USB avant une soirée ; conversion sans perte FLAC / ALAC / AIFF / WAV vers AIFF ou WAV (16 / 24 bits).
+- Dossier de téléchargements surveillé (vers l'Inbox, copie vérifiée) ; étiquettes personnelles dans le commentaire Rekordbox (option) ; compteur « long silence » dans Santé de la bibliothèque ; « Couper les silences » dans Remaster.
+
 ## 0.8.2 — Remaster : réglages en pleine largeur et comparaison en direct (à valider)
 
 - Chaque réglage du Remaster sur sa ligne, en pleine largeur (curseurs longs et précis, saisie chiffrée gardée) ; fréquences de l'égaliseur au curseur.

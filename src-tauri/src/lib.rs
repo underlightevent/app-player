@@ -26,6 +26,7 @@ mod util;
 mod watch;
 mod djtools;
 mod remaster;
+mod prep;
 #[cfg(test)]
 mod testdata;
 
@@ -972,7 +973,13 @@ async fn rekordbox_export_xml(state: State<'_, AppState>, ids: Option<Vec<i64>>,
             pls.push(rekordbox::ExportPlaylist { ids: playlists::track_ids(&conn, &p)?, name: p.name });
         }
         let ws = library::edit::write_settings(&conn);
-        let (xml, n, skipped) = rekordbox::export_xml(&conn, &lib.mounts(), &ids, &pls, ws.version_in_title, ws.artist_in_title)?;
+        let all = settings::get_all(&conn)?;
+        let extras = rekordbox::XmlExtras {
+            cues: all.get("rb_export_cues").map(|v| v != "off").unwrap_or(false),
+            hot_cues: all.get("rb_export_cues").map(|v| v == "memory_hot").unwrap_or(false),
+            tags_in_comment: all.get("rb_export_tags_comment").map(|v| v == "true").unwrap_or(false),
+        };
+        let (xml, n, skipped) = rekordbox::export_xml(&conn, &lib.mounts(), &ids, &pls, ws.version_in_title, ws.artist_in_title, extras)?;
         write_export(&path, &xml)?;
         Ok((n, skipped))
     })
@@ -1056,17 +1063,17 @@ async fn playlist_track_ids(state: State<'_, AppState>, id: i64) -> Result<Vec<i
 }
 
 #[tauri::command]
-async fn convert_preview(state: State<'_, AppState>, ids: Vec<i64>) -> Result<Vec<convert::ConvertItem>, AppError> {
+async fn convert_preview(state: State<'_, AppState>, ids: Vec<i64>, target: Option<convert::Target>) -> Result<Vec<convert::ConvertItem>, AppError> {
     let lib = state.library()?.clone();
-    blocking(move || convert::plan(&lib, &ids)).await
+    blocking(move || convert::plan(&lib, &ids, &target.unwrap_or_default())).await
 }
 
 #[tauri::command]
-async fn convert_apply(state: State<'_, AppState>, ids: Vec<i64>) -> Result<EditReport, AppError> {
+async fn convert_apply(state: State<'_, AppState>, ids: Vec<i64>, target: Option<convert::Target>) -> Result<EditReport, AppError> {
     let lib = state.library()?.clone();
     blocking(move || {
         let task = lib.tasks.start("tasks.convert", None);
-        let r = convert::convert(&lib, &ids, Some(&task));
+        let r = convert::convert(&lib, &ids, &target.unwrap_or_default(), Some(&task));
         task.finish();
         r
     })
@@ -1811,6 +1818,7 @@ pub fn run() {
                     lib.restart_watcher();
                     lib.spawn_scan(None);
                     lib.start_monitor();
+                    prep::downloads::spawn(lib.clone());
                 });
             }
             let player = audio::player::PlayerHandle::spawn(Some(app.handle().clone()));
@@ -1924,6 +1932,17 @@ pub fn run() {
             remaster_ab,
             remaster_export,
             remaster_batch,
+            prep::commands::structure_run,
+            prep::commands::structure_get,
+            prep::commands::similar_tracks,
+            prep::commands::set_generate,
+            prep::commands::transition_play,
+            prep::commands::djedit_export,
+            prep::commands::usb_check,
+            prep::commands::stems_status,
+            prep::commands::stems_install,
+            prep::commands::stems_separate,
+            prep::commands::vocals_detect,
             tags_list,
             tag_create,
             tag_update,

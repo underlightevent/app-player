@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { ClipboardPaste, Disc3, Globe, ImagePlus, Info, Lock, LockOpen, Star, Trash2, X } from "lucide-react";
+import { ClipboardPaste, Disc3, Globe, ImagePlus, Info, Lock, LockOpen, Scissors, Sparkles, Star, Trash2, Users, X } from "lucide-react";
+import { structureGet, structureRun, type Structure } from "../core/prep";
+import { SectionsBar } from "./PrepDialogs";
 import { onEvent, type TrackRow } from "../core/library";
 import type { Changes, EditableField } from "../core/edit";
 import { trackCover } from "../core/edit";
@@ -111,6 +113,57 @@ interface Props {
   futureName: string | null;
   /** Recherche manuelle en ligne pour le morceau sélectionné. */
   onManualSearch: () => void;
+  /** Outils de préparation (phase 8) pour le morceau sélectionné. */
+  onPrepTool: (kind: "similar" | "djedit" | "stems") => void;
+}
+
+/** Structure du morceau (phase 8) : tempo, netteté de la grille, sections, silences. */
+function StructureLine({ row }: { row: TrackRow }) {
+  const { t, i18n } = useTranslation();
+  const [st, setSt] = useState<Structure | null | undefined>(undefined);
+  const [tick, setTick] = useState(0);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => onEvent("library:changed", () => setTick((n) => n + 1)), []);
+  useEffect(() => {
+    setSt(undefined);
+    setBusy(false);
+  }, [row.id]);
+  useEffect(() => {
+    let alive = true;
+    void structureGet(row.id)
+      .then((s) => {
+        if (!alive) return;
+        setSt(s);
+        if (s) setBusy(false);
+      })
+      .catch(() => alive && setSt(null));
+    return () => {
+      alive = false;
+    };
+  }, [row.id, tick]);
+  if (st === undefined) return null;
+  const sec = (ms: number) => (ms / 1000).toLocaleString(i18n.language, { maximumFractionDigits: 1 });
+  if (!st)
+    return (
+      <span className="quality-line">
+        <span className="muted">{busy ? t("prep.analyzing") : t("prep.notAnalyzed")}</span>
+        {row.online && (
+          <button className="btn btn-small" disabled={busy} onClick={() => { setBusy(true); void structureRun([row.id]); }}>
+            {t("prep.analyze")}
+          </button>
+        )}
+      </span>
+    );
+  return (
+    <div className="structure-line">
+      <span className="small">
+        {st.bpm.toLocaleString(i18n.language, { maximumFractionDigits: 2 })} BPM · {st.confidence < 0.15 ? <span className="text-warning">{t("prep.gridUncertainShort")}</span> : t("prep.gridOk")}
+        {" · "}
+        {t("prep.silences", { lead: sec(st.leadSilenceMs), tail: sec(st.tailSilenceMs) })}
+      </span>
+      <SectionsBar st={st} />
+    </div>
+  );
 }
 
 /** Valeur commune à toute la sélection, ou MIXED si elles diffèrent. */
@@ -404,6 +457,19 @@ export function DetailPanel(p: Props) {
           <Globe size={16} aria-hidden /> {t("detail.manualSearch")}
         </button>
       )}
+      {single && single.online && (
+        <div className="detail-tools">
+          <button className="btn btn-small" onClick={() => p.onPrepTool("similar")}>
+            <Users size={14} aria-hidden /> {t("prep.similarShort")}
+          </button>
+          <button className="btn btn-small" onClick={() => p.onPrepTool("djedit")}>
+            <Scissors size={14} aria-hidden /> {t("prep.djeditShort")}
+          </button>
+          <button className="btn btn-small" onClick={() => p.onPrepTool("stems")}>
+            <Sparkles size={14} aria-hidden /> {t("prep.stemsShort")}
+          </button>
+        </div>
+      )}
 
       {single && (
         <>
@@ -411,6 +477,7 @@ export function DetailPanel(p: Props) {
           <dl className="fields tabular">
             {info(t("detail.quality"), formatQuality(single, locale))}
             {single.status === "ok" && info(t("quality.title"), <QualityLine row={single} revision={p.revision} />)}
+            {single.status === "ok" && info(t("prep.structure"), <StructureLine row={single} />)}
             {info(t("detail.duration"), formatDuration(single.durationMs))}
             {single.userTags.length > 0 && info(t("columns.userTags"), <TagChips tags={single.userTags} />)}
             {single.lufs != null && info(t("columns.lufs"), `${single.lufs.toLocaleString(locale, { maximumFractionDigits: 1 })} LUFS`)}

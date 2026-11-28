@@ -1,7 +1,12 @@
-//! Conversion WAV → AIFF (option de la phase 4, lancée uniquement à la demande).
+//! Conversion sans perte, lancée uniquement à la demande : WAV → AIFF (phase 4), étendue en
+//! phase 8 à FLAC, ALAC, AIFF et WAV vers AIFF ou WAV, en gardant la profondeur ou en 16 /
+//! 24 bits.
 //!
-//! Seule exception au principe « l'audio n'est jamais modifié » : le conteneur change,
-//! les échantillons restent identiques au bit près (simple changement d'ordre des octets).
+//! Exception au principe « l'audio n'est jamais modifié » : le conteneur change,
+//! les échantillons restent identiques au bit près (WAV → AIFF : simple changement d'ordre des
+//! octets ; autres sources : décodage puis réécriture en entiers, exacte jusqu'à 24 bits).
+//! Seul un passage à une profondeur plus faible (24 → 16 bits), choisi par l'utilisateur,
+//! arrondit les échantillons ; la vérification tolère alors un pas de quantification.
 //! Garanties :
 //! - l'AIFF est écrit dans un fichier temporaire, puis l'audio décodé des deux fichiers
 //!   est comparé échantillon par échantillon ; au moindre écart, rien n'est gardé ;
@@ -26,13 +31,27 @@ use crate::tags::chunks::{read_chunk, read_layout, Container};
 use crate::tags::write::Changes;
 use crate::tasks::TaskHandle;
 
+/// Format voulu : « aiff » ou « wav » ; `bits` : 16 ou 24, ou `None` pour garder la profondeur.
+#[derive(Debug, Clone, serde::Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct Target {
+    pub format: String,
+    pub bits: Option<u16>,
+}
+
+impl Default for Target {
+    fn default() -> Self {
+        Target { format: "aiff".into(), bits: None }
+    }
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ConvertItem {
     pub track_id: i64,
     pub file_name: String,
     pub target_name: String,
-    /// ok, not_wav, unsupported, exists, offline
+    /// ok, lossy, same, unsupported, exists, offline
     pub status: String,
     pub detail: Option<String>,
     pub in_rekordbox: bool,
@@ -197,26 +216,146 @@ pub fn same_decoded_audio(a: &Path, b: &Path) -> Result<u64, String> {
     Ok(compared)
 }
 
-fn target_rel(rel: &str) -> String {
-    match rel.rsplit_once('.') {
-        Some((stem, _)) => format!("{stem}.aiff"),
-        None => format!("{rel}.aiff"),
+fn target_rel(rel: &str, ext: &str, suffix: Option<String>) -> String {
+    let stem = rel.rsplit_once('.').map(|(s, _)| s).unwrap_or(rel);
+    match suffix {
+        Some(x) => format!("{stem} ({x}).{ext}"),
+        None => format!("{stem}.{ext}"),
     }
 }
 
+/// Sources sans perte acceptées (format de la base et codec pour le M4A).
+fn lossless(format: &str, codec: Option<&str>) -> bool {
+    match format {
+        "wav" | "aiff" | "aif" | "flac" => true,
+        "m4a" | "mp4" => codec.map(|c| c.to_lowercase().contains("alac")).unwrap_or(false),
+        _ => false,
+    }
+}
+
+/// Écrit l'audio décodé de `src` en PCM entier (`bits` : 16 ou 24) dans un AIFF ou un WAV
+/// sans tags (ils sont écrits ensuite). Renvoie le nombre de trames.
+fn write_decoded(src: &Path, dst: &Path, aiff: bool, bits: u16) -> Result<u64, String> {
+    let mut dec = crate::audio::decode::Decoder::open(src)?;
+    let (ch, rate) = (dec.channels.max(1), dec.sample_rate);
+    let bytes = (bits / 8) as usize;
+    let mut out = BufWriter::new(File::create(dst).map_err(|e| e.to_string())?);
+    let io = |e: std::io::Error| e.to_string();
+    // En-tête provisoire (tailles corrigées à la fin).
+    let header_len: u64 = if aiff { 12 + 26 + 16 } else { 44 };
+    out.write_all(&vec![0u8; header_len as usize]).map_err(io)?;
+    let scale = (1i64 << (bits - 1)) as f64;
+    let (max, min) = (scale - 1.0, -scale);
+    let (mut frames, mut buf, mut bytes_out) = (0u64, Vec::new(), Vec::new());
+    while dec.next_block(&mut buf)? {
+        bytes_out.clear();
+        for x in &buf {
+            let v = (*x as f64 * scale).round().clamp(min, max) as i32;
+            let le = v.to_le_bytes();
+            if aiff {
+                for k in (0..bytes).rev() {
+                    bytes_out.push(le[k]);
+                }
+            } else {
+                bytes_out.extend_from_slice(&le[..bytes]);
+            }
+        }
+        out.write_all(&bytes_out).map_err(io)?;
+        frames += (buf.len() / ch as usize) as u64;
+    }
+    let data_len = frames * ch as u64 * bytes as u64;
+    if data_len + header_len > u32::MAX as u64 {
+        return Err("fichier trop gros (4 Go)".into());
+    }
+    if data_len & 1 == 1 {
+        out.write_all(&[0]).map_err(io)?;
+    }
+    let mut h: Vec<u8> = Vec::new();
+    if aiff {
+        let form_len = 4 + (8 + 18) + (8 + 8 + data_len) + (data_len & 1);
+        h.extend(b"FORM");
+        h.extend((form_len as u32).to_be_bytes());
+        h.extend(b"AIFFCOMM");
+        h.extend(18u32.to_be_bytes());
+        h.extend(ch.to_be_bytes());
+        h.extend((frames as u32).to_be_bytes());
+        h.extend(bits.to_be_bytes());
+        h.extend(extended(rate));
+        h.extend(b"SSND");
+        h.extend(((8 + data_len) as u32).to_be_bytes());
+        h.extend([0u8; 8]);
+    } else {
+        let block = ch as u32 * bytes as u32;
+        h.extend(b"RIFF");
+        h.extend(((36 + data_len + (data_len & 1)) as u32).to_le_bytes());
+        h.extend(b"WAVEfmt ");
+        h.extend(16u32.to_le_bytes());
+        h.extend(1u16.to_le_bytes());
+        h.extend(ch.to_le_bytes());
+        h.extend(rate.to_le_bytes());
+        h.extend((rate * block).to_le_bytes());
+        h.extend((block as u16).to_le_bytes());
+        h.extend(bits.to_le_bytes());
+        h.extend(b"data");
+        h.extend((data_len as u32).to_le_bytes());
+    }
+    let mut file = out.into_inner().map_err(|e| e.to_string())?;
+    file.seek(SeekFrom::Start(0)).map_err(io)?;
+    file.write_all(&h).map_err(io)?;
+    file.sync_all().map_err(io)?;
+    Ok(frames)
+}
+
+/// Compare l'audio décodé à un pas de quantification près (passage à une profondeur plus faible).
+fn close_decoded_audio(a: &Path, b: &Path, bits: u16) -> Result<u64, String> {
+    let mut da = crate::audio::decode::Decoder::open(a)?;
+    let mut db = crate::audio::decode::Decoder::open(b)?;
+    if da.channels != db.channels || da.sample_rate != db.sample_rate {
+        return Err("format différent".into());
+    }
+    let tol = 1.01 / (1i64 << (bits - 1)) as f32;
+    let (mut ba, mut bb) = (Vec::new(), Vec::new());
+    let (mut qa, mut qb): (std::collections::VecDeque<f32>, std::collections::VecDeque<f32>) = Default::default();
+    let mut n = 0u64;
+    loop {
+        let ea = !da.next_block(&mut ba)?;
+        qa.extend(ba.iter());
+        let eb = !db.next_block(&mut bb)?;
+        qb.extend(bb.iter());
+        while let (Some(x), Some(y)) = (qa.front(), qb.front()) {
+            if (x.clamp(-1.0, 1.0) - y).abs() > tol {
+                return Err(format!("échantillon {n} différent"));
+            }
+            qa.pop_front();
+            qb.pop_front();
+            n += 1;
+        }
+        if ea && eb {
+            break;
+        }
+    }
+    if !qa.is_empty() || !qb.is_empty() {
+        return Err("longueurs différentes".into());
+    }
+    Ok(n)
+}
+
 /// Aperçu : ce qui sera converti, et pourquoi certains fichiers ne le seront pas.
-pub fn plan(lib: &Library, ids: &[i64]) -> Result<Vec<ConvertItem>, AppError> {
+pub fn plan(lib: &Library, ids: &[i64], target: &Target) -> Result<Vec<ConvertItem>, AppError> {
     let conn = crate::db::open_worker(lib.db_path())?;
     let mounts = lib.mounts();
     let mut out = Vec::new();
     for &id in ids {
-        let row: Option<(i64, String, String, String)> = conn
-            .query_row("SELECT volume_id, rel_path, file_name, format FROM tracks WHERE id = ?1 AND status = 'ok'", [id], |r| {
-                Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))
+        let row: Option<(i64, String, String, String, Option<String>, Option<i64>)> = conn
+            .query_row("SELECT volume_id, rel_path, file_name, format, codec, bit_depth FROM tracks WHERE id = ?1 AND status = 'ok'", [id], |r| {
+                Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?))
             })
             .optional()?;
-        let Some((vol, rel, name, format)) = row else { continue };
-        let target = target_rel(&rel);
+        let Some((vol, rel, name, format, codec, depth)) = row else { continue };
+        let format = if format == "aif" { "aiff".to_string() } else { format };
+        let same_format = format == target.format;
+        let depth_change = target.bits.is_some() && target.bits != depth.map(|d| d as u16);
+        let target = target_rel(&rel, &target.format, (same_format && depth_change).then(|| format!("{} bits", target.bits.unwrap_or(24))));
         let mut it = ConvertItem {
             track_id: id,
             file_name: name,
@@ -225,14 +364,13 @@ pub fn plan(lib: &Library, ids: &[i64]) -> Result<Vec<ConvertItem>, AppError> {
             detail: None,
             in_rekordbox: crate::rekordbox::in_rekordbox(&conn, id),
         };
-        if format != "wav" {
-            it.status = "not_wav".into();
+        if !lossless(&format, codec.as_deref()) {
+            it.status = "lossy".into();
+        } else if same_format && !depth_change {
+            it.status = "same".into();
         } else if let Some(m) = mounts.get(&vol) {
             if volumes::join_rel(m, &target).exists() {
                 it.status = "exists".into();
-            } else if let Err(e) = wav_pcm(&volumes::join_rel(m, &rel)) {
-                it.status = "unsupported".into();
-                it.detail = Some(e);
             }
         } else {
             it.status = "offline".into();
@@ -246,11 +384,11 @@ fn fail(id: i64, name: &str, code: &str, msg: impl Into<String>) -> EditFailure 
     EditFailure { track_id: id, file_name: name.into(), code: code.into(), message: msg.into() }
 }
 
-/// Convertit les WAV demandés (l'aperçu est refait ici, jamais repris tel quel).
-pub fn convert(lib: &std::sync::Arc<Library>, ids: &[i64], task: Option<&TaskHandle>) -> Result<EditReport, AppError> {
-    let items = plan(lib, ids)?;
+/// Convertit les morceaux demandés (l'aperçu est refait ici, jamais repris tel quel).
+pub fn convert(lib: &std::sync::Arc<Library>, ids: &[i64], target: &Target, task: Option<&TaskHandle>) -> Result<EditReport, AppError> {
+    let items = plan(lib, ids, target)?;
     let conn = crate::db::open_worker(lib.db_path())?;
-    let batch = history::begin_batch(&conn, "history.wavToAiff", None)?;
+    let batch = history::begin_batch(&conn, "history.convert", None)?;
     let mut report = EditReport { batch_id: Some(batch), ..Default::default() };
     if let Some(t) = task {
         t.set_total(items.len() as u64);
@@ -265,7 +403,7 @@ pub fn convert(lib: &std::sync::Arc<Library>, ids: &[i64], task: Option<&TaskHan
             report.failures.push(fail(it.track_id, &it.file_name, &format!("convert_{}", it.status), it.detail.clone().unwrap_or_default()));
             continue;
         }
-        match convert_one(lib, &conn, it.track_id, batch, &exceptions, &ws) {
+        match convert_one(lib, &conn, it.track_id, &it.target_name, target, batch, &exceptions, &ws) {
             Ok(()) => report.ok += 1,
             Err(f) => report.failures.push(f),
         }
@@ -281,10 +419,13 @@ pub fn convert(lib: &std::sync::Arc<Library>, ids: &[i64], task: Option<&TaskHan
     Ok(report)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn convert_one(
     lib: &Library,
     conn: &rusqlite::Connection,
     id: i64,
+    target_name: &str,
+    target: &Target,
     batch: i64,
     exceptions: &[String],
     ws: &crate::tags::write::WriteSettings,
@@ -294,23 +435,40 @@ fn convert_one(
         .map_err(|e| fail(id, "", "internal", e.to_string()))?;
     let mount = lib.mounts().get(&vol).cloned().ok_or_else(|| fail(id, &name, "offline", "disque déconnecté"))?;
     let src = volumes::join_rel(&mount, &rel);
-    let aiff_rel = target_rel(&rel);
+    let aiff_rel = match rel.rsplit_once('/') {
+        Some((dir, _)) => format!("{dir}/{target_name}"),
+        None => target_name.to_string(),
+    };
     let dst = volumes::join_rel(&mount, &aiff_rel);
     if dst.exists() {
-        return Err(fail(id, &name, "exists", "un AIFF du même nom existe déjà"));
+        return Err(fail(id, &name, "exists", "un fichier du même nom existe déjà"));
     }
-    let tmp: PathBuf = dst.with_file_name(format!(".djlm-conv-{id}.aiff"));
+    let aiff = target.format == "aiff";
+    let tmp: PathBuf = dst.with_file_name(format!(".djlm-conv-{id}.{}", if aiff { "aiff" } else { "wav" }));
     let cleanup = |e: String, code: &str| {
         let _ = std::fs::remove_file(&tmp);
         fail(id, &name, code, e)
     };
-    let pcm = wav_pcm(&src).map_err(|e| fail(id, &name, "convert_unsupported", e))?;
-    let id3 = {
-        let mut f = BufReader::new(File::open(&src).map_err(|e| fail(id, &name, "io", e.to_string()))?);
-        let layout = read_layout(&mut f).map_err(|e| fail(id, &name, "io", e.to_string()))?;
-        crate::tags::chunks::read_id3_chunk(&layout, &mut f).map_err(|e| fail(id, &name, "io", e.to_string()))?
-    };
-    write_aiff(&src, &pcm, id3.as_deref(), &tmp).map_err(|e| cleanup(e, "io"))?;
+    // WAV entier → AIFF de même profondeur : copie octet par octet (le plus sûr) ; sinon
+    // décodage puis réécriture.
+    let fast = if aiff && target.bits.is_none() && src.extension().map(|e| e.eq_ignore_ascii_case("wav")).unwrap_or(false) { wav_pcm(&src).ok() } else { None };
+    let src_bits = crate::tags::read::read_file(&src, exceptions).ok().and_then(|i| i.bit_depth).map(|b| b as u16);
+    let out_bits = target.bits.unwrap_or(match src_bits {
+        Some(b) if b <= 16 => 16,
+        _ => 24,
+    });
+    // Profondeur réduite (ou source flottante / 32 bits) : arrondi, vérifié à un pas près.
+    let rounding = src_bits.map(|b| b > out_bits).unwrap_or(true);
+    if let Some(pcm) = &fast {
+        let id3 = {
+            let mut f = BufReader::new(File::open(&src).map_err(|e| fail(id, &name, "io", e.to_string()))?);
+            let layout = read_layout(&mut f).map_err(|e| fail(id, &name, "io", e.to_string()))?;
+            crate::tags::chunks::read_id3_chunk(&layout, &mut f).map_err(|e| fail(id, &name, "io", e.to_string()))?
+        };
+        write_aiff(&src, pcm, id3.as_deref(), &tmp).map_err(|e| cleanup(e, "io"))?;
+    } else {
+        write_decoded(&src, &tmp, aiff, out_bits).map_err(|e| cleanup(e, "io"))?;
+    }
     // Tags complets (RIFF INFO compris) et pochette : réécrits proprement dans l'AIFF.
     let wav_info = crate::tags::read::read_file(&src, exceptions).map_err(|e| cleanup(e.to_string(), "unreadable"))?;
     let aiff_now = crate::tags::read::read_file(&tmp, exceptions).map_err(|e| cleanup(e.to_string(), "verify"))?;
@@ -333,10 +491,15 @@ fn convert_one(
         }
     }
     crate::tags::write::write_tags(&tmp, &aiff_now.tags, &changes, ws, exceptions).map_err(|e| cleanup(e.to_string(), e.code()))?;
-    // Vérification : audio décodé identique, échantillon par échantillon.
-    same_decoded_audio(&src, &tmp).map_err(|e| cleanup(format!("vérification de l'audio : {e}"), "verify"))?;
+    // Vérification : audio décodé identique, échantillon par échantillon (à un pas de
+    // quantification près si l'utilisateur a choisi une profondeur plus faible).
+    if fast.is_none() && rounding {
+        close_decoded_audio(&src, &tmp, out_bits).map_err(|e| cleanup(format!("vérification de l'audio : {e}"), "verify"))?;
+    } else {
+        same_decoded_audio(&src, &tmp).map_err(|e| cleanup(format!("vérification de l'audio : {e}"), "verify"))?;
+    }
     std::fs::rename(&tmp, &dst).map_err(|e| cleanup(e.to_string(), "io"))?;
-    log::info!("Converti en AIFF : {} → {}", src.display(), dst.display());
+    log::info!("Converti : {} → {}", src.display(), dst.display());
 
     let res = (|| -> Result<(), AppError> {
         let meta = std::fs::metadata(&dst)?;
@@ -350,7 +513,7 @@ fn convert_one(
         )?;
         conn.execute("UPDATE OR IGNORE playlist_tracks SET track_id = ?2 WHERE track_id = ?1", params![id, new_id])?;
         // Le WAV d'origine part en quarantaine (restaurable)…
-        let q = lib.quarantine_in(conn, &[id], "wav_to_aiff", batch)?;
+        let q = lib.quarantine_in(conn, &[id], "convert", batch)?;
         if q.ok == 0 {
             return Err(AppError::InvalidSetting(q.failures.first().map(|f| f.message.clone()).unwrap_or_default()));
         }
@@ -360,7 +523,7 @@ fn convert_one(
             Some(r) => format!("{r}/{}/{}-aiff/{}", index::QUARANTINE_DIR, crate::db::today(), &aiff_rel[r.len() + 1..]),
             None => format!("{}/{}-aiff/{aiff_rel}", index::QUARANTINE_DIR, crate::db::today()),
         };
-        let before = QuarantineState { volume_id: vol, rel_path: qrel, quarantined: true, reason: Some("wav_to_aiff".into()) };
+        let before = QuarantineState { volume_id: vol, rel_path: qrel, quarantined: true, reason: Some("convert".into()) };
         let after = QuarantineState { volume_id: vol, rel_path: aiff_rel.clone(), quarantined: false, reason: None };
         history::record(conn, batch, "quarantine", Some(new_id), &serde_json::to_string(&before).unwrap_or_default(), &serde_json::to_string(&after).unwrap_or_default())?;
         Ok(())
@@ -428,9 +591,9 @@ mod tests {
         .unwrap();
         let wav_bytes = std::fs::read(&wav).unwrap();
 
-        let plan = plan(&lib, &[id_a, id_b]).unwrap();
+        let plan = plan(&lib, &[id_a, id_b], &Target::default()).unwrap();
         assert!(plan.iter().all(|p| p.status == "ok"), "{plan:?}");
-        let r = convert(&lib, &[id_a, id_b], None).unwrap();
+        let r = convert(&lib, &[id_a, id_b], &Target::default(), None).unwrap();
         assert_eq!(r.ok, 2, "{:?}", r.failures);
         let aiff = music.join("a.aiff");
         assert!(aiff.exists() && music.join("b24.aiff").exists());
@@ -455,6 +618,42 @@ mod tests {
         assert!(rep.failures.is_empty(), "{:?}", rep.failures);
         assert!(!aiff.exists());
         assert_eq!(std::fs::read(&wav).unwrap(), wav_bytes);
+    }
+
+    #[test]
+    fn flac_vers_aiff_et_wav_identiques_puis_16_bits() {
+        let dir = tempfile::tempdir().unwrap();
+        let music = dir.path().join("musique");
+        std::fs::create_dir_all(&music).unwrap();
+        let s = testdata::samples(30_000, 3);
+        testdata::write(&music, "f.flac", &testdata::flac_from_samples(&s));
+        testdata::write(&music, "g.flac", &testdata::flac_from_samples(&s));
+        testdata::write(&music, "m.mp3", &testdata::mp3_bytes());
+        let (lib, _) = library_on(&dir, &music);
+        let conn = crate::db::open_worker(lib.db_path()).unwrap();
+        let id = |n: &str| -> i64 { conn.query_row("SELECT id FROM tracks WHERE file_name = ?1", [n], |r| r.get(0)).unwrap() };
+        let (f, g, m) = (id("f.flac"), id("g.flac"), id("m.mp3"));
+        let flac_bytes = std::fs::read(music.join("f.flac")).unwrap();
+        // Le MP3 (avec perte) est refusé.
+        let p = plan(&lib, &[f, m], &Target::default()).unwrap();
+        assert_eq!(p.iter().map(|i| i.status.as_str()).collect::<Vec<_>>(), ["ok", "lossy"]);
+        let r = convert(&lib, &[f], &Target::default(), None).unwrap();
+        assert_eq!(r.ok, 1, "{:?}", r.failures);
+        let r2 = convert(&lib, &[g], &Target { format: "wav".into(), bits: Some(24) }, None).unwrap();
+        assert_eq!(r2.ok, 1, "{:?}", r2.failures);
+        let q = lib.quarantine_list().unwrap();
+        let orig = PathBuf::from(q.iter().find(|i| i.file_name == "f.flac").unwrap().path.clone().unwrap());
+        assert_eq!(std::fs::read(&orig).unwrap(), flac_bytes, "le FLAC d'origine est intact");
+        assert!(same_decoded_audio(&orig, &music.join("f.aiff")).unwrap() > 0);
+        let w = crate::tags::read::read_file(&music.join("g.wav"), &[]).unwrap();
+        assert_eq!(w.bit_depth, Some(24));
+        // 24 bits → 16 bits : refusé sans choix, accepté (arrondi vérifié) quand demandé.
+        let g24: i64 = conn.query_row("SELECT id FROM tracks WHERE file_name = 'g.wav'", [], |r| r.get(0)).unwrap();
+        let p = plan(&lib, &[g24], &Target { format: "wav".into(), bits: None }).unwrap();
+        assert_eq!(p[0].status, "same");
+        let r3 = convert(&lib, &[g24], &Target { format: "wav".into(), bits: Some(16) }, None).unwrap();
+        assert_eq!(r3.ok, 1, "{:?}", r3.failures);
+        assert!(music.join("g (16 bits).wav").exists());
     }
 
     #[test]

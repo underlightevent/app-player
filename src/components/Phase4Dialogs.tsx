@@ -2,17 +2,19 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowRight, ListMusic, Plus, TriangleAlert } from "lucide-react";
 import type { EditReport } from "../core/edit";
-import { convertApply, convertPreview, playlistAdd, playlistCreate, playlistsList, type ConvertItem, type Playlist } from "../core/rekordbox";
+import { convertApply, convertPreview, playlistAdd, playlistCreate, playlistsList, type ConvertItem, type ConvertTarget, type Playlist } from "../core/rekordbox";
 import { Modal } from "./Modal";
 
-/** Conversion WAV → AIFF : aperçu, alertes Rekordbox, confirmation. */
+/** Conversion sans perte (AIFF ou WAV, 16 / 24 bits) : aperçu, alertes Rekordbox, confirmation. */
 export function ConvertDialog({ ids, onClose, onDone }: { ids: number[]; onClose: () => void; onDone: (r: EditReport) => void }) {
   const { t } = useTranslation();
   const [items, setItems] = useState<ConvertItem[] | null>(null);
   const [busy, setBusy] = useState(false);
+  const [target, setTarget] = useState<ConvertTarget>({ format: "aiff", bits: null });
   useEffect(() => {
-    void convertPreview(ids).then(setItems).catch(() => setItems([]));
-  }, [ids]);
+    setItems(null);
+    void convertPreview(ids, target).then(setItems).catch(() => setItems([]));
+  }, [ids, target]);
   const ok = items?.filter((i) => i.status === "ok") ?? [];
   const inRb = ok.filter((i) => i.inRekordbox).length;
   return (
@@ -29,7 +31,7 @@ export function ConvertDialog({ ids, onClose, onDone }: { ids: number[]; onClose
             onClick={async () => {
               setBusy(true);
               try {
-                onDone(await convertApply(ok.map((i) => i.trackId)));
+                onDone(await convertApply(ok.map((i) => i.trackId), target));
                 onClose();
               } finally {
                 setBusy(false);
@@ -41,7 +43,25 @@ export function ConvertDialog({ ids, onClose, onDone }: { ids: number[]; onClose
         </>
       }
     >
+      <div className="folder-actions">
+        <label className="chip-select">
+          {t("convert.format")}
+          <select value={target.format} onChange={(e) => setTarget({ ...target, format: e.target.value as ConvertTarget["format"] })}>
+            <option value="aiff">AIFF</option>
+            <option value="wav">WAV</option>
+          </select>
+        </label>
+        <label className="chip-select">
+          {t("convert.depth")}
+          <select value={target.bits ?? ""} onChange={(e) => setTarget({ ...target, bits: e.target.value ? (Number(e.target.value) as 16 | 24) : null })}>
+            <option value="">{t("convert.keepDepth")}</option>
+            <option value="24">24 bits</option>
+            <option value="16">16 bits</option>
+          </select>
+        </label>
+      </div>
       <p className="hint">{t("convert.hint")}</p>
+      {target.bits === 16 && <p className="hint small text-warning">{t("convert.depthWarning")}</p>}
       {inRb > 0 && (
         <p className="rekordbox-alert" role="alert"><TriangleAlert size={16} aria-hidden /> {t("convert.rekordboxAlert", { count: inRb })}</p>
       )}

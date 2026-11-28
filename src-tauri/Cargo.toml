@@ -1,6 +1,6 @@
 [package]
 name = "dj-library-manager"
-version = "0.8.2"
+version = "0.9.0"
 description = "Gestionnaire de bibliothèque audio pour DJ"
 edition = "2021"
 rust-version = "1.80"
@@ -43,6 +43,9 @@ rustfft = "6"
 trash = "5"
 quick-xml = "0.42"
 sha2 = "0.10"
+# Phase 8 : séparation des pistes (ONNX Runtime chargé à la demande, téléchargé avec accord).
+ort = { version = "=2.0.0-rc.11", default-features = false, features = ["load-dynamic"] }
+flate2 = "1"
 getrandom = "0.3"
 ebur128 = "0.1"
 

@@ -19,6 +19,9 @@ pub struct Decoder {
     pub duration_ms: Option<u64>,
     /// Paquets abîmés rencontrés (et sautés) depuis l'ouverture.
     pub decode_errors: u32,
+    time_base: Option<symphonia::core::units::TimeBase>,
+    /// Position exacte voulue après un saut (ms) : les trames avant sont écartées.
+    target_ms: Option<f64>,
 }
 
 impl Decoder {
@@ -43,6 +46,7 @@ impl Decoder {
         let Some(CodecParameters::Audio(params)) = track.codec_params.clone() else {
             return Err("paramètres audio absents".into());
         };
+        let time_base = track.time_base;
         let duration_ms = match (track.num_frames, track.time_base) {
             (Some(n), Some(tb)) => symphonia::core::units::Timestamp::try_from(n)
                 .ok()
@@ -56,7 +60,7 @@ impl Decoder {
             .map_err(|e| e.to_string())?;
         let sample_rate = params.sample_rate.unwrap_or(44_100);
         let channels = params.channels.as_ref().map(|c| c.count() as u16).unwrap_or(2).max(1);
-        Ok(Decoder { format, decoder, track_id, channels, sample_rate, duration_ms, decode_errors: 0 })
+        Ok(Decoder { format, decoder, track_id, channels, sample_rate, duration_ms, decode_errors: 0, time_base, target_ms: None })
     }
 
     /// Bloc suivant d'échantillons entrelacés. `Ok(false)` en fin de fichier.
@@ -74,6 +78,20 @@ impl Decoder {
             match self.decoder.decode(&packet) {
                 Ok(buf) => {
                     buf.copy_to_vec_interleaved(out);
+                    if let (Some(t), Some(tb)) = (self.target_ms, self.time_base) {
+                        let start = tb.calc_time(packet.pts).map(|x| x.as_secs_f64() * 1000.0).unwrap_or(t);
+                        let ch = self.channels.max(1) as usize;
+                        let frames = out.len() / ch;
+                        let drop = ((t - start) * self.sample_rate as f64 / 1000.0).round();
+                        if drop >= frames as f64 {
+                            out.clear();
+                            continue;
+                        }
+                        if drop > 0.0 {
+                            out.drain(..drop as usize * ch);
+                        }
+                        self.target_ms = None;
+                    }
                     if !out.is_empty() {
                         return Ok(true);
                     }
@@ -94,5 +112,36 @@ impl Decoder {
             .map_err(|e| e.to_string())?;
         self.decoder.reset();
         Ok(())
+    }
+
+    /// Saut à la trame près (calage des enchaînements, découpes) : le flux reprend
+    /// exactement à la position voulue (ms), quelle que soit la taille des paquets du format.
+    pub fn seek_exact(&mut self, ms: f64) -> Result<(), String> {
+        self.seek_ms(ms.max(0.0) as u64)?;
+        self.target_ms = Some(ms.max(0.0));
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn saut_exact_a_la_trame() {
+        // Rampe : chaque trame a une valeur unique, on sait où l'on est.
+        let frames = 44_100 * 3;
+        let s: Vec<i16> = (0..frames).flat_map(|i| { let v = (i % 30_000) as i16; [v, v] }).collect();
+        let dir = tempfile::tempdir().unwrap();
+        for (name, bytes) in [("r.flac", crate::testdata::flac_from_samples(&s)), ("r.wav", crate::testdata::wav_from_samples(&s))] {
+            let p = crate::testdata::write(dir.path(), name, &bytes);
+            let mut d = Decoder::open(&p).unwrap();
+            d.seek_exact(1234.5).unwrap();
+            let mut buf = Vec::new();
+            assert!(d.next_block(&mut buf).unwrap());
+            let want = (1234.5f64 * 44.1).round() as i64 % 30_000;
+            let got = (buf[0] * 32768.0).round() as i64;
+            assert!((got - want).abs() <= 1, "{name} : {got} au lieu de {want}");
+        }
     }
 }

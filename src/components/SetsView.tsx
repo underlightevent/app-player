@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { startDrag, useDropTarget } from "../core/dnd";
 import { useTranslation } from "react-i18next";
-import { ArrowDown, ArrowUp, FileDown, GripVertical, ListOrdered, ListPlus, Pencil, Play, Plus, Trash2, Usb, X } from "lucide-react";
+import { ArrowDown, ArrowRightLeft, ArrowUp, FileDown, GripVertical, ListOrdered, ListPlus, Pencil, Play, Plus, Trash2, Usb, WandSparkles, X } from "lucide-react";
+import { transitionPlay } from "../core/prep";
+import { SetGeneratorDialog, prepError } from "./PrepDialogs";
 import { isCoreError } from "../core/api";
 import { onEvent } from "../core/library";
 import { formatDuration, formatKey } from "../core/format";
@@ -20,6 +22,8 @@ import { COMPAT_ICON, setCreate, setMove, setSuggestions, setTracks, type SetTra
 import { UsbCopyDialog } from "./Phase6Dialogs";
 
 interface Props {
+  /** Morceaux affichés dans la bibliothèque (réservoir du générateur de set). */
+  pool: number[];
   selection: number[];
   keyNotation: "camelot" | "musical";
   onPlay: (id: number) => void;
@@ -48,7 +52,7 @@ function DropRow({ id, className, onDropRow, onClick, children }: { id: number; 
 }
 
 /** Écran Sets : listes ordonnées avec compatibilité des enchaînements et suggestions. */
-export function SetsView({ selection, keyNotation, onPlay, onToast }: Props) {
+export function SetsView({ pool, selection, keyNotation, onPlay, onToast }: Props) {
   const { t, i18n } = useTranslation();
   const [sets, setSets] = useState<Playlist[] | null>(null);
   const [current, setCurrent] = useState<number | null>(null);
@@ -58,6 +62,17 @@ export function SetsView({ selection, keyNotation, onPlay, onToast }: Props) {
   const [range, setRange] = useState(6);
   const [newName, setNewName] = useState("");
   const [usb, setUsb] = useState(false);
+  const [generator, setGenerator] = useState(false);
+  const [bars, setBars] = useState(16);
+  /** Essai de l'enchaînement du morceau précédent vers celui-ci. */
+  const tryMix = async (a: number, b: number) => {
+    try {
+      await transitionPlay(a, b, bars);
+      onToast(t("prep.transitionStarted"));
+    } catch (e) {
+      onToast(prepError(t, e), undefined, "error");
+    }
+  };
 
   const errText = (e: unknown) => (isCoreError(e) ? t(`errors.${e.code}`, { defaultValue: e.detail }) : t("errors.internal"));
 
@@ -167,6 +182,9 @@ export function SetsView({ selection, keyNotation, onPlay, onToast }: Props) {
               <Plus size={14} aria-hidden /> {t("sets.create")}
             </button>
           </form>
+          <button className="btn btn-small sets-generate" onClick={() => setGenerator(true)}>
+            <WandSparkles size={14} aria-hidden /> {t("prep.genAction")}
+          </button>
           {sets?.length === 0 && <p className="muted small">{t("sets.none")}</p>}
           <ul className="playlist-list">
             {sets?.map((p) => (
@@ -216,6 +234,13 @@ export function SetsView({ selection, keyNotation, onPlay, onToast }: Props) {
                 <button className="btn btn-small" disabled={selection.length === 0} onClick={() => void add(selection)}>
                   <ListPlus size={14} aria-hidden /> {t("sets.addSelection", { count: selection.length })}
                 </button>
+                <label className="chip-select" title={t("prep.mixLengthHint")}>
+                  <ArrowRightLeft size={14} aria-hidden /> {t("prep.mixLength")}
+                  <select value={bars} onChange={(e) => setBars(Number(e.target.value))}>
+                    <option value={16}>{t("prep.bars", { count: 16 })}</option>
+                    <option value={32}>{t("prep.bars", { count: 32 })}</option>
+                  </select>
+                </label>
                 <span className="spacer" />
                 <button className="btn btn-small" disabled={!tracks.length} onClick={() => void exportM3uSet()}>
                   <FileDown size={14} aria-hidden /> M3U8
@@ -277,7 +302,10 @@ export function SetsView({ selection, keyNotation, onPlay, onToast }: Props) {
                         <td className="small">
                           {i > 0 && (
                             <>
-                              {compat(x.keyCompat)} <span className={x.bpmDiff != null && Math.abs(x.bpmDiff) > 6 ? "text-warning" : "muted"}>{diffText(x.bpmDiff)}</span>
+                              {compat(x.keyCompat)} <span className={x.bpmDiff != null && Math.abs(x.bpmDiff) > 6 ? "text-warning" : "muted"}>{diffText(x.bpmDiff)}</span>{" "}
+                              <button className="icon-btn" title={t("prep.tryTransitionFrom", { name: tracks[i - 1].title ?? "" })} aria-label={t("prep.tryTransition")} onClick={(e) => { e.stopPropagation(); void tryMix(tracks[i - 1].id, x.id); }}>
+                                <ArrowRightLeft size={14} aria-hidden />
+                              </button>
                             </>
                           )}
                         </td>
@@ -352,6 +380,17 @@ export function SetsView({ selection, keyNotation, onPlay, onToast }: Props) {
           )}
         </section>
       </div>
+      {generator && (
+        <SetGeneratorDialog
+          pool={pool}
+          start={selection[0] ?? null}
+          onClose={() => setGenerator(false)}
+          onToast={onToast}
+          onDone={(id) => {
+            void loadSets().then(() => setCurrent(id));
+          }}
+        />
+      )}
       {usb && set && <UsbCopyDialog ids={tracks.map((x) => x.id)} defaultName={set.name} onClose={() => setUsb(false)} onToast={onToast} />}
     </div>
   );

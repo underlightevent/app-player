@@ -620,6 +620,38 @@ Critères de validation :
 - [ ] Une coupe de 12,3 s à 3:00,0 donne un fichier de 2:47,7 exactement ; les fondus partent et finissent au silence.
 - [ ] Un préréglage enregistré réapparaît après redémarrage et redonne exactement les mêmes réglages.
 
+### Phase 8 — Préparation avancée, édition et séparation
+
+Demandée par l'utilisateur le 28/11/2026 (« tous ces éléments dans une grosse mise à jour »). Elle lève deux points jusque-là hors périmètre : **repères (cue points) et grille de temps**, et **pré-écoute d'un enchaînement**. Mêmes principes : l'original n'est jamais modifié ; tout ce qui crée du son (DJ edit, conversion, séparation) écrit un **nouveau fichier** à côté de l'original, ajouté à la bibliothèque et annulable (quarantaine) ; tâches longues en fond, annulables ; aperçu avant les actions en lot.
+
+1. **Structure du morceau et repères** : analyse sur l'ordinateur de la grille (tempo du tag ou analysé, premier temps fort, mesures), des **sections** (intro, couplet / montée, break, drop, outro, par blocs de 8 / 16 / 32 mesures selon l'énergie), et de **repères** proposés (début du mix, début du premier drop, break, début de l'outro). Affichés sur la forme d'onde (lecteur et détail). Export vers Rekordbox dans le XML (repères mémoire, et en option repères directs « hot cues » A, B, C… ; grille de tempo) : jamais écrits dans les fichiers. Les repères existants de Rekordbox restent la référence (l'aide explique l'import).
+2. **Silences** : silence au début et à la fin de chaque morceau mesuré pendant l'analyse ; compteur dans Santé de la bibliothèque ; le Remaster propose de les couper (bouton « Couper les silences »).
+3. **Morceaux similaires** : depuis un morceau, liste des plus proches (tempo, tonalité compatible, énergie, genre, « couleur » du son mesurée par l'analyse), écoute et ajout à la sélection / à un set.
+4. **Générateur de set** : durée voulue, courbe d'énergie (montée, plateau, vague, descente), plage de tempo, source (bibliothèque, playlist, filtre, étiquette) ; propose un ordre de morceaux compatibles (tonalité, tempo) ; résultat enregistré comme nouveau set, modifiable.
+5. **Essai d'un enchaînement** : dans un set (ou entre deux morceaux sélectionnés), le lecteur joue la fin du morceau A puis mélange le début du morceau B sur 16 ou 32 mesures, tempo de B calé sur A (comme un lecteur sans « master tempo » : la hauteur suit, écart limité à ±8 %), calé sur les grilles. Écoute seulement, rien n'est enregistré.
+6. **DJ edit** : allonger l'intro et / ou l'outro en répétant N mesures (calées sur la grille, raccords sans clic), aperçu, export WAV 24 bits « … (DJ Edit).wav » (tags et pochette recopiés, version complétée).
+7. **Séparation voix / instrumental** : modèle libre Demucs v4 (Meta, licence MIT, version convertie pour ONNX Runtime), exécuté sur l'ordinateur ; moteur ONNX Runtime (Microsoft, MIT) et modèle (~230 Mo au total) **téléchargés à la première utilisation, avec accord**, empreinte vérifiée. Résultats au choix : « (Instrumental) », « (Acapella) », ou les 4 pistes (batterie, basse, voix, autres). Lent sur un ordinateur sans carte graphique : tâche de fond avec progression.
+8. **Détection des voix** : sur demande (sélection), le modèle de séparation mesure la part de voix sur des extraits ; étiquette automatique « Avec voix » / « Instrumental » (étiquettes personnelles, retirables).
+9. **Contrôle d'une clé USB avant une soirée** : sur un dossier ou une clé, vérifie la lecture de chaque fichier, la compatibilité avec le matériel choisi (anciens CDJ : pas de FLAC / AIFF / ALAC ; WAV 32 bits flottant, fréquence > 48 kHz, fichiers > 4 Go en FAT32 refusés), le système de fichiers de la clé (FAT32 / exFAT / NTFS / HFS+), la longueur des chemins, les pochettes très lourdes ; rapport clair, rien n'est modifié.
+10. **Conversion de formats sans perte** : FLAC, ALAC, WAV, AIFF vers AIFF ou WAV (16 ou 24 bits, même fréquence), généralisation de la conversion WAV → AIFF (vérification que l'audio décodé est identique quand la profondeur est gardée, original en quarantaine jusqu'à validation). Pas de MP3 (encodeurs sous licence non permissive).
+11. **Dossier de téléchargements surveillé** : règle créée par l'utilisateur (désactivée par défaut) : les nouveaux fichiers audio complets d'un dossier choisi (Téléchargements, Beatport, Bandcamp…) sont déplacés automatiquement vers l'Inbox (copie vérifiée), où la chaîne habituelle les traite.
+12. **Étiquettes personnelles pour Rekordbox** : en option, écrites dans le champ « Commentaire » à l'export XML (« #mariage #cocktail »), sans toucher aux fichiers.
+
+**Réalisé en version 0.9.0** (voir DECISIONS D-801 à D-810).
+
+Restent en attente d'une action de l'utilisateur (comptes ou clés à créer) : installation automatique des mises à jour (clé de signature, docs/SIGNATURE.md) et compte Tidal.
+
+Critères de validation :
+- [ ] Les repères proposés tombent sur les temps forts ; importés dans Rekordbox via le XML, ils apparaissent aux bons endroits.
+- [ ] « Similaires » propose des morceaux cohérents (tempo et tonalité compatibles).
+- [ ] Un set généré de 1 h respecte la durée, la courbe d'énergie et les compatibilités.
+- [ ] L'essai d'un enchaînement est calé (pas de « galop » des grosses caisses) sur des morceaux bien analysés.
+- [ ] Un DJ edit d'intro +16 mesures ne contient aucun clic aux raccords.
+- [ ] La séparation produit un instrumental et un acapella écoutables ; l'original est identique octet pour octet.
+- [ ] Le contrôle d'une clé signale un FLAC pour un ancien CDJ et un WAV 32 bits flottant.
+- [ ] Une conversion FLAC → AIFF 24 bits garde l'audio identique.
+- [ ] Un fichier déposé dans le dossier surveillé arrive dans l'Inbox, sans perte.
+
 ## Tests, qualité et documentation
 
 **Tests automatiques**, lancés par la CI à chaque modification :
@@ -652,9 +684,9 @@ Critères de validation :
 
 **Hors périmètre.** Ne pas développer sans demande explicite :
 
-- grilles de temps et cue points (Rekordbox s'en charge) ; l'analyse du BPM et de la tonalité est ajoutée en phase 6, seulement pour les morceaux qui n'en ont pas ;
+- ~~grilles de temps et cue points~~ : ajoutés en phase 8 à la demande de l'utilisateur (proposés, exportés dans le XML ; Rekordbox reste la référence) ;
 - lecture ou écriture de la base interne de Rekordbox ;
-- mixage, effets, pré-écoute sur une sortie casque séparée ;
+- mixage en direct, effets, pré-écoute sur une sortie casque séparée (la phase 8 ajoute seulement l'essai d'un enchaînement, en écoute) ;
 - streaming (Beatport, Tidal…) et téléchargement de musique (la phase 5 donne seulement des liens vers les boutiques et ajoute des titres aux playlists d'un compte lié) ;
 - synchronisation avec Serato, Traktor ou Engine DJ (envisageable plus tard) ;
 - version mobile.

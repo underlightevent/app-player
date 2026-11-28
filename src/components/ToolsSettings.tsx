@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Activity, CalendarX, FolderOpen, HardDriveDownload, History, Trash2, Waves } from "lucide-react";
+import { Activity, CalendarX, Download, FolderOpen, HardDriveDownload, History, ListMusic, Sparkles, Trash2, Usb, Waves } from "lucide-react";
+import { structureRun } from "../core/prep";
+import { StemsDialog, UsbCheckDialog } from "./PrepDialogs";
 import { inTauri, isCoreError } from "../core/api";
 import { formatSize } from "../core/format";
 import { pickFolder } from "../core/library";
@@ -27,6 +29,8 @@ export function ToolsSettings({ values, onSettingChange, onToast }: Props) {
   const [report, setReport] = useState<CopyReport | null>(null);
   const [review, setReview] = useState(false);
   const [dates, setDates] = useState(false);
+  const [stems, setStems] = useState(false);
+  const [usbCheck, setUsbCheck] = useState(false);
   const errText = (e: unknown) => (isCoreError(e) ? t(`errors.${e.code}`, { defaultValue: e.detail }) : t("errors.internal"));
 
   const importHistory = async () => {
@@ -141,6 +145,62 @@ export function ToolsSettings({ values, onSettingChange, onToast }: Props) {
         <button className="btn btn-small" onClick={() => setDates(true)}>{t("dates.check")}</button>
       </div>
 
+      <h2>{t("prep.settingsTitle")}</h2>
+      <p className="hint">{t("prep.settingsHint")}</p>
+
+      <h3 className="form-label"><ListMusic size={14} aria-hidden /> {t("prep.structure")}</h3>
+      <p className="hint">{t("prep.structureHint")}</p>
+      <div className="folder-actions">
+        <button className="btn btn-small" onClick={async () => onToast((await structureRun(null)) ? t("prep.structureStartedAll") : t("prep.structureBusy"))}>
+          {t("prep.analyzeAll")}
+        </button>
+      </div>
+      <div className="folder-actions">
+        <label className="chip-select">
+          {t("prep.rbCues")}
+          <select value={values.rb_export_cues || "off"} onChange={(e) => onSettingChange("rb_export_cues", e.target.value)}>
+            {["off", "memory", "memory_hot"].map((v) => <option key={v} value={v}>{t(`prep.rbCuesOptions.${v}`)}</option>)}
+          </select>
+        </label>
+        <label className="checks">
+          <span>
+            <input type="checkbox" checked={values.rb_export_tags_comment === "true"} onChange={(e) => onSettingChange("rb_export_tags_comment", e.target.checked ? "true" : "false")} /> {t("prep.rbTagsComment")}
+          </span>
+        </label>
+      </div>
+      <p className="hint small">{t("prep.rbCuesHint")}</p>
+
+      <h3 className="form-label"><Download size={14} aria-hidden /> {t("prep.downloadsTitle")}</h3>
+      <p className="hint">{t("prep.downloadsHint")}</p>
+      <div className="folder-actions">
+        <button className="btn btn-small" onClick={async () => {
+          const p = await pickFolder(t("prep.downloadsPick"));
+          if (p) onSettingChange("downloads_dir", p);
+        }}>
+          <FolderOpen size={14} aria-hidden /> {t("prep.downloadsPick")}
+        </button>
+        <span className="muted small">{values.downloads_dir || t("prep.downloadsNone")}</span>
+      </div>
+      <label className="checks">
+        <span>
+          <input type="checkbox" disabled={!values.downloads_dir} checked={values.downloads_watch === "true"} onChange={(e) => onSettingChange("downloads_watch", e.target.checked ? "true" : "false")} /> {t("prep.downloadsOn")}
+        </span>
+      </label>
+
+      <h3 className="form-label"><Sparkles size={14} aria-hidden /> {t("prep.stemsSetup")}</h3>
+      <p className="hint">{t("prep.stemsSettingsHint")}</p>
+      <div className="folder-actions">
+        <button className="btn btn-small" onClick={() => setStems(true)}>{t("prep.stemsManage")}</button>
+      </div>
+
+      <h3 className="form-label"><Usb size={14} aria-hidden /> {t("prep.usbTitle")}</h3>
+      <p className="hint">{t("prep.usbHint")}</p>
+      <div className="folder-actions">
+        <button className="btn btn-small" onClick={() => setUsbCheck(true)}>{t("prep.usbOpen")}</button>
+      </div>
+
+      {stems && <StemsDialog row={null} onClose={() => setStems(false)} onToast={onToast} />}
+      {usbCheck && <UsbCheckDialog onClose={() => setUsbCheck(false)} />}
       {review && <AnalysisDialog onClose={() => setReview(false)} onDone={(r) => onToast(t("analysis.applied", { count: r.ok }))} />}
       {dates && <DatesDialog ids={null} onClose={() => setDates(false)} onDone={(r) => onToast(t("dates.repaired", { count: r.ok }))} />}
     </section>

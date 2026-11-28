@@ -4,7 +4,7 @@
 
 use std::fs::File;
 use std::io::{BufWriter, Seek, SeekFrom, Write};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use ebur128::{EbuR128, Mode};
 use rusqlite::{params, Connection, OptionalExtension};
@@ -14,9 +14,7 @@ use serde::Serialize;
 use super::dsp::{default_bands, Fade, Processor, Settings, Trim};
 use crate::audio::decode::Decoder;
 use crate::error::AppError;
-use crate::library::quarantine::QuarantineState;
-use crate::library::{index, volumes, Library};
-use crate::tags::write::Changes;
+use crate::library::Library;
 use crate::tasks::TaskHandle;
 
 pub const PRESETS: &[&str] = &["auto", "club", "warm", "bright", "punch", "soft"];
@@ -574,109 +572,26 @@ pub fn load_settings(conn: &Connection, id: i64) -> Result<Option<Settings>, App
     Ok(raw.and_then(|r| serde_json::from_str(&r).ok()))
 }
 
-/// Nom libre « … (Remaster).wav » à côté de l'original.
-fn target_rel(mount: &Path, rel: &str) -> String {
-    let (dir, file) = rel.rsplit_once('/').map(|(d, f)| (format!("{d}/"), f)).unwrap_or((String::new(), rel));
-    let stem = Path::new(file).file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
-    let base = format!("{dir}{stem} (Remaster).wav");
-    if !volumes::join_rel(mount, &base).exists() {
-        return base;
-    }
-    for n in 2..1000 {
-        let c = format!("{dir}{stem} (Remaster {n}).wav");
-        if !volumes::join_rel(mount, &c).exists() {
-            return c;
-        }
-    }
-    format!("{dir}{stem} (Remaster {}).wav", std::process::id())
-}
-
-/// Exporte le morceau `id` traité avec `s` dans un nouveau WAV, ajouté à la bibliothèque.
+/// Exporte le morceau traité avec les réglages donnés dans un nouveau WAV, ajouté à la bibliothèque.
 pub fn export(lib: &Library, conn: &Connection, id: i64, s: &Settings, batch: i64, task: Option<&TaskHandle>) -> Result<ExportResult, AppError> {
     let s = s.clamped();
-    let (vol, root_id, rel): (i64, Option<i64>, String) =
-        conn.query_row("SELECT volume_id, root_id, rel_path FROM tracks WHERE id = ?1", [id], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?;
-    let mount = lib.mounts().get(&vol).cloned().ok_or(AppError::Offline)?;
-    let src = volumes::join_rel(&mount, &rel);
-    let new_rel = target_rel(&mount, &rel);
-    let dst = volumes::join_rel(&mount, &new_rel);
-    let tmp: PathBuf = dst.with_file_name(format!(".djlm-remaster-{id}.wav"));
-    let net = |e: String| AppError::Io(std::io::Error::other(e));
-    let cleanup = |e: AppError| {
-        let _ = std::fs::remove_file(&tmp);
-        e
-    };
-
-    let (rate, channels) = {
-        let d = Decoder::open(&src).map_err(net)?;
-        (d.sample_rate, d.channels)
-    };
-    let gain = match s.target_lufs {
-        Some(_) => prepare(&src, &s).map_err(net)?.gain_db,
-        None => 0.0,
-    };
-    // Écriture (le gain vient de `prepare`, qui a déjà vérifié le volume obtenu).
-    let result = {
-        let mut w = Wav24::create(&tmp, rate, channels).map_err(|e| cleanup(e.into()))?;
-        let r = pass(&src, &s, gain, |b| w.write(b).map_err(|e| e.to_string()), task).map_err(|e| cleanup(net(e)))?;
-        w.finish().map_err(|e| cleanup(e.into()))?;
-        r
-    };
-
-    // Tags et pochette de l'original ; version complétée de « Remaster ».
-    let exceptions = index::artist_exceptions(conn).unwrap_or_default();
-    let ws = crate::library::edit::write_settings(conn);
-    let orig = crate::tags::read::read_file(&src, &exceptions).map_err(|e| cleanup(AppError::Io(std::io::Error::other(e.to_string()))))?;
-    let now = crate::tags::read::read_file(&tmp, &exceptions).map_err(|e| cleanup(AppError::Io(std::io::Error::other(e.to_string()))))?;
-    let t = &orig.tags;
-    let version = match t.version.as_deref().map(str::trim).filter(|v| !v.is_empty()) {
-        Some(v) if v.to_lowercase().contains("remaster") => v.to_string(),
-        Some(v) => format!("{v} Remaster"),
-        None => "Remaster".to_string(),
-    };
-    let mut changes = Changes {
-        title: Some(t.title.clone()),
-        version: Some(Some(version)),
-        artists: Some(t.artists.clone()),
-        album: Some(t.album.clone()),
-        year: Some(t.year),
-        genre: Some(t.genre.clone()),
-        bpm: Some(t.bpm),
-        key: Some(t.key.clone()),
-        rating: Some(t.rating),
-        ..Default::default()
-    };
-    if orig.cover.count > 0 {
-        if let Ok(Some(c)) = crate::tags::write::current_cover(&src) {
-            changes.cover = Some(Some(c));
-        }
-    }
-    crate::tags::write::write_tags(&tmp, &now.tags, &changes, &ws, &exceptions).map_err(|e| cleanup(AppError::Io(std::io::Error::other(e.to_string()))))?;
-    if dst.exists() {
-        return Err(cleanup(AppError::InvalidSetting("un fichier de ce nom existe déjà".into())));
-    }
-    std::fs::rename(&tmp, &dst).map_err(|e| cleanup(e.into()))?;
-    log::info!("Remaster exporté : {}", dst.display());
-
-    let meta = std::fs::metadata(&dst)?;
-    let mtime = meta.modified().ok().and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok()).map(|d| d.as_secs() as i64).unwrap_or(0);
-    let new_id = index::store(conn, vol, root_id, &new_rel, meta.len() as i64, mtime, crate::tags::read::read_file(&dst, &exceptions))?;
+    let (d, result) = crate::prep::derive::derive(lib, conn, id, "Remaster", "remaster", batch, |src, tmp| {
+        let (rate, channels) = {
+            let d = Decoder::open(src)?;
+            (d.sample_rate, d.channels)
+        };
+        let gain = match s.target_lufs {
+            Some(_) => prepare(src, &s)?.gain_db,
+            None => 0.0,
+        };
+        // Écriture (le gain vient de la préparation, qui a déjà vérifié le volume obtenu).
+        let mut w = Wav24::create(tmp, rate, channels).map_err(|e| e.to_string())?;
+        let r = pass(src, &s, gain, |b| w.write(b).map_err(|e| e.to_string()), task)?;
+        w.finish().map_err(|e| e.to_string())?;
+        Ok(r)
+    })?;
     save_settings(conn, id, &s)?;
-    // Annulation : le nouveau fichier part en quarantaine (jamais effacé).
-    let root_rel: Option<String> = conn.query_row("SELECT rel_path FROM roots WHERE id = ?1", [root_id], |r| r.get(0)).optional()?.flatten();
-    let qrel = match root_rel.as_deref().filter(|r| !r.is_empty() && new_rel.starts_with(&format!("{r}/"))) {
-        Some(r) => format!("{r}/{}/{}-remaster/{}", index::QUARANTINE_DIR, crate::db::today(), &new_rel[r.len() + 1..]),
-        None => format!("{}/{}-remaster/{new_rel}", index::QUARANTINE_DIR, crate::db::today()),
-    };
-    let before = QuarantineState { volume_id: vol, rel_path: qrel, quarantined: true, reason: Some("remaster".into()) };
-    let after = QuarantineState { volume_id: vol, rel_path: new_rel.clone(), quarantined: false, reason: None };
-    crate::history::record(conn, batch, "quarantine", Some(new_id), &serde_json::to_string(&before).unwrap_or_default(), &serde_json::to_string(&after).unwrap_or_default())?;
-    Ok(ExportResult {
-        track_id: new_id,
-        file_name: dst.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default(),
-        lufs: result.0,
-        peak_db: result.1,
-    })
+    Ok(ExportResult { track_id: d.track_id, file_name: d.file_name, lufs: result.0, peak_db: result.1 })
 }
 
 #[cfg(test)]
