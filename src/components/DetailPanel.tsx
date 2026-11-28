@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { ClipboardPaste, Disc3, Globe, ImagePlus, Info, Lock, LockOpen, Star, Trash2, X } from "lucide-react";
-import type { TrackRow } from "../core/library";
+import { onEvent, type TrackRow } from "../core/library";
 import type { Changes, EditableField } from "../core/edit";
 import { trackCover } from "../core/edit";
 import { formatBpm, formatDuration, formatKey, formatQuality, formatSize } from "../core/format";
@@ -15,14 +15,37 @@ function QualityLine({ row, revision }: { row: TrackRow; revision: number }) {
   const { t } = useTranslation();
   const [q, setQ] = useState<QualityInfo | null | undefined>(undefined);
   const [image, setImage] = useState<string | null | "loading">(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  // Relu quand la bibliothèque change (fin de l'analyse lancée ici ou ailleurs), sans clignoter.
+  const [tick, setTick] = useState(0);
+  useEffect(() => onEvent("library:changed", () => setTick((n) => n + 1)), []);
+  useEffect(() => {
+    setQ(undefined);
+    setAnalyzing(false);
+  }, [row.id]);
   useEffect(() => {
     let alive = true;
-    setQ(undefined);
-    void qualityInfo(row.id).then((r) => alive && setQ(r)).catch(() => alive && setQ(null));
+    void qualityInfo(row.id)
+      .then((r) => {
+        if (!alive) return;
+        setQ(r);
+        if (r) setAnalyzing(false);
+      })
+      .catch(() => alive && setQ(null));
     return () => {
       alive = false;
     };
-  }, [row.id, revision]);
+  }, [row.id, revision, tick]);
+  const analyze = async () => {
+    setAnalyzing(true);
+    try {
+      await qualityAnalyze([row.id]);
+      // Filet de sécurité : si l'analyse échoue, le bouton redevient utilisable.
+      window.setTimeout(() => setAnalyzing(false), 60_000);
+    } catch {
+      setAnalyzing(false);
+    }
+  };
   const open = async () => {
     setImage("loading");
     try {
@@ -39,11 +62,11 @@ function QualityLine({ row, revision }: { row: TrackRow; revision: number }) {
           {t(`quality.verdict.${q.verdict}`)} — {qualityText(q, t)}
         </span>
       ) : (
-        <span className="muted">{t("quality.notAnalyzed")}</span>
+        <span className="muted">{analyzing ? t("quality.analyzingOne") : t("quality.notAnalyzed")}</span>
       )}
       <span className="quality-actions">
         {!q && row.online && (
-          <button className="btn btn-small" onClick={() => void qualityAnalyze([row.id])}>{t("quality.analyzeOne")}</button>
+          <button className="btn btn-small" disabled={analyzing} onClick={() => void analyze()}>{t("quality.analyzeOne")}</button>
         )}
         {row.online && (
           <button className="btn btn-small" onClick={() => void open()}>{t("quality.spectrogram")}</button>

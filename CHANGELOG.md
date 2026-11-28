@@ -1,5 +1,13 @@
 # Journal des versions
 
+## 0.8.1 — Perfectionnements (à valider, avec les phases 6 et 7)
+
+- Remaster : curseurs plus précis avec case chiffrée modifiable, fréquence de chaque bande réglable ; **préréglages personnels** (enregistrer, appliquer, supprimer, en lot) ; **coupe du début / de la fin** au dixième de seconde ; **fondus** d'entrée et de sortie.
+- Bibliothèque : la colonne **Pochette** montre l'image de la pochette.
+- Contrôle qualité d'un morceau : le résultat s'affiche dès la fin de l'analyse.
+- Recherche en ligne d'un morceau : la liste des résultats ne remonte plus en haut toute seule, et les cases cochées ne sont plus remises à zéro.
+- Lecteur : **aléatoire**, **répétition** (toute la liste ou un morceau en boucle), **lecture à la suite** activable.
+
 ## 0.8.0 — Phase 7 : Remaster (à valider, avec la phase 6)
 
 - Écran Remaster : égaliseur 5 bandes, coupe des infra-graves, largeur stéréo et graves en mono, compresseur, volume cible en LUFS, limiteur (jamais de saturation).

@@ -1593,7 +1593,7 @@ async fn remaster_listen(state: State<'_, AppState>, id: i64, settings: remaster
         let s = settings.clamped();
         let p = remaster::engine::prepare(&path, &s).map_err(|e| AppError::Io(std::io::Error::other(e)))?;
         let live: audio::player::LiveHandle = std::sync::Arc::new(Mutex::new(audio::player::Live {
-            settings: s,
+            settings: s.clone(),
             gain_db: p.gain_db,
             bypass: false,
             bypass_gain_db: p.after_lufs - p.before_lufs,
@@ -1604,7 +1604,11 @@ async fn remaster_listen(state: State<'_, AppState>, id: i64, settings: remaster
         }
         let conn = db::open_worker(lib.db_path())?;
         let duration: i64 = conn.query_row("SELECT coalesce(duration_ms, 0) FROM tracks WHERE id = ?1", [id], |r| r.get(0))?;
+        let start_ms = (s.start_s * 1000.0) as u64;
         player.load_live(id, path, duration.max(0) as u64, live);
+        if start_ms > 0 {
+            player.seek(start_ms);
+        }
         Ok(p)
     })
     .await
@@ -1657,7 +1661,7 @@ async fn remaster_export(state: State<'_, AppState>, id: i64, settings: remaster
 
 /// Remaster en lot (préréglage appliqué à chaque morceau), en tâche de fond.
 #[tauri::command]
-async fn remaster_batch(state: State<'_, AppState>, ids: Vec<i64>, preset: String) -> Result<bool, AppError> {
+async fn remaster_batch(state: State<'_, AppState>, ids: Vec<i64>, preset: String, settings: Option<remaster::dsp::Settings>) -> Result<bool, AppError> {
     use std::sync::atomic::Ordering;
     let lib = state.library()?.clone();
     if REMASTER_RUNNING.swap(true, Ordering::SeqCst) {
@@ -1675,8 +1679,14 @@ async fn remaster_batch(state: State<'_, AppState>, ids: Vec<i64>, preset: Strin
                 }
                 let one = (|| -> Result<(), AppError> {
                     let path = remaster_path(&lib, *id)?;
-                    let m = remaster::engine::measure(&path).map_err(|e| AppError::Io(std::io::Error::other(e)))?;
-                    let s = remaster::engine::auto_settings(&m, &preset);
+                    // Préréglage de l'utilisateur : ses réglages tels quels (sans la coupe, propre à chaque morceau).
+                    let s = match settings.as_ref() {
+                        Some(st) => remaster::dsp::Settings { start_s: 0.0, end_s: 0.0, ..st.clone() }.clamped(),
+                        None => {
+                            let m = remaster::engine::measure(&path).map_err(|e| AppError::Io(std::io::Error::other(e)))?;
+                            remaster::engine::auto_settings(&m, &preset)
+                        }
+                    };
                     remaster::engine::export(&lib, &conn, *id, &s, batch, Some(&task))?;
                     Ok(())
                 })();

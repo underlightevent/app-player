@@ -47,7 +47,7 @@ import { OtherView } from "./components/MainView";
 import { LibraryView } from "./components/LibraryView";
 import { FoldersView } from "./components/FoldersView";
 import { DetailPanel } from "./components/DetailPanel";
-import { PlayerBar } from "./components/PlayerBar";
+import { PlayerBar, type PlayModes } from "./components/PlayerBar";
 import { useTasks } from "./components/TasksPanel";
 import { initialPlayerState, playerCommand, playerLoad, playerState, type PlayerState } from "./core/player";
 import { Toast, useToast } from "./components/Toast";
@@ -688,26 +688,82 @@ export default function App() {
     playerCommand(player.playing ? "pause" : "play");
   }, [player.trackId, player.external, player.playing, selection, playTrack]);
 
+  // ---------- Modes de lecture : répétition, aléatoire, à la suite (gardés dans les réglages) ----------
+  const modes: PlayModes = {
+    repeat: settingsValues.player_repeat === "all" || settingsValues.player_repeat === "one" ? settingsValues.player_repeat : "off",
+    shuffle: settingsValues.player_shuffle === "true",
+    autoNext: settingsValues.player_autonext !== "false",
+  };
+  const setMode = useCallback((key: "player_repeat" | "player_shuffle" | "player_autonext", value: string) => {
+    setSettingsValues((v) => ({ ...v, [key]: value }));
+    void setSetting(key, value).catch(() => {});
+  }, []);
+  /** Aléatoire : morceaux déjà joués (pour « précédent » et pour ne pas rejouer le même). */
+  const shuffleHistory = useRef<number[]>([]);
+  const shufflePlayed = useRef<Set<number>>(new Set());
+  useEffect(() => {
+    if (player.trackId != null && shuffleHistory.current[shuffleHistory.current.length - 1] !== player.trackId) {
+      shuffleHistory.current = [...shuffleHistory.current.slice(-199), player.trackId];
+      shufflePlayed.current.add(player.trackId);
+    }
+  }, [player.trackId]);
+
+  /** Morceau suivant selon les modes ; null = fin de la liste. */
+  const nextId = useCallback(
+    (delta: number): number | null => {
+      const ids = lib.ids;
+      if (ids.length === 0) return null;
+      if (modes.shuffle) {
+        if (delta < 0) {
+          const h = shuffleHistory.current;
+          if (h.length < 2) return null;
+          // Le morceau précédent sera remis dans l'historique quand il démarrera.
+          shuffleHistory.current = h.slice(0, -2);
+          return h[h.length - 2];
+        }
+        let pool = ids.filter((id) => !shufflePlayed.current.has(id));
+        if (pool.length === 0) {
+          // Tout a été joué : on recommence seulement en « répéter tout ».
+          if (modes.repeat !== "all") return null;
+          shufflePlayed.current = new Set(player.trackId != null ? [player.trackId] : []);
+          pool = ids.filter((id) => id !== player.trackId);
+          if (pool.length === 0) pool = ids;
+        }
+        return pool[Math.floor(Math.random() * pool.length)];
+      }
+      const id = neighbour(delta);
+      if (id != null || modes.repeat !== "all") return id;
+      // « Répéter tout » : après le dernier, le premier (et inversement).
+      return delta > 0 ? ids[0] : ids[ids.length - 1];
+    },
+    [lib.ids, modes.shuffle, modes.repeat, neighbour, player.trackId],
+  );
+
   /** Précédent / suivant : dans la liste des extraits, sinon dans le tableau. */
   const step = useCallback(
     (delta: number) => {
       if (player.external) return stepPreview(delta);
-      const id = neighbour(delta);
+      const id = nextId(delta);
       if (id != null) void playTrack(id);
     },
-    [player.external, stepPreview, neighbour, playTrack],
+    [player.external, stepPreview, nextId, playTrack],
   );
 
-  // Fin du morceau : on enchaîne sur le suivant du tableau (ou de la liste des extraits).
+  // Fin du morceau : répéter, enchaîner ou s'arrêter, selon les modes choisis.
   const endedRef = useRef(false);
   useEffect(() => {
     if (player.ended && !endedRef.current) {
       endedRef.current = true;
-      step(1);
+      if (modes.repeat === "one") {
+        if (player.external) stepPreview(0);
+        else if (player.trackId != null) void playTrack(player.trackId);
+      } else if (modes.autoNext || modes.repeat === "all") {
+        step(1);
+      }
     } else if (!player.ended) {
       endedRef.current = false;
     }
-  }, [player.ended, step]);
+  }, [player.ended, step, modes.repeat, modes.autoNext, player.external, player.trackId, stepPreview, playTrack]);
 
   // Raccourcis du lecteur.
   useEffect(() => {
@@ -1087,6 +1143,13 @@ export default function App() {
           else step(-1);
         }}
         onNext={() => step(1)}
+        modes={modes}
+        onRepeat={() => setMode("player_repeat", modes.repeat === "off" ? "all" : modes.repeat === "all" ? "one" : "off")}
+        onShuffle={() => {
+          shufflePlayed.current = new Set(player.trackId != null ? [player.trackId] : []);
+          setMode("player_shuffle", modes.shuffle ? "false" : "true");
+        }}
+        onAutoNext={() => setMode("player_autonext", modes.autoNext ? "false" : "true")}
         onSeek={(ms) => playerCommand("seek", ms)}
         onVolume={(v) => playerCommand("volume", v)}
       />

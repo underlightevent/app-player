@@ -111,6 +111,10 @@ Le panneau de détail montre aussi le nom que donnerait le modèle (« Nom selon
 - Double-clic ou **Entrée** sur un morceau pour le lancer. **Espace** : lecture / pause.
 - Cliquez sur la **forme d'onde** pour aller à cet endroit. Flèches gauche/droite : reculer / avancer de 10 secondes. Maj + flèches : morceau précédent / suivant (dans l'ordre du tableau).
 - La lecture continue même si vous modifiez le morceau en cours.
+- Trois boutons à droite de lecture / pause (allumés quand ils sont actifs) :
+  - **Aléatoire** : le morceau suivant est tiré au hasard dans le tableau affiché (sans repasser deux fois le même) ; « précédent » revient au morceau joué avant.
+  - **Répétition** : un clic = toute la liste (après le dernier, on repart du premier), deux clics = **ce morceau en boucle**, trois clics = désactivée.
+  - **À la suite** : à la fin d'un morceau, le suivant démarre tout seul. Désactivé, la lecture s'arrête à la fin du morceau.
 
 ## Dossiers
 
@@ -283,11 +287,16 @@ L'écran **Remaster** améliore le son d'un morceau et l'exporte dans un **nouve
    - **Égaliseur** : graves, bas-médiums, médiums, hauts-médiums, aigus (±12 dB), coupe des infra-graves ;
    - **Mono / stéréo** : largeur stéréo, **graves en mono** sous une fréquence (plus puissant en club), tout en mono ;
    - **Compresseur** : seuil, taux, attaque, relâchement, gain de compensation ;
-   - **Volume et limiteur** : volume cible (−7 à −8 LUFS pour le club), plafond de crête (−1 dB) : le son ne sature jamais.
+   - **Volume et limiteur** : volume cible (−7 à −8 LUFS pour le club), plafond de crête (−1 dB) : le son ne sature jamais ;
+   - **Coupe et fondus** : début et fin du morceau gardés, au dixième de seconde, et fondu d'entrée / de sortie en secondes (0 = aucun). Tout s'entend à l'écoute.
+
+   Pour être précis : chaque curseur a une case chiffrée. Cliquez dedans, tapez la valeur (virgule acceptée) puis **Entrée**, ou utilisez les flèches **↑ ↓** du clavier (**Maj** + flèche = pas plus grand). La fréquence de chaque bande de l'égaliseur se règle aussi.
 5. **Comparer le spectre** montre l'équilibre avant / après.
 6. **Exporter en WAV** : « … (Remaster).wav » (24 bits) est créé à côté de l'original, avec les tags et la pochette, et ajouté à la bibliothèque. **Ctrl+Z** l'envoie en quarantaine.
 
 Plusieurs morceaux sélectionnés : **Remaster automatique de N morceaux** applique le préréglage choisi à chacun, en tâche de fond.
+
+**Vos préréglages** : réglez le son, puis **Enregistrer comme préréglage** et donnez un nom (un nom déjà pris est remplacé). Il apparaît dans la liste sous « Mes préréglages » : choisissez-le puis **Appliquer** (pas d'analyse : vos réglages tels quels), ou **Supprimer** (annulable). Un préréglage garde le son et les fondus, mais pas la coupe, propre à chaque morceau. Il marche aussi en lot.
 
 Ce que Remaster ne fait pas : recréer les aigus perdus d'un MP3 de basse qualité. Comparez toujours avant / après.
 

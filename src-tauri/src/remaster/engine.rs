@@ -11,7 +11,7 @@ use rusqlite::{params, Connection, OptionalExtension};
 use rustfft::{num_complex::Complex, FftPlanner};
 use serde::Serialize;
 
-use super::dsp::{default_bands, Processor, Settings};
+use super::dsp::{default_bands, Fade, Processor, Settings, Trim};
 use crate::audio::decode::Decoder;
 use crate::error::AppError;
 use crate::library::quarantine::QuarantineState;
@@ -167,28 +167,50 @@ fn pass(path: &Path, s: &Settings, gain_db: f64, mut sink: impl FnMut(&[f32]) ->
     }
     let mut p = Processor::new(s, dec.sample_rate, ch, gain_db);
     let mut meter = EbuR128::new(ch as u32, dec.sample_rate, Mode::I | Mode::SAMPLE_PEAK).map_err(|e| e.to_string())?;
-    let (mut buf, mut out) = (Vec::new(), Vec::new());
+    let mut trim = Trim::new(s, dec.sample_rate);
+    // Fondu de sortie sans fin précisée : il faut la longueur exacte du morceau.
+    let total = if s.fade_out_s > 0.0 && trim.end.is_none() { Some(count_frames(path)?) } else { None };
+    let mut fade = Fade::new(s, dec.sample_rate, trim.kept_len(total));
+    let (mut buf, mut cut, mut out) = (Vec::new(), Vec::new(), Vec::new());
+    let mut emit = |out: &mut Vec<f32>, fade: &mut Fade, sink: &mut dyn FnMut(&[f32]) -> Result<(), String>| -> Result<(), String> {
+        if !out.is_empty() {
+            fade.apply(out, ch as usize);
+            meter.add_frames_f32(out).map_err(|e| e.to_string())?;
+            sink(out)?;
+        }
+        Ok(())
+    };
     while dec.next_block(&mut buf)? {
         if task.map(|t| t.is_cancelled()).unwrap_or(false) {
             return Err("annulé".into());
         }
-        p.process(&buf, &mut out);
-        if !out.is_empty() {
-            meter.add_frames_f32(&out).map_err(|e| e.to_string())?;
-            sink(&out)?;
+        let done = trim.cut(&buf, ch as usize, &mut cut);
+        p.process(&cut, &mut out);
+        emit(&mut out, &mut fade, &mut sink)?;
+        if done {
+            break;
         }
     }
     p.flush(&mut out);
-    if !out.is_empty() {
-        meter.add_frames_f32(&out).map_err(|e| e.to_string())?;
-        sink(&out)?;
-    }
+    emit(&mut out, &mut fade, &mut sink)?;
     let lufs = meter.loudness_global().map_err(|e| e.to_string())?;
     let mut peak: f64 = 0.0;
     for c in 0..ch as u32 {
         peak = peak.max(meter.sample_peak(c).map_err(|e| e.to_string())?);
     }
     Ok((lufs, 20.0 * peak.max(1e-9).log10()))
+}
+
+/// Nombre exact de trames du fichier (décodage complet).
+fn count_frames(path: &Path) -> Result<u64, String> {
+    let mut dec = Decoder::open(path)?;
+    let ch = dec.channels.max(1) as u64;
+    let mut buf = Vec::new();
+    let mut n = 0u64;
+    while dec.next_block(&mut buf)? {
+        n += buf.len() as u64 / ch;
+    }
+    Ok(n)
 }
 
 /// Gain (dB) à ajouter avant le limiteur pour atteindre le volume cible, et volumes
@@ -547,6 +569,25 @@ mod tests {
         assert_eq!(u.ok, 1, "{:?}", u.failures);
         assert!(!out.exists());
         assert!(src.exists());
+    }
+
+    #[test]
+    fn coupe_et_fondus_dans_le_traitement() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = crate::testdata::write(dir.path(), "t.wav", &crate::testdata::wav_from_samples(&track()));
+        // Coupe de 2,5 s à la fin (20 s) avec fondu de sortie : la longueur est comptée.
+        let s = Settings { start_s: 2.5, fade_in_s: 1.0, fade_out_s: 2.0, target_lufs: None, ..Default::default() }.clamped();
+        let mut all: Vec<f32> = Vec::new();
+        pass(&p, &s, 0.0, |b| { all.extend_from_slice(b); Ok(()) }, None).unwrap();
+        assert_eq!(all.len(), (17.5 * 44_100.0) as usize * 2, "20 s − 2,5 s");
+        assert!(all[0].abs() < 1e-6 && all[1].abs() < 1e-6, "fondu d'entrée");
+        let tail = &all[all.len() - 200..];
+        assert!(tail.iter().all(|x| x.abs() < 0.01), "fondu de sortie");
+        // Fin précisée : de 1,0 s à 5,0 s.
+        let s = Settings { start_s: 1.0, end_s: 5.0, target_lufs: None, ..Default::default() };
+        let mut n = 0usize;
+        pass(&p, &s, 0.0, |b| { n += b.len(); Ok(()) }, None).unwrap();
+        assert_eq!(n, 4 * 44_100 * 2);
     }
 
     #[test]

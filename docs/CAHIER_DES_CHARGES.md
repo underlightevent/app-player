@@ -605,6 +605,8 @@ Demandée par l'utilisateur le 28/11/2026. Améliorer le son d'un titre (volume,
 
 **Export** : WAV 24 bits, même fréquence d'échantillonnage que l'original, à côté de l'original sous le nom « … (Remaster).wav » (jamais d'écrasement), tags et pochette recopiés, version complétée de « Remaster » (le titre n'est donc pas regroupé avec l'original dans les doublons), ajouté à la bibliothèque. Les réglages utilisés sont gardés pour pouvoir refaire l'export. Traitement en lot (mode automatique ou préréglage) sur une sélection, en tâche de fond annulable.
 
+**Ajouts du 28/11/2026 (version 0.8.1)** : curseurs plus précis avec saisie chiffrée ; **préréglages personnels** enregistrés (son + fondus, sans la coupe), utilisables en lot ; **coupe du début et de la fin** au dixième de seconde et **fondus d'entrée et de sortie** optionnels en secondes, entendus à l'écoute et appliqués à l'export.
+
 **Limites, dites dans l'aide** : on ne recrée pas les aigus perdus d'un MP3 basse qualité ; l'outil améliore le volume, l'équilibre, la densité et l'image stéréo. Pas de restauration par IA.
 
 Critères de validation :
@@ -613,6 +615,8 @@ Critères de validation :
 - [ ] L'export crée un nouveau WAV avec tags et pochette ; l'original est identique octet pour octet.
 - [ ] Avec « graves en mono », les graves sous la fréquence choisie sont identiques sur les deux canaux.
 - [ ] Le traitement en lot de 10 titres se termine, s'annule proprement et chaque export est dans la bibliothèque.
+- [ ] Une coupe de 12,3 s à 3:00,0 donne un fichier de 2:47,7 exactement ; les fondus partent et finissent au silence.
+- [ ] Un préréglage enregistré réapparaît après redémarrage et redonne exactement les mêmes réglages.
 
 ## Tests, qualité et documentation
 

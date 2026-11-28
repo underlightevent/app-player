@@ -12,6 +12,10 @@ use crate::error::AppError;
 /// (clé, valeurs permises, valeur par défaut)
 const KNOWN: &[(&str, &[&str], &str)] = &[
     ("theme", &["light", "dark", "system"], "light"),
+    // Lecteur du bas : répétition, lecture aléatoire, enchaînement automatique.
+    ("player_repeat", &["off", "all", "one"], "off"),
+    ("player_shuffle", &["true", "false"], "false"),
+    ("player_autonext", &["true", "false"], "true"),
     ("language", &["fr", "en"], "fr"),
     ("onboarding_done", &["true", "false"], "false"),
     ("table_density", &["compact", "comfortable"], "compact"),
@@ -74,8 +78,10 @@ const FREE_TEXT: &[(&str, &str)] = &[
     // Sauvegarde (phase 6) : dossier de destination et date de la dernière sauvegarde.
     ("backup_dest", ""),
     ("backup_last", ""),
+    // Remaster : préréglages de l'utilisateur (liste JSON [{name, settings}]).
+    ("remaster_presets", "[]"),
 ];
-const MAX_FREE_TEXT: usize = 20_000;
+const MAX_FREE_TEXT: usize = 100_000;
 
 fn validate(key: &str, value: &str) -> Result<(), AppError> {
     if FREE_TEXT.iter().any(|(k, _)| *k == key) {

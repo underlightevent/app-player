@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FileDown, Info, Play, RotateCcw, Square, WandSparkles, Waves } from "lucide-react";
-import { isCoreError } from "../core/api";
+import { FileDown, Info, Play, RotateCcw, Save, Scissors, Square, Trash2, WandSparkles, Waves } from "lucide-react";
+import { getSettings, isCoreError, setSetting } from "../core/api";
 import { libraryRows, type TrackRow } from "../core/library";
 import { playerCommand } from "../core/player";
 import {
@@ -16,8 +16,10 @@ import {
   remasterListen,
   remasterSpectrum,
   remasterUpdate,
+  parseUserPresets,
   type Prepared,
   type RemasterSettings,
+  type UserPreset,
 } from "../core/remaster";
 
 interface Props {
@@ -30,15 +32,65 @@ interface Props {
 
 const BAND_LABELS = ["low", "lowMid", "mid", "highMid", "high"];
 
-/** Curseur avec libellé et valeur affichée. */
-function Slider(p: { label: string; value: number; min: number; max: number; step: number; unit?: string; disabled?: boolean; onChange: (v: number) => void; format?: (v: number) => string }) {
+const decimals = (step: number) => (String(step).split(".")[1] ?? "").length;
+
+/** Champ chiffré : la saisie est validée à Entrée ou en quittant le champ (ramenée dans les bornes). */
+export function NumInput(p: { value: number; min: number; max: number; step: number; disabled?: boolean; label: string; onChange: (v: number) => void }) {
+  const { i18n } = useTranslation();
+  const d = decimals(p.step);
+  // Virgule décimale en français.
+  const shown = p.value.toFixed(d).replace(".", i18n.language.startsWith("fr") ? "," : ".");
+  const [draft, setDraft] = useState<string | null>(null);
+  const commit = () => {
+    if (draft == null) return;
+    const v = Number(draft.replace(",", "."));
+    setDraft(null);
+    if (!Number.isFinite(v)) return;
+    const k = Math.round(v / p.step) * p.step;
+    p.onChange(Number(Math.min(p.max, Math.max(p.min, k)).toFixed(d)));
+  };
   return (
-    <label className={`rm-slider${p.disabled ? " disabled" : ""}`}>
-      <span className="rm-slider-label">{p.label}</span>
-      <input type="range" min={p.min} max={p.max} step={p.step} value={p.value} disabled={p.disabled} onChange={(e) => p.onChange(Number(e.target.value))} />
-      <span className="rm-slider-value tabular">{p.format ? p.format(p.value) : `${p.value}${p.unit ?? ""}`}</span>
-    </label>
+    <input
+      className="rm-num tabular"
+      type="text"
+      inputMode="decimal"
+      aria-label={p.label}
+      disabled={p.disabled}
+      value={draft ?? shown}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") commit();
+        if (e.key === "Escape") setDraft(null);
+        if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+          e.preventDefault();
+          const base = draft != null ? Number(draft.replace(",", ".")) || p.value : p.value;
+          const k = base + (e.key === "ArrowUp" ? p.step : -p.step) * (e.shiftKey ? 10 : 1);
+          setDraft(null);
+          p.onChange(Number(Math.min(p.max, Math.max(p.min, k)).toFixed(d)));
+        }
+      }}
+    />
   );
+}
+
+/** Curseur avec libellé, champ chiffré modifiable et unité. */
+function Slider(p: { label: string; value: number; min: number; max: number; step: number; unit?: string; disabled?: boolean; onChange: (v: number) => void }) {
+  return (
+    <div className={`rm-slider${p.disabled ? " disabled" : ""}`}>
+      <span className="rm-slider-label">{p.label}</span>
+      <input type="range" aria-label={p.label} min={p.min} max={p.max} step={p.step} value={p.value} disabled={p.disabled} onChange={(e) => p.onChange(Number(e.target.value))} />
+      <NumInput label={p.label} value={p.value} min={p.min} max={p.max} step={p.step} disabled={p.disabled} onChange={p.onChange} />
+      <span className="rm-slider-unit muted">{p.unit ?? ""}</span>
+    </div>
+  );
+}
+
+/** 83,4 s → « 1:23,4 ». */
+function clock(sec: number, lang: string) {
+  const m = Math.floor(sec / 60);
+  const r = sec - m * 60;
+  return `${m}:${r.toLocaleString(lang, { minimumIntegerDigits: 2, minimumFractionDigits: 1, maximumFractionDigits: 1 })}`;
 }
 
 /** Spectre avant (gris) / après (couleur d'accent), 24 bandes de 30 Hz à 16 kHz. */
@@ -85,6 +137,16 @@ export function RemasterView({ selection, playingId, onToast, onOpenTrack }: Pro
   const [busy, setBusy] = useState<string | null>(null);
   const [spec, setSpec] = useState<{ before: number[] | null; after: number[] | null }>({ before: null, after: null });
   const levelTimer = useRef<number | undefined>(undefined);
+  const [userPresets, setUserPresets] = useState<UserPreset[]>([]);
+  const [naming, setNaming] = useState<string | null>(null);
+
+  useEffect(() => {
+    void getSettings().then((v) => setUserPresets(parseUserPresets(v.remaster_presets)));
+  }, []);
+  const saveUserPresets = async (list: UserPreset[]) => {
+    setUserPresets(list);
+    await setSetting("remaster_presets", JSON.stringify(list));
+  };
 
   const errText = (e: unknown) => (isCoreError(e) ? t(`errors.${e.code}`, { defaultValue: e.detail }) : t("errors.internal"));
   const nf = (v: number, d = 1) => v.toLocaleString(i18n.language, { maximumFractionDigits: d, minimumFractionDigits: d });
@@ -118,14 +180,24 @@ export function RemasterView({ selection, playingId, onToast, onOpenTrack }: Pro
     [listening, id],
   );
   const set = (patch: Partial<RemasterSettings>) => change({ ...s, ...patch });
-  const setBand = (i: number, gainDb: number) => change({ ...s, bands: s.bands.map((b, k) => (k === i ? { ...b, gainDb } : b)) });
+  const setBand = (i: number, patch: { gainDb?: number; freq?: number }) => change({ ...s, bands: s.bands.map((b, k) => (k === i ? { ...b, ...patch } : b)) });
+  const userPreset = preset.startsWith("user:") ? userPresets.find((p) => p.name === preset.slice(5)) ?? null : null;
+  const presetLabel = userPreset ? userPreset.name : t(`remaster.presets.${preset}`, { defaultValue: preset });
+  /** La coupe (début / fin) est propre au morceau : un préréglage ne la change pas. */
+  const keepTrim = (next: RemasterSettings) => ({ ...next, startS: s.startS, endS: s.endS });
 
   const applyPreset = async () => {
     if (id == null) return;
+    if (userPreset) {
+      change(keepTrim(userPreset.settings));
+      onToast(t("remaster.presetApplied", { preset: userPreset.name }));
+      return;
+    }
     setBusy("auto");
     try {
-      change(await remasterAuto(id, preset));
-      onToast(t("remaster.presetApplied", { preset: t(`remaster.presets.${preset}`) }));
+      // Les préréglages intégrés ne touchent ni à la coupe ni aux fondus.
+      change({ ...(await remasterAuto(id, preset)), startS: s.startS, endS: s.endS, fadeInS: s.fadeInS, fadeOutS: s.fadeOutS });
+      onToast(t("remaster.presetApplied", { preset: presetLabel }));
     } catch (e) {
       onToast(errText(e), undefined, "error");
     } finally {
@@ -186,8 +258,26 @@ export function RemasterView({ selection, playingId, onToast, onOpenTrack }: Pro
     }
   };
 
+  const savePreset = async () => {
+    const name = (naming ?? "").trim();
+    if (!name) return setNaming(null);
+    const settings = { ...s, startS: 0, endS: 0 };
+    await saveUserPresets([...userPresets.filter((p) => p.name !== name), { name, settings }].sort((a, b) => a.name.localeCompare(b.name)));
+    setPreset(`user:${name}`);
+    setNaming(null);
+    onToast(t("remaster.presetSaved", { name }));
+  };
+
+  const deletePreset = async () => {
+    if (!userPreset) return;
+    const before = userPresets;
+    await saveUserPresets(userPresets.filter((p) => p.name !== userPreset.name));
+    setPreset("auto");
+    onToast(t("remaster.presetDeleted", { name: userPreset.name }), { label: t("remaster.undo"), run: () => void saveUserPresets(before) });
+  };
+
   const batch = async () => {
-    const ok = await remasterBatch(selection, preset);
+    const ok = await remasterBatch(selection, preset, userPreset ? userPreset.settings : null);
     onToast(ok ? t("remaster.batchStarted", { count: selection.length }) : t("remaster.batchRunning"));
   };
 
@@ -204,9 +294,9 @@ export function RemasterView({ selection, playingId, onToast, onOpenTrack }: Pro
     );
   }
 
-  const hpOptions = [0, 20, 25, 30, 40];
-  const monoOptions = [0, 80, 100, 120, 150, 200];
-  const targets = [null, -14, -12, -10, -9, -8, -7, -6];
+  const dur = row?.durationMs ? Math.floor(row.durationMs / 100) / 10 : 0;
+  const maxT = Math.max(dur, s.startS, s.endS, 1);
+  const keptS = Math.max(0, (s.endS > 0 ? s.endS : dur) - s.startS);
 
   return (
     <div className="settings remaster">
@@ -238,18 +328,55 @@ export function RemasterView({ selection, playingId, onToast, onOpenTrack }: Pro
         <label className="chip-select">
           {t("remaster.preset")}
           <select value={preset} onChange={(e) => setPreset(e.target.value)}>
-            {PRESETS.map((p) => (
-              <option key={p} value={p}>{t(`remaster.presets.${p}`)}</option>
-            ))}
+            <optgroup label={t("remaster.builtinPresets")}>
+              {PRESETS.map((p) => (
+                <option key={p} value={p}>{t(`remaster.presets.${p}`)}</option>
+              ))}
+            </optgroup>
+            {userPresets.length > 0 && (
+              <optgroup label={t("remaster.myPresets")}>
+                {userPresets.map((p) => (
+                  <option key={p.name} value={`user:${p.name}`}>{p.name}</option>
+                ))}
+              </optgroup>
+            )}
           </select>
         </label>
         <button className="btn btn-small" disabled={busy != null} onClick={() => void applyPreset()}>
-          <WandSparkles size={14} aria-hidden /> {busy === "auto" ? t("remaster.analyzing") : t("remaster.applyPreset")}
+          <WandSparkles size={14} aria-hidden /> {busy === "auto" ? t("remaster.analyzing") : userPreset ? t("remaster.applyUserPreset") : t("remaster.applyPreset")}
         </button>
-        <button className="btn btn-small" onClick={() => change(DEFAULT_SETTINGS)}>
+        {userPreset && (
+          <button className="btn btn-small" onClick={() => void deletePreset()} title={t("remaster.deletePreset")}>
+            <Trash2 size={14} aria-hidden /> {t("remaster.deletePreset")}
+          </button>
+        )}
+        <button className="btn btn-small" onClick={() => change({ ...DEFAULT_SETTINGS, startS: s.startS, endS: s.endS })}>
           <RotateCcw size={14} aria-hidden /> {t("remaster.reset")}
         </button>
+        {naming == null ? (
+          <button className="btn btn-small" onClick={() => setNaming(userPreset?.name ?? "")}>
+            <Save size={14} aria-hidden /> {t("remaster.savePreset")}
+          </button>
+        ) : (
+          <span className="rm-naming">
+            <input
+              autoFocus
+              type="text"
+              maxLength={60}
+              placeholder={t("remaster.presetName")}
+              value={naming}
+              onChange={(e) => setNaming(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void savePreset();
+                if (e.key === "Escape") setNaming(null);
+              }}
+            />
+            <button className="btn btn-small btn-primary" disabled={!naming.trim()} onClick={() => void savePreset()}>{t("remaster.save")}</button>
+            <button className="btn btn-small" onClick={() => setNaming(null)}>{t("remaster.cancel")}</button>
+          </span>
+        )}
       </div>
+      {naming != null && <p className="muted small">{t("remaster.presetHint")}</p>}
 
       <div className="rm-grid">
         <section className="rm-card">
@@ -257,39 +384,22 @@ export function RemasterView({ selection, playingId, onToast, onOpenTrack }: Pro
             <label><input type="checkbox" checked={s.eqOn} onChange={(e) => set({ eqOn: e.target.checked })} /> {t("remaster.eq")}</label>
           </h2>
           {s.bands.map((b, i) => (
-            <Slider
-              key={i}
-              label={`${t(`remaster.bands.${BAND_LABELS[i]}`)} · ${b.freq >= 1000 ? `${b.freq / 1000} kHz` : `${b.freq} Hz`}`}
-              value={b.gainDb}
-              min={-12}
-              max={12}
-              step={0.5}
-              disabled={!s.eqOn}
-              format={(v) => `${v > 0 ? "+" : ""}${nf(v)} dB`}
-              onChange={(v) => setBand(i, v)}
-            />
+            <div key={i} className="rm-band">
+              <Slider label={t(`remaster.bands.${BAND_LABELS[i]}`)} value={b.gainDb} min={-12} max={12} step={0.1} unit="dB" disabled={!s.eqOn} onChange={(v) => setBand(i, { gainDb: v })} />
+              <label className={`rm-freq muted small${s.eqOn ? "" : " disabled"}`}>
+                {t("remaster.freq")}
+                <NumInput label={`${t(`remaster.bands.${BAND_LABELS[i]}`)} : ${t("remaster.freq")}`} value={b.freq} min={20} max={20000} step={1} disabled={!s.eqOn} onChange={(v) => setBand(i, { freq: v })} /> Hz
+              </label>
+            </div>
           ))}
-          <label className="chip-select">
-            {t("remaster.highpass")}
-            <select value={s.highpassHz} onChange={(e) => set({ highpassHz: Number(e.target.value) })}>
-              {hpOptions.map((h) => (
-                <option key={h} value={h}>{h ? `${h} Hz` : t("remaster.off")}</option>
-              ))}
-            </select>
-          </label>
+          <Slider label={t("remaster.highpass")} value={s.highpassHz} min={0} max={200} step={1} unit="Hz" onChange={(v) => set({ highpassHz: v })} />
+          <p className="muted small">{t("remaster.zeroOff")}</p>
         </section>
 
         <section className="rm-card">
           <h2>{t("remaster.stereo")}</h2>
-          <Slider label={t("remaster.width")} value={Math.round(s.width * 100)} min={0} max={150} step={5} unit=" %" onChange={(v) => set({ width: v / 100 })} />
-          <label className="chip-select">
-            {t("remaster.monoBass")}
-            <select value={s.monoBassHz} onChange={(e) => set({ monoBassHz: Number(e.target.value) })}>
-              {monoOptions.map((h) => (
-                <option key={h} value={h}>{h ? t("remaster.below", { hz: h }) : t("remaster.off")}</option>
-              ))}
-            </select>
-          </label>
+          <Slider label={t("remaster.width")} value={Math.round(s.width * 100)} min={0} max={150} step={1} unit="%" onChange={(v) => set({ width: v / 100 })} />
+          <Slider label={t("remaster.monoBass")} value={s.monoBassHz} min={0} max={300} step={1} unit="Hz" onChange={(v) => set({ monoBassHz: v })} />
           <label className="checks">
             <span><input type="checkbox" checked={s.width === 0} onChange={(e) => set({ width: e.target.checked ? 0 : 1 })} /> {t("remaster.fullMono")}</span>
           </label>
@@ -300,28 +410,36 @@ export function RemasterView({ selection, playingId, onToast, onOpenTrack }: Pro
           <h2>
             <label><input type="checkbox" checked={s.compOn} onChange={(e) => set({ compOn: e.target.checked })} /> {t("remaster.comp")}</label>
           </h2>
-          <Slider label={t("remaster.threshold")} value={s.thresholdDb} min={-40} max={0} step={0.5} disabled={!s.compOn} format={(v) => `${nf(v)} dB`} onChange={(v) => set({ thresholdDb: v })} />
-          <Slider label={t("remaster.ratio")} value={s.ratio} min={1} max={8} step={0.1} disabled={!s.compOn} format={(v) => `${nf(v)} : 1`} onChange={(v) => set({ ratio: v })} />
-          <Slider label={t("remaster.attack")} value={s.attackMs} min={1} max={100} step={1} unit=" ms" disabled={!s.compOn} onChange={(v) => set({ attackMs: v })} />
-          <Slider label={t("remaster.release")} value={s.releaseMs} min={50} max={1000} step={10} unit=" ms" disabled={!s.compOn} onChange={(v) => set({ releaseMs: v })} />
-          <Slider label={t("remaster.makeup")} value={s.makeupDb} min={0} max={12} step={0.5} disabled={!s.compOn} format={(v) => `+${nf(v)} dB`} onChange={(v) => set({ makeupDb: v })} />
+          <Slider label={t("remaster.threshold")} value={s.thresholdDb} min={-60} max={0} step={0.1} unit="dB" disabled={!s.compOn} onChange={(v) => set({ thresholdDb: v })} />
+          <Slider label={t("remaster.ratio")} value={s.ratio} min={1} max={20} step={0.05} unit=": 1" disabled={!s.compOn} onChange={(v) => set({ ratio: v })} />
+          <Slider label={t("remaster.attack")} value={s.attackMs} min={0.1} max={200} step={0.1} unit="ms" disabled={!s.compOn} onChange={(v) => set({ attackMs: v })} />
+          <Slider label={t("remaster.release")} value={s.releaseMs} min={10} max={2000} step={1} unit="ms" disabled={!s.compOn} onChange={(v) => set({ releaseMs: v })} />
+          <Slider label={t("remaster.makeup")} value={s.makeupDb} min={-12} max={24} step={0.1} unit="dB" disabled={!s.compOn} onChange={(v) => set({ makeupDb: v })} />
         </section>
 
         <section className="rm-card">
           <h2>{t("remaster.loudness")}</h2>
-          <label className="chip-select">
-            {t("remaster.target")}
-            <select value={s.targetLufs ?? ""} onChange={(e) => set({ targetLufs: e.target.value === "" ? null : Number(e.target.value) })}>
-              {targets.map((v) => (
-                <option key={String(v)} value={v ?? ""}>{v == null ? t("remaster.noTarget") : `${v} LUFS`}</option>
-              ))}
-            </select>
+          <label className="checks">
+            <span><input type="checkbox" checked={s.targetLufs != null} onChange={(e) => set({ targetLufs: e.target.checked ? -9 : null })} /> {t("remaster.targetOn")}</span>
           </label>
+          <Slider label={t("remaster.target")} value={s.targetLufs ?? -9} min={-30} max={-4} step={0.1} unit="LUFS" disabled={s.targetLufs == null} onChange={(v) => set({ targetLufs: v })} />
           <label className="checks">
             <span><input type="checkbox" checked={s.limiterOn} onChange={(e) => set({ limiterOn: e.target.checked })} /> {t("remaster.limiter")}</span>
           </label>
-          <Slider label={t("remaster.ceiling")} value={s.ceilingDb} min={-3} max={-0.1} step={0.1} disabled={!s.limiterOn} format={(v) => `${nf(v)} dB`} onChange={(v) => set({ ceilingDb: v })} />
+          <Slider label={t("remaster.ceiling")} value={s.ceilingDb} min={-6} max={0} step={0.05} unit="dB" disabled={!s.limiterOn} onChange={(v) => set({ ceilingDb: v })} />
           <p className="muted small">{t("remaster.loudnessHint")}</p>
+        </section>
+
+        <section className="rm-card">
+          <h2><Scissors size={16} aria-hidden /> {t("remaster.trim")}</h2>
+          <Slider label={t("remaster.start")} value={s.startS} min={0} max={maxT} step={0.1} unit="s" onChange={(v) => set({ startS: v, endS: s.endS > 0 && s.endS <= v ? 0 : s.endS })} />
+          <Slider label={t("remaster.end")} value={s.endS > 0 ? s.endS : dur} min={0} max={maxT} step={0.1} unit="s" onChange={(v) => set({ endS: v >= dur || v <= s.startS ? 0 : v })} />
+          <Slider label={t("remaster.fadeIn")} value={s.fadeInS} min={0} max={30} step={0.1} unit="s" onChange={(v) => set({ fadeInS: v })} />
+          <Slider label={t("remaster.fadeOut")} value={s.fadeOutS} min={0} max={30} step={0.1} unit="s" onChange={(v) => set({ fadeOutS: v })} />
+          <p className="muted small tabular">
+            {t("remaster.kept", { from: clock(s.startS, i18n.language), to: s.endS > 0 ? clock(s.endS, i18n.language) : t("remaster.toEnd"), len: clock(keptS, i18n.language) })}
+          </p>
+          <p className="muted small">{t("remaster.trimHint")}</p>
         </section>
       </div>
 
@@ -349,7 +467,7 @@ export function RemasterView({ selection, playingId, onToast, onOpenTrack }: Pro
         </button>
         {selection.length > 1 && (
           <button className="btn" disabled={busy != null} onClick={() => void batch()}>
-            <WandSparkles size={16} aria-hidden /> {t("remaster.batch", { count: selection.length, preset: t(`remaster.presets.${preset}`) })}
+            <WandSparkles size={16} aria-hidden /> {t("remaster.batch", { count: selection.length, preset: presetLabel })}
           </button>
         )}
       </div>

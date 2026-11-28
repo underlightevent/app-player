@@ -1,11 +1,19 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Music, Pause, Play, SkipBack, SkipForward, Volume1, Volume2, VolumeX } from "lucide-react";
+import { ListEnd, Music, Pause, Play, Repeat, Repeat1, Shuffle, SkipBack, SkipForward, Volume1, Volume2, VolumeX } from "lucide-react";
 import type { TrackRow } from "../core/library";
 import type { PlayerState } from "../core/player";
 import { waveform } from "../core/player";
 import { trackCover } from "../core/edit";
 import { formatDuration } from "../core/format";
+
+/** Modes de lecture du lecteur du bas. */
+export interface PlayModes {
+  repeat: "off" | "all" | "one";
+  shuffle: boolean;
+  /** Enchaîner automatiquement sur le morceau suivant à la fin. */
+  autoNext: boolean;
+}
 
 interface Props {
   state: PlayerState;
@@ -13,6 +21,10 @@ interface Props {
   onToggle: () => void;
   onPrev: () => void;
   onNext: () => void;
+  modes: PlayModes;
+  onRepeat: () => void;
+  onShuffle: () => void;
+  onAutoNext: () => void;
   onSeek: (ms: number) => void;
   onVolume: (v: number) => void;
 }
@@ -97,7 +109,7 @@ function Waveform({ trackId, seekable, position, duration, onSeek }: { trackId: 
   );
 }
 
-export function PlayerBar({ state, track, onToggle, onPrev, onNext, onSeek, onVolume }: Props) {
+export function PlayerBar({ state, track, onToggle, onPrev, onNext, modes, onRepeat, onShuffle, onAutoNext, onSeek, onVolume }: Props) {
   const { t } = useTranslation();
   const [cover, setCover] = useState<string | null>(null);
   const [showVolume, setShowVolume] = useState(false);
@@ -152,6 +164,17 @@ export function PlayerBar({ state, track, onToggle, onPrev, onNext, onSeek, onVo
         </button>
         <button className="icon-btn" onClick={onNext} disabled={!has} aria-label={t("player.next")} title={`${t("player.next")} (Maj+→)`}>
           <SkipForward size={20} aria-hidden />
+        </button>
+      </div>
+      <div className="player-modes">
+        <button className={`icon-btn${modes.shuffle ? " active" : ""}`} onClick={onShuffle} aria-pressed={modes.shuffle} aria-label={t("player.shuffle")} title={t(modes.shuffle ? "player.shuffleOn" : "player.shuffleOff")}>
+          <Shuffle size={17} aria-hidden />
+        </button>
+        <button className={`icon-btn${modes.repeat !== "off" ? " active" : ""}`} onClick={onRepeat} aria-pressed={modes.repeat !== "off"} aria-label={t("player.repeat")} title={t(`player.repeatMode.${modes.repeat}`)}>
+          {modes.repeat === "one" ? <Repeat1 size={17} aria-hidden /> : <Repeat size={17} aria-hidden />}
+        </button>
+        <button className={`icon-btn${modes.autoNext ? " active" : ""}`} onClick={onAutoNext} aria-pressed={modes.autoNext} aria-label={t("player.autoNext")} title={t(modes.autoNext ? "player.autoNextOn" : "player.autoNextOff")}>
+          <ListEnd size={17} aria-hidden />
         </button>
       </div>
       <div className="waveform">

@@ -50,6 +50,13 @@ pub struct Settings {
     pub limiter_on: bool,
     /// Plafond de crête (dBFS).
     pub ceiling_db: f64,
+    /// Coupe : début du morceau gardé (secondes, au dixième) ; 0 = depuis le début.
+    pub start_s: f64,
+    /// Coupe : fin du morceau gardé (secondes) ; 0 = jusqu'à la fin.
+    pub end_s: f64,
+    /// Fondu en entrée et en sortie (secondes) ; 0 = aucun.
+    pub fade_in_s: f64,
+    pub fade_out_s: f64,
 }
 
 /// Les 5 bandes de l'égaliseur, à plat.
@@ -80,6 +87,10 @@ impl Default for Settings {
             target_lufs: None,
             limiter_on: true,
             ceiling_db: -1.0,
+            start_s: 0.0,
+            end_s: 0.0,
+            fade_in_s: 0.0,
+            fade_out_s: 0.0,
         }
     }
 }
@@ -104,6 +115,14 @@ impl Settings {
         s.makeup_db = s.makeup_db.clamp(-12.0, 24.0);
         s.target_lufs = s.target_lufs.map(|t| t.clamp(-30.0, -4.0));
         s.ceiling_db = s.ceiling_db.clamp(-6.0, 0.0);
+        let tenth = |v: f64| (v * 10.0).round() / 10.0;
+        s.start_s = tenth(s.start_s.clamp(0.0, 7200.0));
+        s.end_s = tenth(s.end_s.clamp(0.0, 7200.0));
+        if s.end_s > 0.0 && s.end_s <= s.start_s {
+            s.end_s = 0.0;
+        }
+        s.fade_in_s = tenth(s.fade_in_s.clamp(0.0, 120.0));
+        s.fade_out_s = tenth(s.fade_out_s.clamp(0.0, 120.0));
         s
     }
 }
@@ -145,8 +164,8 @@ impl Biquad {
                 Biquad::new(1.0 + alpha * a, -2.0 * c, 1.0 - alpha * a, 1.0 + alpha / a, -2.0 * c, 1.0 - alpha / a)
             }
             BandKind::LowShelf | BandKind::HighShelf => {
-                // Pente S = 1.
-                let alpha = s / 2.0 * ((a + 1.0 / a) * (1.0 / 1.0 - 1.0) + 2.0).sqrt();
+                // Pente S = 1 : (A + 1/A)·(1/S − 1) + 2 vaut 2, donc alpha = sin(w)/2 · √2.
+                let alpha = s / 2.0 * std::f64::consts::SQRT_2;
                 let sq = 2.0 * a.sqrt() * alpha;
                 if b.kind == BandKind::LowShelf {
                     Biquad::new(
@@ -377,6 +396,97 @@ impl Processor {
     }
 }
 
+// =====================================================================
+// Coupe du début / de la fin et fondus
+// =====================================================================
+
+/// Coupe : garde les trames de `start` à `end` (comptées depuis le début du fichier).
+pub struct Trim {
+    pub start: u64,
+    pub end: Option<u64>,
+    /// Position (en trames depuis le début du fichier) de la prochaine trame reçue.
+    pub pos: u64,
+}
+
+impl Trim {
+    pub fn new(s: &Settings, rate: u32) -> Trim {
+        let r = rate as f64;
+        Trim { start: (s.start_s * r) as u64, end: (s.end_s > 0.0).then(|| (s.end_s * r) as u64), pos: 0 }
+    }
+
+    /// Nombre de trames gardées si la longueur totale est connue.
+    pub fn kept_len(&self, total: Option<u64>) -> Option<u64> {
+        let end = self.end.or(total)?;
+        Some(end.saturating_sub(self.start))
+    }
+
+    /// Recopie dans `out` la partie gardée du bloc ; renvoie vrai quand la fin est passée.
+    pub fn cut(&mut self, block: &[f32], ch: usize, out: &mut Vec<f32>) -> bool {
+        out.clear();
+        let frames = (block.len() / ch.max(1)) as u64;
+        let a = self.start.saturating_sub(self.pos).min(frames);
+        let b = match self.end {
+            Some(e) => e.saturating_sub(self.pos).min(frames),
+            None => frames,
+        };
+        if b > a {
+            out.extend_from_slice(&block[(a as usize) * ch..(b as usize) * ch]);
+        }
+        self.pos += frames;
+        self.end.map(|e| self.pos >= e).unwrap_or(false)
+    }
+}
+
+/// Fondus en entrée et en sortie, appliqués au son traité (le compresseur ne les déforme pas).
+pub struct Fade {
+    fin: u64,
+    fout: u64,
+    /// Longueur gardée (pour placer le fondu de sortie) ; inconnue = pas de fondu de sortie.
+    len: Option<u64>,
+    k: u64,
+}
+
+impl Fade {
+    pub fn new(s: &Settings, rate: u32, kept_len: Option<u64>) -> Fade {
+        let r = rate as f64;
+        Fade { fin: (s.fade_in_s * r) as u64, fout: (s.fade_out_s * r) as u64, len: kept_len, k: 0 }
+    }
+
+    /// Position de départ (trames déjà jouées depuis le début gardé).
+    pub fn set_pos(&mut self, k: u64) {
+        self.k = k;
+    }
+
+    pub fn is_active(&self) -> bool {
+        self.fin > 0 || (self.fout > 0 && self.len.is_some())
+    }
+
+    pub fn apply(&mut self, block: &mut [f32], ch: usize) {
+        if !self.is_active() {
+            self.k += (block.len() / ch.max(1)) as u64;
+            return;
+        }
+        for frame in block.chunks_mut(ch.max(1)) {
+            let mut g = 1.0f64;
+            if self.fin > 0 && self.k < self.fin {
+                g *= self.k as f64 / self.fin as f64;
+            }
+            if let (Some(len), true) = (self.len, self.fout > 0) {
+                let left = len.saturating_sub(self.k);
+                if left < self.fout {
+                    g *= left as f64 / self.fout as f64;
+                }
+            }
+            // Courbe douce (puissance égale) plutôt que linéaire.
+            let g = (g * std::f64::consts::FRAC_PI_2).sin() as f32;
+            for v in frame.iter_mut() {
+                *v *= g;
+            }
+            self.k += 1;
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -415,6 +525,35 @@ mod tests {
 
     fn flat() -> Settings {
         Settings { highpass_hz: 0.0, limiter_on: false, ..Default::default() }
+    }
+
+    #[test]
+    fn coupe_au_dixieme_et_fondus() {
+        let s = Settings { start_s: 1.25, end_s: 3.0, fade_in_s: 0.5, fade_out_s: 0.5, ..Default::default() }.clamped();
+        assert_eq!((s.start_s, s.end_s), (1.3, 3.0), "arrondi au dixième");
+        let mut trim = Trim::new(&s, RATE);
+        let x = sine(1000.0, 0.5, 4.0, true);
+        let mut kept = Vec::new();
+        let mut out = Vec::new();
+        for b in x.chunks(4410 * 2) {
+            let done = trim.cut(b, 2, &mut out);
+            kept.extend_from_slice(&out);
+            if done {
+                break;
+            }
+        }
+        let len = trim.kept_len(None).unwrap();
+        assert_eq!(kept.len() as u64, len * 2, "de 1,3 s à 3,0 s");
+        assert_eq!(len, (1.7 * RATE as f64) as u64);
+        let mut fade = Fade::new(&s, RATE, Some(len));
+        fade.apply(&mut kept, 2);
+        assert!(kept[0].abs() < 1e-6, "silence au tout début");
+        assert!(kept[kept.len() - 1].abs() < 0.01, "silence à la toute fin");
+        let mid = kept.len() / 2;
+        assert!(rms(&kept[mid - 2000..mid + 2000]) > 0.3, "milieu intact");
+        // Fin non précisée et longueur inconnue : pas de fondu de sortie, pas d'erreur.
+        let s2 = Settings { fade_out_s: 2.0, ..Default::default() };
+        assert!(!Fade::new(&s2, RATE, None).is_active());
     }
 
     #[test]

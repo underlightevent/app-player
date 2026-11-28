@@ -14,6 +14,10 @@ interface Props {
 export function Modal({ title, onClose, children, footer, wide }: Props) {
   const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
+  // Dernière version de onClose, sans relancer l'effet : sinon chaque rafraîchissement de la
+  // fenêtre principale redonnait le focus au premier champ et ramenait la liste en haut.
+  const close = useRef(onClose);
+  close.current = onClose;
   useEffect(() => {
     const prev = document.activeElement as HTMLElement | null;
     const first = ref.current?.querySelector<HTMLElement>("input, select, textarea, button:not(.modal-close)");
@@ -21,7 +25,7 @@ export function Modal({ title, onClose, children, footer, wide }: Props) {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation();
-        onClose();
+        close.current();
       }
       if (e.key === "Tab" && ref.current) {
         const items = [...ref.current.querySelectorAll<HTMLElement>("input, select, textarea, button, [tabindex='0']")].filter((el) => !el.hasAttribute("disabled"));
@@ -42,7 +46,7 @@ export function Modal({ title, onClose, children, footer, wide }: Props) {
       window.removeEventListener("keydown", onKey, true);
       prev?.focus?.();
     };
-  }, [onClose]);
+  }, []);
   return (
     <>
       <div className="menu-backdrop dim" onClick={onClose} />

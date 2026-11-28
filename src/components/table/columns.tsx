@@ -91,18 +91,14 @@ function Badges({ row, ctx }: { row: TrackRow; ctx: RenderCtx }) {
 export const COLUMNS: ColumnDef[] = [
   {
     id: "cover",
-    width: 40,
-    minWidth: 32,
+    width: 44,
+    minWidth: 36,
     align: "center",
     defaultVisible: true,
+    // Image de la pochette (chargée quand la ligne est affichée) ; point orange si aucune.
     render: (r, { t }) =>
-      r.coverCount > 0 ? (
-        <span className="cover-dot" aria-label={t("columns.cover")} />
-      ) : (
-        <span className="cover-dot missing" title={t("badges.noCover")} aria-label={t("badges.noCover")} />
-      ),
+      r.coverCount > 0 ? <CoverThumb row={r} /> : <span className="cover-dot missing" title={t("badges.noCover")} aria-label={t("badges.noCover")} />,
   },
-  { id: "thumb", width: 44, minWidth: 36, align: "center", defaultVisible: false, render: (r) => <CoverThumb row={r} /> },
   { id: "rating", sortField: "rating", width: 84, defaultVisible: true, render: (r) => <Stars value={r.rating} /> },
   { id: "mainArtist", sortField: "mainArtist", width: 180, defaultVisible: true, render: (r) => r.mainArtist ?? "" },
   { id: "title", sortField: "title", width: 240, defaultVisible: true, render: (r) => r.title ?? r.fileName },
@@ -161,7 +157,8 @@ export function loadColumnState(): ColumnState[] {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return defaults;
     const saved = JSON.parse(raw) as ColumnState[];
-    const known = saved.filter((s) => COLUMNS.some((c) => c.id === s.id));
+    // La colonne « Vignette » (0.7.0) est fusionnée dans « Pochette », assez large pour l'image.
+    const known = saved.filter((s) => COLUMNS.some((c) => c.id === s.id)).map((s) => (s.id === "cover" && s.width < 44 ? { ...s, width: 44 } : s));
     // Colonnes ajoutées dans une version plus récente : ajoutées à la fin.
     for (const d of defaults) if (!known.some((k) => k.id === d.id)) known.push(d);
     return known;

@@ -283,7 +283,19 @@
       "offline": "Lecture impossible : disque déconnecté ou fichier introuvable.",
       "audio_output": "Aucune sortie son disponible. Vérifiez vos haut-parleurs ou votre casque."
     },
-    "preview": "Extrait {{service}}"
+    "preview": "Extrait {{service}}",
+    "shuffle": "Lecture aléatoire",
+    "shuffleOn": "Lecture aléatoire : activée",
+    "shuffleOff": "Lecture aléatoire : désactivée",
+    "repeat": "Répétition",
+    "repeatMode": {
+      "off": "Répétition : désactivée",
+      "all": "Répétition : toute la liste",
+      "one": "Répétition : ce morceau en boucle"
+    },
+    "autoNext": "Lecture à la suite",
+    "autoNextOn": "Lecture à la suite : le morceau suivant démarre à la fin",
+    "autoNextOff": "Lecture à la suite : désactivée (arrêt à la fin du morceau)"
   },
   "settings": {
     "title": "Réglages",
@@ -808,7 +820,8 @@
       "errors_one": "{{count}} passage abîmé dans le son",
       "errors_other": "{{count}} passages abîmés dans le son",
       "unreadable": "le son ne peut pas être décodé"
-    }
+    },
+    "analyzingOne": "Analyse en cours…"
   },
   "health": {
     "summary_one": "{{total}} morceaux · {{count}} point à vérifier.",
@@ -1468,6 +1481,29 @@
     "batchStarted_other": "Remaster de {{count}} morceaux lancé en tâche de fond.",
     "batchRunning": "Un Remaster en lot est déjà en cours.",
     "exportHint": "L'original n'est jamais modifié : un nouveau fichier « … (Remaster).wav » (24 bits) est créé à côté, avec les tags et la pochette, la version complétée de « Remaster », et ajouté à la bibliothèque.",
-    "limits": "Ce que Remaster peut faire : volume, équilibre graves / aigus, densité, image stéréo. Ce qu'il ne peut pas faire : recréer les aigus perdus d'un MP3 basse qualité. Comparez toujours avant / après."
+    "limits": "Ce que Remaster peut faire : volume, équilibre graves / aigus, densité, image stéréo. Ce qu'il ne peut pas faire : recréer les aigus perdus d'un MP3 basse qualité. Comparez toujours avant / après.",
+    "builtinPresets": "Préréglages intégrés (analyse du morceau)",
+    "myPresets": "Mes préréglages",
+    "applyUserPreset": "Appliquer",
+    "savePreset": "Enregistrer comme préréglage",
+    "presetName": "Nom du préréglage",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "presetHint": "Le préréglage garde tous les réglages du son et les fondus, mais pas la coupe (début / fin), propre à chaque morceau. Un nom déjà utilisé est remplacé.",
+    "presetSaved": "Préréglage « {{name}} » enregistré.",
+    "presetDeleted": "Préréglage « {{name}} » supprimé.",
+    "deletePreset": "Supprimer",
+    "undo": "Annuler",
+    "freq": "Fréquence",
+    "zeroOff": "0 = désactivé. Astuce : cliquez dans un chiffre pour le taper, ou utilisez les flèches ↑ ↓ (Maj + flèche = pas ×10).",
+    "targetOn": "Volume cible",
+    "trim": "Coupe et fondus",
+    "start": "Début",
+    "end": "Fin",
+    "fadeIn": "Fondu d'entrée",
+    "fadeOut": "Fondu de sortie",
+    "toEnd": "la fin",
+    "kept": "Gardé : de {{from}} à {{to}} (durée {{len}})",
+    "trimHint": "Au dixième de seconde. Début 0 = depuis le début ; fin au maximum = jusqu'au bout. Fondu 0 = aucun. La coupe et les fondus s'entendent à l'écoute et s'appliquent au fichier exporté ; l'original n'est pas touché."
   }
 }

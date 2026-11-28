@@ -41,26 +41,51 @@ struct FileSource {
     live: Option<LiveHandle>,
     processor: Option<(u64, crate::remaster::dsp::Processor)>,
     raw: Vec<f32>,
+    /// Position dans le fichier (en trames), pour la coupe et les fondus de l'écoute Remaster.
+    fpos: u64,
 }
 
 impl FileSource {
     fn new(dec: Decoder, live: Option<LiveHandle>) -> FileSource {
         // Traitement en direct : mono et stéréo seulement.
         let live = live.filter(|_| dec.channels <= 2);
-        FileSource { dec, buf: Vec::new(), pos: 0, done: false, live, processor: None, raw: Vec::new() }
+        FileSource { dec, buf: Vec::new(), pos: 0, done: false, live, processor: None, raw: Vec::new(), fpos: 0 }
     }
 
     /// Bloc suivant, traité si un Remaster est en cours d'écoute.
     fn refill(&mut self) -> Result<bool, String> {
         let Some(live) = self.live.clone() else { return self.dec.next_block(&mut self.buf) };
+        let st = live.lock().map(|l| l.clone()).map_err(|_| "état indisponible".to_string())?;
+        let rate = self.dec.sample_rate;
+        let ch = self.dec.channels.max(1) as usize;
+        let trim = crate::remaster::dsp::Trim::new(&st.settings, rate);
+        // Avant le début gardé : on saute directement au début.
+        if self.fpos < trim.start {
+            self.dec.seek_ms(trim.start * 1000 / rate.max(1) as u64)?;
+            self.fpos = trim.start;
+        }
+        if trim.end.map(|e| self.fpos >= e).unwrap_or(false) {
+            return Ok(false);
+        }
         if !self.dec.next_block(&mut self.raw)? {
             return Ok(false);
         }
-        let st = live.lock().map(|l| l.clone()).map_err(|_| "état indisponible".to_string())?;
+        // Partie gardée du bloc (fin de la coupe).
+        let frames = (self.raw.len() / ch) as u64;
+        if let Some(e) = trim.end {
+            let keep = e.saturating_sub(self.fpos).min(frames) as usize;
+            self.raw.truncate(keep * ch);
+        }
+        let k = self.fpos - trim.start;
+        self.fpos += frames;
+        let total = self.dec.duration_ms.map(|ms| ms * rate as u64 / 1000);
+        let mut fade = crate::remaster::dsp::Fade::new(&st.settings, rate, trim.kept_len(total));
+        fade.set_pos(k);
         if st.bypass {
             let g = 10f32.powf(st.bypass_gain_db as f32 / 20.0);
             self.buf.clear();
             self.buf.extend(self.raw.iter().map(|x| (x * g).clamp(-1.0, 1.0)));
+            fade.apply(&mut self.buf, ch);
             return Ok(true);
         }
         let rebuild = self.processor.as_ref().map(|(v, _)| *v != st.version).unwrap_or(true);
@@ -70,6 +95,7 @@ impl FileSource {
         if let Some((_, p)) = self.processor.as_mut() {
             p.process(&self.raw, &mut self.buf);
         }
+        fade.apply(&mut self.buf, ch);
         Ok(true)
     }
 }
@@ -121,6 +147,7 @@ impl Source for FileSource {
         self.buf.clear();
         self.pos = 0;
         self.done = false;
+        self.fpos = pos.as_millis() as u64 * self.dec.sample_rate as u64 / 1000;
         Ok(())
     }
 }

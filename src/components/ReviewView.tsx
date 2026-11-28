@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, CheckCheck, ImageOff, Search, X } from "lucide-react";
 import {
@@ -147,10 +147,15 @@ function useCompareState(current: Current | null, candidates: Candidate[], hasCo
     setCover(null);
   }, [key]);
 
+  // Champs cochés par défaut : recalculés au changement de proposition seulement (pas à chaque
+  // rafraîchissement de l'écran, qui effaçait les choix de l'utilisateur).
+  const currentRef = useRef(current);
+  currentRef.current = current;
   useEffect(() => {
     const c = candidates[chosen];
-    if (current && c) setFields(defaultFields(current, c));
-  }, [current, candidates, chosen]);
+    const cur = currentRef.current;
+    if (cur && c) setFields(defaultFields(cur, c));
+  }, [key, candidates, chosen]);
 
   useEffect(() => {
     if (candidates.length === 0) return;

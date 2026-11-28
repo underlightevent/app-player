@@ -353,3 +353,23 @@ Mesure du volume, de la dynamique (crête moins niveau moyen) et de l'équilibre
 
 ### D-705 · Écoute avant / après
 Le traitement s'applique en direct dans le lecteur de l'application (réglages pris en compte au bloc suivant). « Avant » joue l'original avec le gain qui le met au même volume perçu que le résultat (différence des LUFS mesurés), pour juger la qualité et non le volume ; le volume est recalculé une seconde après le dernier changement de réglage.
+
+## Version 0.8.1 — Perfectionnements (Remaster, bibliothèque, lecteur)
+
+### D-706 · Coupe et fondus du Remaster
+Nouveaux réglages : début et fin gardés (au dixième de seconde ; fin 0 = jusqu'au bout), fondu d'entrée et de sortie (en secondes). La coupe est faite **avant** le traitement (le compresseur et le volume cible ne tiennent compte que de la partie gardée) ; les fondus **après** le limiteur (courbe douce en quart de sinus), pour que le compresseur ne « remonte » pas le fondu. Fondu de sortie sans fin précisée : la longueur exacte est comptée par un décodage complet (la durée annoncée par certains MP3 est approximative). À l'écoute en direct, le lecteur saute au début gardé, s'arrête à la fin gardée et applique les fondus (la longueur annoncée suffit pour l'écoute). Tests : coupe exacte au dixième, silence au tout début et à la toute fin, milieu intact.
+
+### D-707 · Préréglages de l'utilisateur et précision
+Préréglages enregistrés dans le réglage texte `remaster_presets` (liste JSON nom + réglages ; plafond des réglages texte porté de 20 000 à 100 000 caractères). Un préréglage garde le son et les fondus, **pas la coupe** (propre à chaque morceau) ; il s'applique sans analyse, y compris en lot. Les préréglages intégrés, eux, ne touchent ni à la coupe ni aux fondus. Chaque curseur a un champ chiffré modifiable (virgule ou point, flèches ↑ ↓, Maj = ×10) ; pas plus fins (égaliseur 0,1 dB, seuil 0,1 dB, taux 0,05, attaque 0,1 ms, relâchement 1 ms, plafond 0,05 dB, largeur 1 %) ; fréquence de chaque bande modifiable ; coupe des infra-graves, graves en mono et volume cible deviennent des curseurs (au lieu de listes).
+
+### D-708 · Pochette dans le tableau
+La colonne « Pochette » affiche l'image (vignette 24 px chargée seulement pour les lignes visibles, gardée en mémoire pendant la session) ; un point orange reste affiché quand il n'y a pas de pochette. La colonne « Vignette » de la 0.7.0, en double, est retirée (la largeur enregistrée de « Pochette » est portée à 44 px au besoin).
+
+### D-709 · Fenêtres qui remontaient en haut
+Cause : chaque rafraîchissement de la fenêtre principale (par exemple le lecteur qui avance) relançait la mise en place des fenêtres de dialogue, qui redonnait le focus à leur premier champ — d'où le retour en haut de la liste des résultats — et la recherche manuelle recochait les champs par défaut (les choix de l'utilisateur étaient perdus). Correction générale dans la fenêtre de dialogue (mise en place une seule fois) et dans la comparaison des résultats (cases recalculées seulement au changement de proposition).
+
+### D-710 · Contrôle qualité individuel
+La ligne « Qualité » du panneau de détail se relit à chaque changement de la bibliothèque (dont la fin de l'analyse) et affiche « Analyse en cours… » entre-temps : plus besoin de changer de morceau.
+
+### D-711 · Modes du lecteur
+Trois boutons, gardés dans les réglages : **aléatoire** (sans rejouer un morceau déjà passé tant que tout n'a pas été joué ; « précédent » revient aux morceaux réellement joués), **répétition** (désactivée → toute la liste → ce morceau en boucle), **lecture à la suite** (activée par défaut, comme avant ; désactivée, la lecture s'arrête à la fin du morceau). « Répéter tout » enchaîne même si « à la suite » est désactivé, et repart du début de la liste après le dernier. La liste suivie est l'ordre du tableau affiché (tri et filtres compris) ; pour les extraits de l'écran Sorties, la boucle d'un extrait et l'arrêt à la fin sont respectés, l'aléatoire ne s'applique pas.

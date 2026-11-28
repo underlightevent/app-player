@@ -283,7 +283,19 @@
       "offline": "Cannot play: drive disconnected or file not found.",
       "audio_output": "No audio output available. Check your speakers or headphones."
     },
-    "preview": "{{service}} preview"
+    "preview": "{{service}} preview",
+    "shuffle": "Shuffle",
+    "shuffleOn": "Shuffle: on",
+    "shuffleOff": "Shuffle: off",
+    "repeat": "Repeat",
+    "repeatMode": {
+      "off": "Repeat: off",
+      "all": "Repeat: whole list",
+      "one": "Repeat: this track"
+    },
+    "autoNext": "Continuous play",
+    "autoNextOn": "Continuous play: the next track starts at the end",
+    "autoNextOff": "Continuous play: off (stops at the end of the track)"
   },
   "settings": {
     "title": "Settings",
@@ -808,7 +820,8 @@
       "errors_one": "{{count}} damaged spot in the audio",
       "errors_other": "{{count}} damaged spots in the audio",
       "unreadable": "the audio cannot be decoded"
-    }
+    },
+    "analyzingOne": "Analysing…"
   },
   "health": {
     "summary_one": "{{total}} tracks · {{count}} thing to check.",
@@ -1468,6 +1481,29 @@
     "batchStarted_other": "Remaster of {{count}} tracks started in the background.",
     "batchRunning": "A batch remaster is already running.",
     "exportHint": "The original is never modified: a new “… (Remaster).wav” file (24-bit) is created next to it, with tags and cover, the version extended with “Remaster”, and added to the library.",
-    "limits": "What Remaster can do: loudness, low / high balance, density, stereo image. What it cannot do: bring back the highs lost in a low-quality MP3. Always compare before / after."
+    "limits": "What Remaster can do: loudness, low / high balance, density, stereo image. What it cannot do: bring back the highs lost in a low-quality MP3. Always compare before / after.",
+    "builtinPresets": "Built-in presets (track analysis)",
+    "myPresets": "My presets",
+    "applyUserPreset": "Apply",
+    "savePreset": "Save as preset",
+    "presetName": "Preset name",
+    "save": "Save",
+    "cancel": "Cancel",
+    "presetHint": "A preset keeps every sound setting and the fades, but not the trim (start / end), which belongs to each track. An existing name is replaced.",
+    "presetSaved": "Preset “{{name}}” saved.",
+    "presetDeleted": "Preset “{{name}}” deleted.",
+    "deletePreset": "Delete",
+    "undo": "Undo",
+    "freq": "Frequency",
+    "zeroOff": "0 = off. Tip: click a number to type it, or use the ↑ ↓ arrows (Shift + arrow = step ×10).",
+    "targetOn": "Target loudness",
+    "trim": "Trim and fades",
+    "start": "Start",
+    "end": "End",
+    "fadeIn": "Fade in",
+    "fadeOut": "Fade out",
+    "toEnd": "the end",
+    "kept": "Kept: from {{from}} to {{to}} (length {{len}})",
+    "trimHint": "To a tenth of a second. Start 0 = from the beginning; end at maximum = to the end. Fade 0 = none. Trim and fades are heard while listening and applied to the exported file; the original is never touched."
   }
 }

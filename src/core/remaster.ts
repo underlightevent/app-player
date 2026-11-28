@@ -26,6 +26,18 @@ export interface RemasterSettings {
   targetLufs: number | null;
   limiterOn: boolean;
   ceilingDb: number;
+  /** Coupe : début et fin gardés (secondes, au dixième ; fin 0 = jusqu'au bout). */
+  startS: number;
+  endS: number;
+  /** Fondus en entrée et en sortie (secondes ; 0 = aucun). */
+  fadeInS: number;
+  fadeOutS: number;
+}
+
+/** Préréglage enregistré par l'utilisateur (sans la coupe, propre à chaque morceau). */
+export interface UserPreset {
+  name: string;
+  settings: RemasterSettings;
 }
 
 export interface Prepared {
@@ -65,7 +77,21 @@ export const DEFAULT_SETTINGS: RemasterSettings = {
   targetLufs: null,
   limiterOn: true,
   ceilingDb: -1,
+  startS: 0,
+  endS: 0,
+  fadeInS: 0,
+  fadeOutS: 0,
 };
+
+/** Lit la liste des préréglages de l'utilisateur (texte JSON du réglage « remaster_presets »). */
+export function parseUserPresets(raw: string | undefined): UserPreset[] {
+  try {
+    const v = JSON.parse(raw || "[]") as UserPreset[];
+    return Array.isArray(v) ? v.filter((p) => p && typeof p.name === "string" && p.settings).map((p) => ({ name: p.name, settings: { ...DEFAULT_SETTINGS, ...p.settings } })) : [];
+  } catch {
+    return [];
+  }
+}
 
 // ---------- Aperçu navigateur ----------
 const demoSpectrum = (tilt: number) => Array.from({ length: 24 }, (_, i) => -20 - i * 1.6 + tilt * (i / 23) + Math.sin(i / 2) * 2);
@@ -118,7 +144,8 @@ export async function remasterExport(id: number, settings: RemasterSettings): Pr
   return invoke<ExportResult>("remaster_export", { id, settings });
 }
 
-export async function remasterBatch(ids: number[], preset: string): Promise<boolean> {
+/** `settings` : préréglage de l'utilisateur (appliqué tel quel, sans analyse). */
+export async function remasterBatch(ids: number[], preset: string, settings: RemasterSettings | null = null): Promise<boolean> {
   if (!inTauri) return true;
-  return invoke<boolean>("remaster_batch", { ids, preset });
+  return invoke<boolean>("remaster_batch", { ids, preset, settings });
 }
